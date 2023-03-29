@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -154,7 +156,27 @@ type Session struct {
 }
 
 type SessionHandler struct {
-	sessions map[uint64]Session
+	sessionsLock sync.Mutex
+	sessions     map[uint64]*Session
+}
+
+func (sh *SessionHandler) allocateNewSession() (uint64, *Session) {
+	sh.sessionsLock.Lock()
+	defer sh.sessionsLock.Unlock()
+	pin := uint64(rand.Int63n(100_000_000))
+	for _, ok := sh.sessions[pin]; ok; _, ok = sh.sessions[pin] {
+		pin = uint64(rand.Int63n(100_000_000))
+	}
+	session := &Session{}
+	sh.sessions[pin] = session
+	return pin, session
+}
+
+func (sh *SessionHandler) findSession(pin uint64) (*Session, bool) {
+	sh.sessionsLock.Lock()
+	defer sh.sessionsLock.Unlock()
+	session, ok := sh.sessions[pin]
+	return session, ok
 }
 
 var sessionUrlRegex = regexp.MustCompile("^/session/(new_session|resume_session)$")
@@ -171,20 +193,22 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch m[1] {
 	case "new_session":
-		fmt.Fprintf(w, "NEW_SESSION\n")
+		// Generate new session PIN that does not exist yet
+		pin, session := sh.allocateNewSession()
+		fmt.Fprintf(w, "NEW_SESSION %d %p\n", pin, session)
 	case "resume_session":
-		pinStr := r.FormValue("sessionid")
+		pinStr := r.FormValue("pin")
 		sessionPin, err := strconv.ParseUint(pinStr, 10, 64)
 		if err != nil {
 			fmt.Fprintf(w, "Error parsing session PIN %s: %v", pinStr, err)
 			return
 		}
-		_, ok := sh.sessions[sessionPin]
+		session, ok := sh.findSession(sessionPin)
 		if !ok {
 			fmt.Fprintf(w, "Session %d is not found", sessionPin)
 			return
 		}
-		fmt.Fprintf(w, "RESUME SESSION: %s\n", sessionPin)
+		fmt.Fprintf(w, "RESUME SESSION: %d %p\n", sessionPin, session)
 	}
 }
 
@@ -193,7 +217,7 @@ func webServer() error {
 	mux := http.NewServeMux()
 	mux.Handle("/ui/", http.FileServer(http.FS(assets.Content)))
 	sh := &SessionHandler{
-		sessions: map[uint64]Session{},
+		sessions: map[uint64]*Session{},
 	}
 	mux.Handle("/session/", sh)
 	bh := &BridgeHandler{}
