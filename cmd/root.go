@@ -89,6 +89,7 @@ func initConfig() {
 
 type BridgeHandler struct {
 	cancel context.CancelFunc
+	sh     *SessionHandler
 }
 
 var supportUrlRegex = regexp.MustCompile("^/support/([0-9]+)$")
@@ -96,11 +97,6 @@ var supportUrlRegex = regexp.MustCompile("^/support/([0-9]+)$")
 var ErrHTTP2NotSupported = "HTTP2 not supported"
 
 func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	m := supportUrlRegex.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return
-	}
 	if !r.ProtoAtLeast(2, 0) {
 		http.Error(w, ErrHTTP2NotSupported, http.StatusHTTPVersionNotSupported)
 		return
@@ -110,6 +106,25 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, ErrHTTP2NotSupported, http.StatusHTTPVersionNotSupported)
 		return
 	}
+	m := supportUrlRegex.FindStringSubmatch(r.URL.Path)
+	if m == nil {
+		http.NotFound(w, r)
+		return
+	}
+	pin, err := strconv.ParseUint(m[1], 10, 64)
+	if err != nil {
+		http.Error(w, "Error parsing session PIN", http.StatusNotFound)
+		log.Printf("Errir parsing session pin %s: %v", m[1], err)
+		return
+	}
+	fmt.Printf("PIN: %d\n", pin)
+	_, ok = bh.sh.findSession(pin)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusNotFound)
+		log.Printf("Session with specified PIN %d not found", pin)
+		return
+	}
+	fmt.Fprintf(w, "SUCCESS\n")
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	defer r.Body.Close()
@@ -120,12 +135,6 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
-
-	pin, err := strconv.ParseUint(m[1], 10, 64)
-	if err != nil {
-		log.Printf("Parsing pin %s: %v", m[1], err)
-	}
-	fmt.Printf("PIN: %d", pin)
 
 	var writeBuf bytes.Buffer
 	for {
@@ -220,7 +229,7 @@ func webServer() error {
 		sessions: map[uint64]*Session{},
 	}
 	mux.Handle("/session/", sh)
-	bh := &BridgeHandler{}
+	bh := &BridgeHandler{sh: sh}
 	mux.Handle("/support/", bh)
 	certPool := x509.NewCertPool()
 	for _, caCertFile := range caCertFiles {
