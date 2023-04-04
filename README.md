@@ -17,5 +17,5 @@ To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use
 
 # How to access from the browser
 
-In the browser, go to the URL `https://localhost:8080/ui`. You brower is likely ask to to accept the risks (due to self-signed certificate), do that.
+In the browser, go to the URL `https://localhost:8080/ui`. You browser will likely ask to to accept the risks (due to self-signed certificate), do that.
 
