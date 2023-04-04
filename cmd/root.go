@@ -3,29 +3,34 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
-	"math/rand"
+	weakrand "math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"log"
 
+	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics/assets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/ledgerwatch/diagnostics/assets"
 )
 
 var (
@@ -118,7 +123,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("PIN: %d\n", pin)
-	_, ok = bh.sh.findSession(pin)
+	_, ok = bh.sh.findNodeSession(pin)
 	if !ok {
 		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusNotFound)
 		log.Printf("Session with specified PIN %d not found", pin)
@@ -161,82 +166,215 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type Session struct {
+type NodeSession struct {
+	sessionPin uint64
+}
+
+type UiNodeSession struct {
+	SessionName string
+	SessionPin  uint64
+}
+
+type UiSession struct {
+	lock               sync.Mutex
+	Session            bool
+	SessionPin         uint64
+	SessionName        string
+	Errors             []string // Transient field - only filled for the time of template execution
+	currentSessionName string
+	NodeS              *NodeSession // Transient field - only filled for the time of template execution
+	uiNodeTree         *btree.BTreeG[UiNodeSession]
+	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
 }
 
 type SessionHandler struct {
-	sessionsLock sync.Mutex
-	sessions     map[uint64]*Session
+	nodeSessionsLock sync.Mutex
+	nodeSessions     map[uint64]*NodeSession
+	uiSessionsLock   sync.Mutex
+	uiSessions       map[string]*UiSession
+	uiTemplate       *template.Template
 }
 
-func (sh *SessionHandler) allocateNewSession() (uint64, *Session) {
-	sh.sessionsLock.Lock()
-	defer sh.sessionsLock.Unlock()
-	pin := uint64(rand.Int63n(100_000_000))
-	for _, ok := sh.sessions[pin]; ok; _, ok = sh.sessions[pin] {
-		pin = uint64(rand.Int63n(100_000_000))
+func (sh *SessionHandler) allocateNewNodeSession() (uint64, *NodeSession) {
+	sh.nodeSessionsLock.Lock()
+	defer sh.nodeSessionsLock.Unlock()
+	pin := uint64(weakrand.Int63n(100_000_000))
+	for _, ok := sh.nodeSessions[pin]; ok; _, ok = sh.nodeSessions[pin] {
+		pin = uint64(weakrand.Int63n(100_000_000))
 	}
-	session := &Session{}
-	sh.sessions[pin] = session
-	return pin, session
+	nodeSession := &NodeSession{}
+	sh.nodeSessions[pin] = nodeSession
+	return pin, nodeSession
 }
 
-func (sh *SessionHandler) findSession(pin uint64) (*Session, bool) {
-	sh.sessionsLock.Lock()
-	defer sh.sessionsLock.Unlock()
-	session, ok := sh.sessions[pin]
-	return session, ok
+func (sh *SessionHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
+	sh.nodeSessionsLock.Lock()
+	defer sh.nodeSessionsLock.Unlock()
+	nodeSession, ok := sh.nodeSessions[pin]
+	return nodeSession, ok
 }
 
-var sessionUrlRegex = regexp.MustCompile("^/session/(new_session|resume_session)$")
+func (sh *SessionHandler) newUiSession() (string, *UiSession, error) {
+	var b [32]byte
+	var sessionId string
+	_, err := io.ReadFull(rand.Reader, b[:])
+	if err == nil {
+		sessionId = base64.URLEncoding.EncodeToString(b[:])
+	}
+	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
+		return strings.Compare(a.SessionName, b.SessionName) < 0
+	})}
+	sh.uiSessionsLock.Lock()
+	defer sh.uiSessionsLock.Unlock()
+	if sessionId != "" {
+		sh.uiSessions[sessionId] = uiSession
+	}
+	return sessionId, uiSession, err
+}
+
+func (sh *SessionHandler) findUiSession(sessionId string) (*UiSession, bool) {
+	sh.uiSessionsLock.Lock()
+	defer sh.uiSessionsLock.Unlock()
+	uiSession, ok := sh.uiSessions[sessionId]
+	return uiSession, ok
+}
+
+var sessionUrlRegex = regexp.MustCompile("^/ui/(|new_session|resume_session|select_session)$")
+
+const sessionIdCookieName = "sessionId"
+const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(sessionIdCookieName)
+	var sessionId string
+	var uiSession *UiSession
+	var sessionFound bool
+	if err == nil && cookie.Value != "" {
+		sessionId, err = url.QueryUnescape(cookie.Value)
+		if err == nil {
+			uiSession, sessionFound = sh.findUiSession(sessionId)
+		}
+	}
+	if !sessionFound {
+		var e error
+		sessionId, uiSession, e = sh.newUiSession()
+		if e == nil {
+			cookie := http.Cookie{Name: sessionIdCookieName, Value: url.QueryEscape(sessionId), Path: "/", HttpOnly: true, MaxAge: sessionIdCookieDuration}
+			http.SetCookie(w, &cookie)
+		} else {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Creating new UI session: %v", e))
+		}
+	}
+	uiSession.lock.Lock()
+	defer func() {
+		uiSession.Errors = nil
+		uiSession.NodeS = nil
+		uiSession.UiNodes = nil
+		uiSession.lock.Unlock()
+	}()
+	if err != nil {
+		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Cookie handling: %v", err))
+	}
 	m := sessionUrlRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		fmt.Fprintf(w, "Error parsing form: %v", err)
+		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
 	}
+	sessionName := r.FormValue("sessionname")
+	foundSessionName := uiSession.uiNodeTree.Has(UiNodeSession{SessionName: sessionName})
 	switch m[1] {
 	case "new_session":
-		// Generate new session PIN that does not exist yet
-		pin, session := sh.allocateNewSession()
-		fmt.Fprintf(w, "NEW_SESSION %d %p\n", pin, session)
+		// Generate new node session PIN that does not exist yet
+		if sessionName == "" {
+			uiSession.Errors = append(uiSession.Errors, "empty session name")
+			break
+		}
+		if foundSessionName {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
+			break
+		}
+		uiSession.Session = true
+		uiSession.SessionName = sessionName
+		uiSession.SessionPin, uiSession.NodeS = sh.allocateNewNodeSession()
+		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
 	case "resume_session":
+		// Resume (take over) node session using known PIN
 		pinStr := r.FormValue("pin")
 		sessionPin, err := strconv.ParseUint(pinStr, 10, 64)
 		if err != nil {
-			fmt.Fprintf(w, "Error parsing session PIN %s: %v", pinStr, err)
-			return
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Parsing session PIN %s: %v", pinStr, err))
+			break
 		}
-		session, ok := sh.findSession(sessionPin)
-		if !ok {
-			fmt.Fprintf(w, "Session %d is not found", sessionPin)
-			return
+		var ok bool
+		if uiSession.NodeS, ok = sh.findNodeSession(sessionPin); !ok {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", sessionPin))
+			break
 		}
-		fmt.Fprintf(w, "RESUME SESSION: %d %p\n", sessionPin, session)
+		if sessionName == "" {
+			uiSession.Errors = append(uiSession.Errors, "empty session name")
+			break
+		}
+		if foundSessionName {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
+			break
+		}
+		uiSession.Session = true
+		uiSession.SessionName = sessionName
+		uiSession.SessionPin = sessionPin
+		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
+	case "select_session":
+		// Make one of the previously known sessions active
+		for k, vs := range r.Form {
+			if len(vs) == 1 {
+				if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: vs[0]}); ok && fmt.Sprintf("pin%d", v.SessionPin) == k {
+					if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
+						uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
+						uiSession.uiNodeTree.Delete(v)
+						break
+					}
+					uiSession.Session = true
+					uiSession.SessionName = vs[0]
+					uiSession.SessionPin = v.SessionPin
+				}
+			}
+		}
+	}
+	uiSession.uiNodeTree.Ascend(func(uiNodeSession UiNodeSession) bool {
+		uiSession.UiNodes = append(uiSession.UiNodes, uiNodeSession)
+		return true
+	})
+	if err := sh.uiTemplate.Execute(w, uiSession); err != nil {
+		fmt.Fprintf(w, "Executing template: %v", err)
+		return
 	}
 }
 
 func webServer() error {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	mux := http.NewServeMux()
-	mux.Handle("/ui/", http.FileServer(http.FS(assets.Content)))
-	sh := &SessionHandler{
-		sessions: map[uint64]*Session{},
+	sessionTemplate, err := template.ParseFS(assets.Content, "ui/session.html")
+	if err != nil {
+		return fmt.Errorf("parsing session.html template: %v", err)
 	}
-	mux.Handle("/session/", sh)
+	//mux.Handle("/ui/", http.FileServer(http.FS(assets.Content)))
+	sh := &SessionHandler{
+		nodeSessions: map[uint64]*NodeSession{},
+		uiSessions:   map[string]*UiSession{},
+		uiTemplate:   sessionTemplate,
+	}
+	mux.Handle("/ui/", sh)
 	bh := &BridgeHandler{sh: sh}
 	mux.Handle("/support/", bh)
 	certPool := x509.NewCertPool()
 	for _, caCertFile := range caCertFiles {
 		caCert, err := ioutil.ReadFile(caCertFile)
 		if err != nil {
-			log.Printf("Reading server certificate: %v", err)
-			return err
+			return fmt.Errorf("reading server certificate: %v", err)
 		}
 		certPool.AppendCertsFromPEM(caCert)
 	}
@@ -261,9 +399,8 @@ func webServer() error {
 		cancel()
 		s.Shutdown(ctx)
 	}()
-	err := s.ListenAndServeTLS(serverCertFile, serverKeyFile)
-	if err != nil {
-		log.Printf("Running server problem: %v", err)
+	if err = s.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
+		return fmt.Errorf("running server: %v", err)
 	}
 	return nil
 }
