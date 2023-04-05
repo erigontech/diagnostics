@@ -175,6 +175,11 @@ type UiNodeSession struct {
 	SessionPin  uint64
 }
 
+type UiNames struct {
+	NewSession    string
+	ResumeSession string
+}
+
 type UiSession struct {
 	lock               sync.Mutex
 	Session            bool
@@ -185,6 +190,7 @@ type UiSession struct {
 	NodeS              *NodeSession // Transient field - only filled for the time of template execution
 	uiNodeTree         *btree.BTreeG[UiNodeSession]
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
+	ButtonNames        *UiNames
 }
 
 type SessionHandler struct {
@@ -223,7 +229,7 @@ func (sh *SessionHandler) newUiSession() (string, *UiSession, error) {
 	}
 	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
-	})}
+	}), ButtonNames: &UiNames{NewSession: newOperatorSessionName, ResumeSession: resumeOperatorSessionName}}
 	sh.uiSessionsLock.Lock()
 	defer sh.uiSessionsLock.Unlock()
 	if sessionId != "" {
@@ -239,10 +245,26 @@ func (sh *SessionHandler) findUiSession(sessionId string) (*UiSession, bool) {
 	return uiSession, ok
 }
 
-var sessionUrlRegex = regexp.MustCompile("^/ui/(|new_session|resume_session|select_session)$")
-
+const newOperatorSessionName = "new_session" // Name for the operator session button - needs to match the field in the form
+const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
+
+func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
+	if sessionName == "" {
+		uiSession.Errors = append(uiSession.Errors, "empty session name")
+		return false
+	}
+	if uiSession.uiNodeTree.Has(UiNodeSession{SessionName: sessionName}) {
+		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
+		return false
+	}
+	if sessionName == uiSession.ButtonNames.NewSession || sessionName == uiSession.ButtonNames.ResumeSession {
+		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session cannot have reserved name [%s], choose another name", sessionName))
+		return false
+	}
+	return true
+}
 
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sessionIdCookieName)
@@ -275,33 +297,22 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Cookie handling: %v", err))
 	}
-	m := sessionUrlRegex.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return
-	}
 	if err := r.ParseForm(); err != nil {
 		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
 	}
 	sessionName := r.FormValue("sessionname")
-	foundSessionName := uiSession.uiNodeTree.Has(UiNodeSession{SessionName: sessionName})
-	switch m[1] {
-	case "new_session":
+	switch {
+	case r.FormValue(uiSession.ButtonNames.NewSession) != "":
 		// Generate new node session PIN that does not exist yet
-		if sessionName == "" {
-			uiSession.Errors = append(uiSession.Errors, "empty session name")
-			break
-		}
-		if foundSessionName {
-			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
+		if !sh.validSessionName(sessionName, uiSession) {
 			break
 		}
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin, uiSession.NodeS = sh.allocateNewNodeSession()
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
-	case "resume_session":
+	case r.FormValue(uiSession.ButtonNames.ResumeSession) != "":
 		// Resume (take over) node session using known PIN
 		pinStr := r.FormValue("pin")
 		sessionPin, err := strconv.ParseUint(pinStr, 10, 64)
@@ -314,19 +325,14 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", sessionPin))
 			break
 		}
-		if sessionName == "" {
-			uiSession.Errors = append(uiSession.Errors, "empty session name")
-			break
-		}
-		if foundSessionName {
-			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
+		if !sh.validSessionName(sessionName, uiSession) {
 			break
 		}
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
-	case "select_session":
+	default:
 		// Make one of the previously known sessions active
 		for k, vs := range r.Form {
 			if len(vs) == 1 {
@@ -343,6 +349,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// Populate transient field UiNodes to display the buttons (with the labels)
 	uiSession.uiNodeTree.Ascend(func(uiNodeSession UiNodeSession) bool {
 		uiSession.UiNodes = append(uiSession.UiNodes, uiNodeSession)
 		return true
