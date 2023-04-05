@@ -123,7 +123,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("PIN: %d\n", pin)
-	_, ok = bh.sh.findNodeSession(pin)
+	nodeSession, ok := bh.sh.findNodeSession(pin)
 	if !ok {
 		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusNotFound)
 		log.Printf("Session with specified PIN %d not found", pin)
@@ -133,6 +133,8 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	defer r.Body.Close()
+	nodeSession.connect(r.RemoteAddr)
+	defer nodeSession.disconnect()
 
 	// Update the request context with the connection context.
 	// If the connection is closed by the server, it will also notify everything that waits on the request context.
@@ -167,7 +169,23 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type NodeSession struct {
+	lock       sync.Mutex
 	sessionPin uint64
+	Connected  bool
+	RemoteAddr string
+}
+
+func (ns *NodeSession) connect(remoteAddr string) {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+	ns.Connected = true
+	ns.RemoteAddr = remoteAddr
+}
+
+func (ns *NodeSession) disconnect() {
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
+	ns.Connected = false
 }
 
 type UiNodeSession struct {
@@ -368,7 +386,6 @@ func webServer() error {
 	if err != nil {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
-	//mux.Handle("/ui/", http.FileServer(http.FS(assets.Content)))
 	sh := &SessionHandler{
 		nodeSessions: map[uint64]*NodeSession{},
 		uiSessions:   map[string]*UiSession{},

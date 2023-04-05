@@ -35,7 +35,12 @@
                     {{end}}
                 </ul>
                 {{if .Session}}
-                    <h1>SESSION: {{.SessionName}} PIN: {{.SessionPin}}</h1>
+                    <h2>SESSION: {{.SessionName}} PIN: {{.SessionPin}}</h2>
+                    {{if .NodeS.Connected}}
+                        <p>Connected, Remote Address: {{.NodeS.RemoteAddr}}</p>
+                    {{else}}
+                        <p>NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
+                    {{end}}
                 {{end}}
             </div>
         </form>
