@@ -122,7 +122,6 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Errir parsing session pin %s: %v", m[1], err)
 		return
 	}
-	fmt.Printf("PIN: %d\n", pin)
 	nodeSession, ok := bh.sh.findNodeSession(pin)
 	if !ok {
 		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusNotFound)
@@ -144,12 +143,20 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	var writeBuf bytes.Buffer
-	for {
-		//fmt.Printf("Sending request\n")
+	for request := range nodeSession.requestCh {
+		request.lock.Lock()
+		url := request.url
+		request.lock.Unlock()
+		fmt.Printf("Sending request %s\n", url)
 		writeBuf.Reset()
-		fmt.Fprintf(&writeBuf, "/db/list\n")
+		fmt.Fprintf(&writeBuf, url)
 		if _, err := w.Write(writeBuf.Bytes()); err != nil {
 			log.Printf("Writing metrics request: %v", err)
+			request.lock.Lock()
+			request.served = true
+			request.response = nil
+			request.err = fmt.Sprintf("writing metrics request: %v", err)
+			request.lock.Unlock()
 			return
 		}
 		flusher.Flush()
@@ -157,15 +164,37 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var sizeBuf [4]byte
 		if _, err := io.ReadFull(r.Body, sizeBuf[:]); err != nil {
 			log.Printf("Reading size of metrics response: %v", err)
+			request.lock.Lock()
+			request.served = true
+			request.response = nil
+			request.err = fmt.Sprintf("reading size of metrics response: %v", err)
+			request.lock.Unlock()
 			return
 		}
 		metricsBuf := make([]byte, binary.BigEndian.Uint32(sizeBuf[:]))
 		if _, err := io.ReadFull(r.Body, metricsBuf); err != nil {
 			log.Printf("Reading metrics response: %v", err)
+			request.lock.Lock()
+			request.served = true
+			request.response = nil
+			request.err = fmt.Sprintf("reading metrics response: %v", err)
+			request.lock.Unlock()
 			return
 		}
-		//fmt.Printf("RESPONSE: \n%s\n", metricsBuf)
+		request.lock.Lock()
+		request.served = true
+		request.response = metricsBuf
+		request.err = ""
+		request.lock.Unlock()
 	}
+}
+
+type NodeRequest struct {
+	lock     sync.Mutex
+	url      string
+	served   bool
+	response []byte
+	err      string
 }
 
 type NodeSession struct {
@@ -173,6 +202,7 @@ type NodeSession struct {
 	sessionPin uint64
 	Connected  bool
 	RemoteAddr string
+	requestCh  chan *NodeRequest // Channel for incoming metrics requests
 }
 
 func (ns *NodeSession) connect(remoteAddr string) {
@@ -193,11 +223,6 @@ type UiNodeSession struct {
 	SessionPin  uint64
 }
 
-type UiNames struct {
-	NewSession    string
-	ResumeSession string
-}
-
 type UiSession struct {
 	lock               sync.Mutex
 	Session            bool
@@ -208,7 +233,9 @@ type UiSession struct {
 	NodeS              *NodeSession // Transient field - only filled for the time of template execution
 	uiNodeTree         *btree.BTreeG[UiNodeSession]
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
-	ButtonNames        *UiNames
+	CmdLineRequest     *NodeRequest    // Outstanding request for cmd line arguments
+	CmdLineArgs        []string
+	CmdLineError       string
 }
 
 type SessionHandler struct {
@@ -226,7 +253,7 @@ func (sh *SessionHandler) allocateNewNodeSession() (uint64, *NodeSession) {
 	for _, ok := sh.nodeSessions[pin]; ok; _, ok = sh.nodeSessions[pin] {
 		pin = uint64(weakrand.Int63n(100_000_000))
 	}
-	nodeSession := &NodeSession{}
+	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
 	sh.nodeSessions[pin] = nodeSession
 	return pin, nodeSession
 }
@@ -247,7 +274,7 @@ func (sh *SessionHandler) newUiSession() (string, *UiSession, error) {
 	}
 	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
-	}), ButtonNames: &UiNames{NewSession: newOperatorSessionName, ResumeSession: resumeOperatorSessionName}}
+	})}
 	sh.uiSessionsLock.Lock()
 	defer sh.uiSessionsLock.Unlock()
 	if sessionId != "" {
@@ -263,7 +290,6 @@ func (sh *SessionHandler) findUiSession(sessionId string) (*UiSession, bool) {
 	return uiSession, ok
 }
 
-const newOperatorSessionName = "new_session" // Name for the operator session button - needs to match the field in the form
 const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
@@ -275,10 +301,6 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	}
 	if uiSession.uiNodeTree.Has(UiNodeSession{SessionName: sessionName}) {
 		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
-		return false
-	}
-	if sessionName == uiSession.ButtonNames.NewSession || sessionName == uiSession.ButtonNames.ResumeSession {
-		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session cannot have reserved name [%s], choose another name", sessionName))
 		return false
 	}
 	return true
@@ -307,6 +329,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	uiSession.lock.Lock()
 	defer func() {
+		uiSession.Session = false
 		uiSession.Errors = nil
 		uiSession.NodeS = nil
 		uiSession.UiNodes = nil
@@ -319,9 +342,48 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
 	}
+	if !uiSession.Session {
+		// Try to lookup current session name
+		currentSessionName := r.FormValue("current_sessionname")
+		if currentSessionName != "" {
+			if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: currentSessionName}); ok {
+				if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
+					uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
+					uiSession.uiNodeTree.Delete(v)
+				} else {
+					uiSession.Session = true
+					uiSession.SessionName = currentSessionName
+					uiSession.SessionPin = v.SessionPin
+				}
+			}
+		}
+	}
+	// Fill out CmdLineArgs or CmdLineError
+	if uiSession.CmdLineRequest != nil {
+		var served bool
+		uiSession.CmdLineRequest.lock.Lock()
+		served = uiSession.CmdLineRequest.served
+		if served {
+			if uiSession.CmdLineRequest.err == "" {
+				args := strings.Split(string(uiSession.CmdLineRequest.response), "\n")
+				if len(args) > 0 && args[0] == "SUCCESS" {
+					args = args[1:]
+				}
+				uiSession.CmdLineArgs = args
+				uiSession.CmdLineError = ""
+			} else {
+				uiSession.CmdLineArgs = nil
+				uiSession.CmdLineError = uiSession.CmdLineRequest.err
+			}
+		}
+		uiSession.CmdLineRequest.lock.Unlock()
+		if served {
+			uiSession.CmdLineRequest = nil
+		}
+	}
 	sessionName := r.FormValue("sessionname")
 	switch {
-	case r.FormValue(uiSession.ButtonNames.NewSession) != "":
+	case r.FormValue("new_session") != "":
 		// Generate new node session PIN that does not exist yet
 		if !sh.validSessionName(sessionName, uiSession) {
 			break
@@ -330,7 +392,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin, uiSession.NodeS = sh.allocateNewNodeSession()
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
-	case r.FormValue(uiSession.ButtonNames.ResumeSession) != "":
+	case r.FormValue("resume_session") != "":
 		// Resume (take over) node session using known PIN
 		pinStr := r.FormValue("pin")
 		sessionPin, err := strconv.ParseUint(pinStr, 10, 64)
@@ -350,6 +412,13 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
+	case r.FormValue("cmdline") != "":
+		// Request command line arguments
+		if uiSession.NodeS != nil && uiSession.CmdLineRequest == nil {
+			nodeRequest := &NodeRequest{url: "/cmdline\n"}
+			uiSession.NodeS.requestCh <- nodeRequest
+			uiSession.CmdLineRequest = nodeRequest
+		}
 	default:
 		// Make one of the previously known sessions active
 		for k, vs := range r.Form {

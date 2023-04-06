@@ -7,25 +7,21 @@
     </head>
     <body>
         <form action="" method="post">
+            <input type="hidden" id="current_sessionname" name="current_sessionname" value="{{.SessionName}}"/>
             <div class="solid">
                 <div>
                     <label for="sessionname">Session Name (1 to 64 characters):</label>
                     <input type="text" id="sessionname" name="sessionname" minlength="1" maxlength="64">
-                    <input id="newsession" type="submit" name="{{.ButtonNames.NewSession}}" value="New operator session"/>
-                </div>
-                <div>
-                    <label for="sessionname">Session Name (1 to 64 characters):</label>
-                    <input type="text" id="sessionname" name="sessionname" minlength="1" maxlength="64">
-                    <label for="pin">Session ID (up to 8 digits)</label>
+                    <input id="newsession" type="submit" name="new_session" value="New operator session"/>
+                    <label for="pin">Session PIN (up to 8 digits)</label>
                     <input id="pin" type="number" name="pin" min="0" max="99999999"/>
-                    <input id="resumesession" type="submit" name="{{.ButtonNames.ResumeSession}}" value="Resume or take over operator session"/>
+                    <input id="resumesession" type="submit" name="resume_session" value="Resume or take over operator session"/>
                 </div>
             </div>
             <div class="solid">
+                <label>Switch to existing session: </label>
                 {{range .UiNodes}}
-                <div>
                     <input id="pin{{.SessionPin}}" type="submit" name="pin{{.SessionPin}}" value="{{.SessionName}}"/>
-                </div>
                 {{end}}
             </div>
             <div>
@@ -41,6 +37,18 @@
                     {{else}}
                         <p>NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
+                    <div class="solid">
+                        <input type="submit" id="cmdline" name="cmdline" value="Fetch Command Line"/>
+                        {{if ne (len .CmdLineArgs) 0}}
+                            <h3>COMMAND LINE ARGS</h3>
+                            <textarea readonly>{{range .CmdLineArgs}}{{.}} {{end}}</textarea>
+                        {{else if ne .CmdLineError ""}}
+                            <h3>COMMAND LINE ERROR</h3>
+                            <pre>{{.CmdLineError}}</pre>
+                        {{else if ne .CmdLineRequest nil}}
+                            <h3>COMMAND LINE REQUEST PENDING...</h3>
+                        {{end}}
+                    </div>
                 {{end}}
             </div>
         </form>
