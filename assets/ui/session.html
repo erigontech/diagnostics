@@ -49,6 +49,22 @@
                             <h3>COMMAND LINE REQUEST PENDING...</h3>
                         {{end}}
                     </div>
+                    <div class="solid">
+                        <input type="submit" id="log_list" name="log_list" value="Fetch Log List"/>
+                        {{if ne (len .LogList) 0}}
+                            <h3>LOG FILES</h3>
+                            <ul>
+                            {{range .LogList}}
+                                <li>{{.}}</li>
+                            {{end}}
+                            </ul>
+                        {{else if ne .LogListError ""}}
+                            <h3>LOG LIST ERROR</h3>
+                            <pre>{{.LogListError}}</pre>
+                        {{else if ne .LogListRequest nil}}
+                            <h3>LOG LIST REQUEST PENDING...</h3>
+                        {{end}}
+                    </div>
                 {{end}}
             </div>
         </form>

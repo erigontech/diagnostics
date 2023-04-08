@@ -236,6 +236,9 @@ type UiSession struct {
 	CmdLineRequest     *NodeRequest    // Outstanding request for cmd line arguments
 	CmdLineArgs        []string
 	CmdLineError       string
+	LogListRequest     *NodeRequest // Outstanding request for log list
+	LogList            []string
+	LogListError       string
 }
 
 type SessionHandler struct {
@@ -381,6 +384,29 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			uiSession.CmdLineRequest = nil
 		}
 	}
+	// Fill out LogList or LogListError
+	if uiSession.LogListRequest != nil {
+		var served bool
+		uiSession.LogListRequest.lock.Lock()
+		served = uiSession.LogListRequest.served
+		if served {
+			if uiSession.LogListRequest.err == "" {
+				args := strings.Split(string(uiSession.LogListRequest.response), "\n")
+				if len(args) > 0 && args[0] == "SUCCESS" {
+					args = args[1:]
+				}
+				uiSession.LogList = args
+				uiSession.LogListError = ""
+			} else {
+				uiSession.LogList = nil
+				uiSession.LogListError = uiSession.LogListRequest.err
+			}
+		}
+		uiSession.LogListRequest.lock.Unlock()
+		if served {
+			uiSession.LogListRequest = nil
+		}
+	}
 	sessionName := r.FormValue("sessionname")
 	switch {
 	case r.FormValue("new_session") != "":
@@ -418,6 +444,13 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nodeRequest := &NodeRequest{url: "/cmdline\n"}
 			uiSession.NodeS.requestCh <- nodeRequest
 			uiSession.CmdLineRequest = nodeRequest
+		}
+	case r.FormValue("log_list") != "":
+		// Request list of logs
+		if uiSession.NodeS != nil && uiSession.LogListRequest == nil {
+			nodeRequest := &NodeRequest{url: "/logs/list\n"}
+			uiSession.NodeS.requestCh <- nodeRequest
+			uiSession.LogListRequest = nodeRequest
 		}
 	default:
 		// Make one of the previously known sessions active
