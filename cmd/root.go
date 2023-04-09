@@ -258,10 +258,7 @@ type UiSession struct {
 	NodeS              *NodeSession // Transient field - only filled for the time of template execution
 	uiNodeTree         *btree.BTreeG[UiNodeSession]
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
-	CmdLineRequest     *NodeRequest    // Outstanding request for cmd line arguments
-	CmdLineArgs        []string
-	CmdLineError       string
-	LogListRequest     *NodeRequest // Outstanding request for log list
+	LogListRequest     *NodeRequest    // Outstanding request for log list
 	LogList            []string
 	LogListError       string
 }
@@ -362,28 +359,29 @@ func (sh *SessionHandler) fetchCmdLineArgs(w http.ResponseWriter, r *http.Reques
 			uiSession.SessionPin = v.SessionPin
 		}
 	}
-	// Request command line arguments
-	if uiSession.NodeS != nil && uiSession.CmdLineRequest == nil {
-		nodeRequest := &NodeRequest{url: "/cmdline\n"}
-		uiSession.NodeS.requestCh <- nodeRequest
-		uiSession.CmdLineRequest = nodeRequest
+	if uiSession.NodeS == nil {
+		fmt.Fprintf(w, "ERROR: Node is not allocated\n")
+		return
 	}
-	for uiSession.CmdLineRequest != nil {
-		uiSession.CmdLineRequest.lock.Lock()
-		clear := uiSession.CmdLineRequest.served
-		if uiSession.CmdLineRequest.served {
-			if uiSession.CmdLineRequest.err == "" {
-				w.Write(uiSession.CmdLineRequest.response)
+	// Request command line arguments
+	nodeRequest := &NodeRequest{url: "/cmdline\n"}
+	uiSession.NodeS.requestCh <- nodeRequest
+	for nodeRequest != nil {
+		nodeRequest.lock.Lock()
+		clear := nodeRequest.served
+		if nodeRequest.served {
+			if nodeRequest.err == "" {
+				w.Write(nodeRequest.response)
 			} else {
-				fmt.Fprintf(w, "ERROR: %s\n", uiSession.CmdLineRequest.err)
-				if uiSession.CmdLineRequest.retries < 16 {
+				fmt.Fprintf(w, "ERROR: %s\n", nodeRequest.err)
+				if nodeRequest.retries < 16 {
 					clear = false
 				}
 			}
 		}
-		uiSession.CmdLineRequest.lock.Unlock()
+		nodeRequest.lock.Unlock()
 		if clear {
-			uiSession.CmdLineRequest = nil
+			nodeRequest = nil
 		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -452,31 +450,6 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// Fill out CmdLineArgs or CmdLineError
-	if uiSession.CmdLineRequest != nil {
-		uiSession.CmdLineRequest.lock.Lock()
-		clear := uiSession.CmdLineRequest.served
-		if uiSession.CmdLineRequest.served {
-			if uiSession.CmdLineRequest.err == "" {
-				args := strings.Split(string(uiSession.CmdLineRequest.response), "\n")
-				if len(args) > 0 && args[0] == "SUCCESS" {
-					args = args[1:]
-				}
-				uiSession.CmdLineArgs = args
-				uiSession.CmdLineError = ""
-			} else {
-				uiSession.CmdLineArgs = nil
-				uiSession.CmdLineError = uiSession.CmdLineRequest.err
-				if uiSession.CmdLineRequest.retries < 16 {
-					clear = false
-				}
-			}
-		}
-		uiSession.CmdLineRequest.lock.Unlock()
-		if clear {
-			uiSession.CmdLineRequest = nil
-		}
-	}
 	// Fill out LogList or LogListError
 	if uiSession.LogListRequest != nil {
 		uiSession.LogListRequest.lock.Lock()
@@ -533,13 +506,6 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
-	case r.FormValue("cmdline") != "":
-		// Request command line arguments
-		if uiSession.NodeS != nil && uiSession.CmdLineRequest == nil {
-			nodeRequest := &NodeRequest{url: "/cmdline\n"}
-			uiSession.NodeS.requestCh <- nodeRequest
-			uiSession.CmdLineRequest = nodeRequest
-		}
 	case r.FormValue("log_list") != "":
 		// Request list of logs
 		if uiSession.NodeS != nil && uiSession.LogListRequest == nil {
