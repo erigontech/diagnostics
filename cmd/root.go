@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -156,6 +157,13 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.served = true
 			request.response = nil
 			request.err = fmt.Sprintf("writing metrics request: %v", err)
+			request.retries++
+			if request.retries < 16 {
+				select {
+				case nodeSession.requestCh <- request:
+				default:
+				}
+			}
 			request.lock.Unlock()
 			return
 		}
@@ -168,6 +176,13 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.served = true
 			request.response = nil
 			request.err = fmt.Sprintf("reading size of metrics response: %v", err)
+			request.retries++
+			if request.retries < 16 {
+				select {
+				case nodeSession.requestCh <- request:
+				default:
+				}
+			}
 			request.lock.Unlock()
 			return
 		}
@@ -178,6 +193,13 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.served = true
 			request.response = nil
 			request.err = fmt.Sprintf("reading metrics response: %v", err)
+			request.retries++
+			if request.retries < 16 {
+				select {
+				case nodeSession.requestCh <- request:
+				default:
+				}
+			}
 			request.lock.Unlock()
 			return
 		}
@@ -195,7 +217,10 @@ type NodeRequest struct {
 	served   bool
 	response []byte
 	err      string
+	retries  int
 }
+
+const MaxRequestRetries = 16 // How many time to retry a request to the support
 
 type NodeSession struct {
 	lock       sync.Mutex
@@ -297,6 +322,8 @@ const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
+var uiRegex = regexp.MustCompile("^/ui/(cmdline|)$")
+
 func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
@@ -309,7 +336,66 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	return true
 }
 
+func (sh *SessionHandler) fetchCmdLineArgs(w http.ResponseWriter, r *http.Request, uiSession *UiSession) {
+	rbuf := bufio.NewReaderSize(r.Body, 128 /* Maximum length of the sessionName */)
+	line, isPrefix, err := rbuf.ReadLine()
+	if err != nil {
+		fmt.Fprintf(w, "ERROR: Reading sessionName: %v\n", err)
+		return
+	}
+	if isPrefix {
+		fmt.Fprintf(w, "ERROR: Session name is too long\n")
+		return
+	}
+	sessionName := string(line)
+	if sessionName == "" {
+		fmt.Fprintf(w, "ERROR: Empty session name\n")
+		return
+	}
+	if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: sessionName}); ok {
+		if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
+			uiSession.uiNodeTree.Delete(v)
+		} else {
+			uiSession.Session = true
+			uiSession.SessionName = sessionName
+			uiSession.SessionPin = v.SessionPin
+		}
+	}
+	// Request command line arguments
+	if uiSession.NodeS != nil && uiSession.CmdLineRequest == nil {
+		nodeRequest := &NodeRequest{url: "/cmdline\n"}
+		uiSession.NodeS.requestCh <- nodeRequest
+		uiSession.CmdLineRequest = nodeRequest
+	}
+	for uiSession.CmdLineRequest != nil {
+		uiSession.CmdLineRequest.lock.Lock()
+		clear := uiSession.CmdLineRequest.served
+		if uiSession.CmdLineRequest.served {
+			if uiSession.CmdLineRequest.err == "" {
+				w.Write(uiSession.CmdLineRequest.response)
+			} else {
+				fmt.Fprintf(w, "ERROR: %s\n", uiSession.CmdLineRequest.err)
+				if uiSession.CmdLineRequest.retries < 16 {
+					clear = false
+				}
+			}
+		}
+		uiSession.CmdLineRequest.lock.Unlock()
+		if clear {
+			uiSession.CmdLineRequest = nil
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m := uiRegex.FindStringSubmatch(r.URL.Path)
+	if m == nil {
+		http.NotFound(w, r)
+		return
+	}
 	cookie, err := r.Cookie(sessionIdCookieName)
 	var sessionId string
 	var uiSession *UiSession
@@ -341,6 +427,11 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Cookie handling: %v", err))
 	}
+	switch m[1] {
+	case "cmdline":
+		sh.fetchCmdLineArgs(w, r, uiSession)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
@@ -363,10 +454,9 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Fill out CmdLineArgs or CmdLineError
 	if uiSession.CmdLineRequest != nil {
-		var served bool
 		uiSession.CmdLineRequest.lock.Lock()
-		served = uiSession.CmdLineRequest.served
-		if served {
+		clear := uiSession.CmdLineRequest.served
+		if uiSession.CmdLineRequest.served {
 			if uiSession.CmdLineRequest.err == "" {
 				args := strings.Split(string(uiSession.CmdLineRequest.response), "\n")
 				if len(args) > 0 && args[0] == "SUCCESS" {
@@ -377,33 +467,38 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				uiSession.CmdLineArgs = nil
 				uiSession.CmdLineError = uiSession.CmdLineRequest.err
+				if uiSession.CmdLineRequest.retries < 16 {
+					clear = false
+				}
 			}
 		}
 		uiSession.CmdLineRequest.lock.Unlock()
-		if served {
+		if clear {
 			uiSession.CmdLineRequest = nil
 		}
 	}
 	// Fill out LogList or LogListError
 	if uiSession.LogListRequest != nil {
-		var served bool
 		uiSession.LogListRequest.lock.Lock()
-		served = uiSession.LogListRequest.served
-		if served {
+		clear := uiSession.LogListRequest.served
+		if uiSession.LogListRequest.served {
 			if uiSession.LogListRequest.err == "" {
-				args := strings.Split(string(uiSession.LogListRequest.response), "\n")
-				if len(args) > 0 && args[0] == "SUCCESS" {
-					args = args[1:]
+				list := strings.Split(string(uiSession.LogListRequest.response), "\n")
+				if len(list) > 0 && list[0] == "SUCCESS" {
+					list = list[1:]
 				}
-				uiSession.LogList = args
+				uiSession.LogList = list
 				uiSession.LogListError = ""
 			} else {
 				uiSession.LogList = nil
 				uiSession.LogListError = uiSession.LogListRequest.err
+				if uiSession.LogListRequest.retries < 16 {
+					clear = false
+				}
 			}
 		}
 		uiSession.LogListRequest.lock.Unlock()
-		if served {
+		if clear {
 			uiSession.LogListRequest = nil
 		}
 	}
@@ -484,7 +579,7 @@ func webServer() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	mux := http.NewServeMux()
-	sessionTemplate, err := template.ParseFS(assets.Content, "ui/session.html")
+	sessionTemplate, err := template.ParseFS(assets.Templates, "template/session.html")
 	if err != nil {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
@@ -493,6 +588,7 @@ func webServer() error {
 		uiSessions:   map[string]*UiSession{},
 		uiTemplate:   sessionTemplate,
 	}
+	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))
 	mux.Handle("/ui/", sh)
 	bh := &BridgeHandler{sh: sh}
 	mux.Handle("/support/", bh)

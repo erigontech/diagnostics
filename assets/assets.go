@@ -2,5 +2,8 @@ package assets
 
 import "embed"
 
-//go:embed ui
-var Content embed.FS
+//go:embed template
+var Templates embed.FS
+
+//go:embed script
+var Scripts embed.FS

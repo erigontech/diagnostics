@@ -4,6 +4,7 @@
         <style>
             div.solid {border-style: solid;}
         </style>
+        <script src="/script/session.js"></script>
     </head>
     <body>
         <form action="" method="post">
@@ -38,16 +39,10 @@
                         <p>NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
                     <div class="solid">
-                        <input type="submit" id="cmdline" name="cmdline" value="Fetch Command Line"/>
-                        {{if ne (len .CmdLineArgs) 0}}
-                            <h3>COMMAND LINE ARGS</h3>
-                            <textarea readonly>{{range .CmdLineArgs}}{{.}} {{end}}</textarea>
-                        {{else if ne .CmdLineError ""}}
-                            <h3>COMMAND LINE ERROR</h3>
-                            <pre>{{.CmdLineError}}</pre>
-                        {{else if ne .CmdLineRequest nil}}
-                            <h3>COMMAND LINE REQUEST PENDING...</h3>
-                        {{end}}
+                        <div>
+                            <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
+                            <textarea readonly id="cmdlineargs"></textarea>
+                        </div>
                     </div>
                     <div class="solid">
                         <input type="submit" id="log_list" name="log_list" value="Fetch Log List"/>
