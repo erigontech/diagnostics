@@ -1,9 +1,15 @@
 {{if .Success}}
-    <ol>
+    <div>
         {{range .List}}
-            <li>{{.Filename}} {{.Size}}</li>
+            <div class="solid">
+                <p><b>Name:</b> {{.Filename}}, <b>Size:</b> {{.Size}}</p>
+                <div id="log_part"></div>
+                <button type="button" onclick="">Head</button>
+                <button type="button" onclick="">Tail</button>
+                <button type="button" onclick="">Download</button>
+            </div>
         {{end}}
-    </ol>
+    </div>
 {{else}}
-    <p>{{.Error}}</p>
+    <p class="solid">{{.Error}}</p>
 {{end}}

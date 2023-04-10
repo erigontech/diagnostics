@@ -3,7 +3,7 @@
         <meta charset="utf-8"/>
         <style>
             div.solid {border-style: solid;}
-            p {
+            p.solid {
                 margin: 10px 0;
                 padding: 5px;
                 border: 1px solid #999;
@@ -39,9 +39,9 @@
                 {{if .Session}}
                     <h2>SESSION: {{.SessionName}} PIN: {{.SessionPin}}</h2>
                     {{if .NodeS.Connected}}
-                        <p>Connected, Remote Address: {{.NodeS.RemoteAddr}}</p>
+                        <p class="solid">Connected, Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{else}}
-                        <p>NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
+                        <p class="solid">NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
                     <div>
                         <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
