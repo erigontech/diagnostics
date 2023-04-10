@@ -271,9 +271,10 @@ type LogListItem struct {
 }
 
 type LogList struct {
-	Success bool
-	List    []LogListItem
-	Error   string
+	Success     bool
+	SessionName string
+	List        []LogListItem
+	Error       string
 }
 
 type SessionHandler struct {
@@ -422,8 +423,8 @@ func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool
 	}
 }
 
-func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, result string) {
-	var list LogList
+func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, sessionName string, result string) {
+	var list = LogList{SessionName: sessionName}
 	if success {
 		lines := strings.Split(result, "\n")
 		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
@@ -503,7 +504,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "log_list":
 		success, result := sh.fetch(r, "/logs/list\n", uiSession)
-		sh.processLogList(w, success, result)
+		sh.processLogList(w, success, uiSession.SessionName, result)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
