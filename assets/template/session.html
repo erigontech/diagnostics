@@ -43,17 +43,13 @@
                     {{else}}
                         <p>NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
-                    <div class="solid">
-                        <div>
-                            <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
-                            <p id="cmdlineargs"></p>
-                        </div>
+                    <div>
+                        <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
+                        <p id="cmdlineargs"></p>
                     </div>
-                    <div class="solid">
-                        <div>
-                            <button type="button" onclick="fetchLogList('{{.SessionName}}')">Fetch Log List</button>
-                            <p id="loglist"></p>
-                        </div>
+                    <div>
+                        <button type="button" onclick="fetchLogList('{{.SessionName}}')">Fetch Log List</button>
+                        <p id="loglist"></p>
                     </div>
                 {{end}}
             </div>

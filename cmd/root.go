@@ -258,9 +258,6 @@ type UiSession struct {
 	NodeS              *NodeSession // Transient field - only filled for the time of template execution
 	uiNodeTree         *btree.BTreeG[UiNodeSession]
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
-	LogListRequest     *NodeRequest    // Outstanding request for log list
-	LogList            []string
-	LogListError       string
 }
 
 type SessionHandler struct {
@@ -453,31 +450,6 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// Fill out LogList or LogListError
-	if uiSession.LogListRequest != nil {
-		uiSession.LogListRequest.lock.Lock()
-		clear := uiSession.LogListRequest.served
-		if uiSession.LogListRequest.served {
-			if uiSession.LogListRequest.err == "" {
-				list := strings.Split(string(uiSession.LogListRequest.response), "\n")
-				if len(list) > 0 && list[0] == "SUCCESS" {
-					list = list[1:]
-				}
-				uiSession.LogList = list
-				uiSession.LogListError = ""
-			} else {
-				uiSession.LogList = nil
-				uiSession.LogListError = uiSession.LogListRequest.err
-				if uiSession.LogListRequest.retries < 16 {
-					clear = false
-				}
-			}
-		}
-		uiSession.LogListRequest.lock.Unlock()
-		if clear {
-			uiSession.LogListRequest = nil
-		}
-	}
 	sessionName := r.FormValue("sessionname")
 	switch {
 	case r.FormValue("new_session") != "":
@@ -509,13 +481,6 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
-	case r.FormValue("log_list") != "":
-		// Request list of logs
-		if uiSession.NodeS != nil && uiSession.LogListRequest == nil {
-			nodeRequest := &NodeRequest{url: "/logs/list\n"}
-			uiSession.NodeS.requestCh <- nodeRequest
-			uiSession.LogListRequest = nodeRequest
-		}
 	default:
 		// Make one of the previously known sessions active
 		for k, vs := range r.Form {
