@@ -14,7 +14,7 @@ async function fetchCmdLineArgs(sessionName) {
             return
         }
         const result = await response.text();
-        p.innerHTML = "<code>" + result + "</code>"
+        p.innerHTML = result
     } catch (error) {
         p.innerHTML = "ERROR: " + error.message
     }
@@ -36,7 +36,7 @@ async function fetchLogList(sessionName) {
             return
         }
         const result = await response.text();
-        p.innerHTML = "<code>" + result + "</code>"
+        p.innerHTML = result
     } catch (error) {
         p.innerHTML = "ERROR: " + error.message
     }

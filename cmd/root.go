@@ -260,6 +260,18 @@ type UiSession struct {
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
 }
 
+type CmdLineArgs struct {
+	Success bool
+	Args    string
+	Error   string
+}
+
+type LogList struct {
+	Success bool
+	List    string
+	Error   string
+}
+
 type SessionHandler struct {
 	nodeSessionsLock sync.Mutex
 	nodeSessions     map[uint64]*NodeSession
@@ -330,21 +342,18 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	return true
 }
 
-func (sh *SessionHandler) fetch(w http.ResponseWriter, r *http.Request, url string, uiSession *UiSession) {
+func (sh *SessionHandler) fetch(r *http.Request, url string, uiSession *UiSession) (bool, string) {
 	rbuf := bufio.NewReaderSize(r.Body, 128 /* Maximum length of the sessionName */)
 	line, isPrefix, err := rbuf.ReadLine()
 	if err != nil {
-		fmt.Fprintf(w, "ERROR: Reading sessionName: %v\n", err)
-		return
+		return false, fmt.Sprintf("ERROR: Reading sessionName: %v\n", err)
 	}
 	if isPrefix {
-		fmt.Fprintf(w, "ERROR: Session name is too long\n")
-		return
+		return false, fmt.Sprintf("ERROR: Session name is too long\n")
 	}
 	sessionName := string(line)
 	if sessionName == "" {
-		fmt.Fprintf(w, "ERROR: Empty session name\n")
-		return
+		return false, fmt.Sprintf("ERROR: Empty session name\n")
 	}
 	if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: sessionName}); ok {
 		if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
@@ -357,20 +366,23 @@ func (sh *SessionHandler) fetch(w http.ResponseWriter, r *http.Request, url stri
 		}
 	}
 	if uiSession.NodeS == nil {
-		fmt.Fprintf(w, "ERROR: Node is not allocated\n")
-		return
+		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
 	}
 	// Request command line arguments
 	nodeRequest := &NodeRequest{url: url}
 	uiSession.NodeS.requestCh <- nodeRequest
+	var sb strings.Builder
+	var success bool
 	for nodeRequest != nil {
 		nodeRequest.lock.Lock()
 		clear := nodeRequest.served
 		if nodeRequest.served {
 			if nodeRequest.err == "" {
-				w.Write(nodeRequest.response)
+				sb.Write(nodeRequest.response)
+				success = true
 			} else {
-				fmt.Fprintf(w, "ERROR: %s\n", nodeRequest.err)
+				success = false
+				fmt.Fprintf(&sb, "ERROR: %s\n", nodeRequest.err)
 				if nodeRequest.retries < 16 {
 					clear = false
 				}
@@ -382,6 +394,45 @@ func (sh *SessionHandler) fetch(w http.ResponseWriter, r *http.Request, url stri
 		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
+	}
+	return success, sb.String()
+}
+
+const successLine = "SUCCESS\n"
+
+func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool, result string) {
+	var args CmdLineArgs
+	if success {
+		if strings.HasPrefix(result, successLine) {
+			args.Args = strings.ReplaceAll(result[len(successLine):], "\n", " ")
+		} else {
+			args.Args = result
+		}
+		args.Success = true
+	} else {
+		args.Success = false
+		args.Error = result
+	}
+	if err := sh.uiTemplate.ExecuteTemplate(w, "cmd_line.html", args); err != nil {
+		fmt.Fprintf(w, "Executing cmd_line template: %v", err)
+	}
+}
+
+func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, result string) {
+	var list LogList
+	if success {
+		if strings.HasPrefix(result, successLine) {
+			list.List = strings.ReplaceAll(result[len(successLine):], "\n", " ")
+		} else {
+			list.List = result
+		}
+		list.Success = true
+	} else {
+		list.Success = false
+		list.Error = result
+	}
+	if err := sh.uiTemplate.ExecuteTemplate(w, "log_list.html", list); err != nil {
+		fmt.Fprintf(w, "Executing log_list template: %v", err)
 	}
 }
 
@@ -424,10 +475,12 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch m[1] {
 	case "cmd_line":
-		sh.fetch(w, r, "/cmdline\n", uiSession)
+		success, result := sh.fetch(r, "/cmdline\n", uiSession)
+		sh.processCmdLineArgs(w, success, result)
 		return
 	case "log_list":
-		sh.fetch(w, r, "/logs/list\n", uiSession)
+		success, result := sh.fetch(r, "/logs/list\n", uiSession)
+		sh.processLogList(w, success, result)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -503,7 +556,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.UiNodes = append(uiSession.UiNodes, uiNodeSession)
 		return true
 	})
-	if err := sh.uiTemplate.Execute(w, uiSession); err != nil {
+	if err := sh.uiTemplate.ExecuteTemplate(w, "session.html", uiSession); err != nil {
 		fmt.Fprintf(w, "Executing template: %v", err)
 		return
 	}
@@ -513,14 +566,14 @@ func webServer() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	mux := http.NewServeMux()
-	sessionTemplate, err := template.ParseFS(assets.Templates, "template/session.html")
+	uiTemplate, err := template.ParseFS(assets.Templates, "template/*.html")
 	if err != nil {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
 	sh := &SessionHandler{
 		nodeSessions: map[uint64]*NodeSession{},
 		uiSessions:   map[string]*UiSession{},
-		uiTemplate:   sessionTemplate,
+		uiTemplate:   uiTemplate,
 	}
 	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))
 	mux.Handle("/ui/", sh)
