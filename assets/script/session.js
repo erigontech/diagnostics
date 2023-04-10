@@ -41,3 +41,9 @@ async function fetchLogList(sessionName) {
         p.innerHTML = "ERROR: " + error.message
     }
 }
+
+async function fetchLogHead(sessionName, filename, size) {
+    console.log("Session = " + sessionName)
+    console.log("Filename = " + filename)
+    console.log("Size = " + size)
+}

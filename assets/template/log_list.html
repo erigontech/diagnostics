@@ -1,17 +1,16 @@
 {{if .Success}}
-    {{with $sessionName := "{{.SessionName}}"}}
-        <div>
-            {{range .List}}
-                <div class="solid">
-                    <p><b>Name:</b> {{.Filename}}, <b>Size:</b> {{.Size}}</p>
-                    <div id="log_part"></div>
-                    <button type="button" onclick="fetchLogHead('{{$sessionName}}', '{{.Filename}}', {{.Size}})">Head</button>
-                    <button type="button" onclick="">Tail</button>
-                    <button type="button" onclick="">Download</button>
-                </div>
-            {{end}}
-        </div>
-    {{end}}
+    <div>
+        {{$sessionName := .SessionName}}
+        {{range .List}}
+            <div class="solid">
+                <p><b>Name:</b> {{.Filename}}, <b>Size:</b> {{.Size}}</p>
+                <div id="log_part"></div>
+                <button type="button" onclick="fetchLogHead('{{$sessionName}}', '{{.Filename}}', {{.Size}})">Head</button>
+                <button type="button" onclick="">Tail</button>
+                <button type="button" onclick="">Download</button>
+            </div>
+        {{end}}
+    </div>
 {{else}}
     <p class="solid">{{.Error}}</p>
 {{end}}
