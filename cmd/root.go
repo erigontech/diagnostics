@@ -265,10 +265,14 @@ type CmdLineArgs struct {
 	Args    string
 	Error   string
 }
+type LogListItem struct {
+	Filename string
+	Size     int64
+}
 
 type LogList struct {
 	Success bool
-	List    string
+	List    []LogListItem
 	Error   string
 }
 
@@ -398,7 +402,7 @@ func (sh *SessionHandler) fetch(r *http.Request, url string, uiSession *UiSessio
 	return success, sb.String()
 }
 
-const successLine = "SUCCESS\n"
+const successLine = "SUCCESS"
 
 func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool, result string) {
 	var args CmdLineArgs
@@ -421,18 +425,37 @@ func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool
 func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, result string) {
 	var list LogList
 	if success {
-		if strings.HasPrefix(result, successLine) {
-			list.List = strings.ReplaceAll(result[len(successLine):], "\n", " ")
+		lines := strings.Split(result, "\n")
+		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
+			list.Success = true
+			for _, line := range lines[1:] {
+				if len(line) == 0 {
+					// skip empty line (usually at the end)
+					continue
+				}
+				terms := strings.Split(line, " | ")
+				if len(terms) != 2 {
+					list.Error = fmt.Sprintf("incorrect response line (need to have 2 terms divided by |): %v", line)
+					list.Success = false
+					break
+				}
+				size, err := strconv.ParseUint(terms[1], 10, 64)
+				if err != nil {
+					list.Error = fmt.Sprintf("incorrect size: %v", terms[1])
+					list.Success = false
+					break
+				}
+				list.List = append(list.List, LogListItem{Filename: terms[0], Size: int64(size)})
+			}
 		} else {
-			list.List = result
+			list.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
 		}
-		list.Success = true
 	} else {
-		list.Success = false
 		list.Error = result
 	}
 	if err := sh.uiTemplate.ExecuteTemplate(w, "log_list.html", list); err != nil {
 		fmt.Fprintf(w, "Executing log_list template: %v", err)
+		return
 	}
 }
 

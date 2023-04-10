@@ -1,7 +1,9 @@
-<p>
-    {{if .Success}}
-        <code>{{.List}}</code>
-    {{else}}
-        {{.Error}}
-    {{end}}
-</p>
+{{if .Success}}
+    <ol>
+        {{range .List}}
+            <li>{{.Filename}} {{.Size}}</li>
+        {{end}}
+    </ol>
+{{else}}
+    <p>{{.Error}}</p>
+{{end}}
