@@ -3,6 +3,11 @@
         <meta charset="utf-8"/>
         <style>
             div.solid {border-style: solid;}
+            p {
+                margin: 10px 0;
+                padding: 5px;
+                border: 1px solid #999;
+            }
         </style>
         <script src="/script/session.js"></script>
     </head>
@@ -41,24 +46,14 @@
                     <div class="solid">
                         <div>
                             <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
-                            <textarea readonly id="cmdlineargs"></textarea>
+                            <p id="cmdlineargs"></p>
                         </div>
                     </div>
                     <div class="solid">
-                        <input type="submit" id="log_list" name="log_list" value="Fetch Log List"/>
-                        {{if ne (len .LogList) 0}}
-                            <h3>LOG FILES</h3>
-                            <ul>
-                            {{range .LogList}}
-                                <li>{{.}}</li>
-                            {{end}}
-                            </ul>
-                        {{else if ne .LogListError ""}}
-                            <h3>LOG LIST ERROR</h3>
-                            <pre>{{.LogListError}}</pre>
-                        {{else if ne .LogListRequest nil}}
-                            <h3>LOG LIST REQUEST PENDING...</h3>
-                        {{end}}
+                        <div>
+                            <button type="button" onclick="fetchLogList('{{.SessionName}}')">Fetch Log List</button>
+                            <p id="loglist"></p>
+                        </div>
                     </div>
                 {{end}}
             </div>

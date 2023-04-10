@@ -1,7 +1,7 @@
 async function fetchCmdLineArgs(sessionName) {
-    var area = document.getElementById('cmdlineargs');
-    area.value = "Fetching command line args...";
-    const request = new Request("/ui/cmdline", {
+    var p = document.getElementById('cmdlineargs');
+    p.innerHTML = "Fetching command line args...";
+    const request = new Request("/ui/cmd_line", {
         method: "POST",
         mode: "cors",
         cache: "default",
@@ -10,12 +10,34 @@ async function fetchCmdLineArgs(sessionName) {
     try {
         const response = await fetch(request);
         if (!response.ok) {
-            area.value = "ERROR: Network response was not OK";
+            p.innerHTML = "ERROR: Network response was not OK";
             return
         }
         const result = await response.text();
-        area.value = result
+        p.innerHTML = "<code>" + result + "</code>"
     } catch (error) {
-        area.value = "ERROR: " + error.message
+        p.innerHTML = "ERROR: " + error.message
+    }
+}
+
+async function fetchLogList(sessionName) {
+    var p = document.getElementById('loglist');
+    p.innerHTML = "Fetching log list...";
+    const request = new Request("/ui/log_list", {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: sessionName + "\n",
+    });
+    try {
+        const response = await fetch(request);
+        if (!response.ok) {
+            p.innerHTML = "ERROR: Network response was not OK";
+            return
+        }
+        const result = await response.text();
+        p.innerHTML = "<code>" + result + "</code>"
+    } catch (error) {
+        p.innerHTML = "ERROR: " + error.message
     }
 }

@@ -319,7 +319,7 @@ const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmdline|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|)$")
 
 func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
@@ -333,7 +333,7 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	return true
 }
 
-func (sh *SessionHandler) fetchCmdLineArgs(w http.ResponseWriter, r *http.Request, uiSession *UiSession) {
+func (sh *SessionHandler) fetch(w http.ResponseWriter, r *http.Request, url string, uiSession *UiSession) {
 	rbuf := bufio.NewReaderSize(r.Body, 128 /* Maximum length of the sessionName */)
 	line, isPrefix, err := rbuf.ReadLine()
 	if err != nil {
@@ -364,7 +364,7 @@ func (sh *SessionHandler) fetchCmdLineArgs(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	// Request command line arguments
-	nodeRequest := &NodeRequest{url: "/cmdline\n"}
+	nodeRequest := &NodeRequest{url: url}
 	uiSession.NodeS.requestCh <- nodeRequest
 	for nodeRequest != nil {
 		nodeRequest.lock.Lock()
@@ -426,8 +426,11 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Cookie handling: %v", err))
 	}
 	switch m[1] {
-	case "cmdline":
-		sh.fetchCmdLineArgs(w, r, uiSession)
+	case "cmd_line":
+		sh.fetch(w, r, "/cmdline\n", uiSession)
+		return
+	case "log_list":
+		sh.fetch(w, r, "/logs/list\n", uiSession)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
