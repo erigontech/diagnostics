@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	weakrand "math/rand"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -271,8 +272,9 @@ type CmdLineArgs struct {
 	Error   string
 }
 type LogListItem struct {
-	Filename string
-	Size     int64
+	Filename    string
+	Size        int64
+	PrintedSize string
 }
 
 type LogList struct {
@@ -344,7 +346,7 @@ const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|)$")
 
 func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
@@ -358,7 +360,7 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	return true
 }
 
-func (sh *SessionHandler) fetch(r *http.Request, url string, requestChannel chan *NodeRequest) (bool, string) {
+func (sh *SessionHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
 	if requestChannel == nil {
 		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
 	}
@@ -413,6 +415,30 @@ func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool
 	}
 }
 
+func MBToGB(b uint64) (float64, int) {
+	const unit = 1024
+	if b < unit {
+		return float64(b), 0
+	}
+
+	div, exp := uint64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return float64(b) / float64(div), exp
+}
+
+func ByteCount(b uint64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%dB", b)
+	}
+	bGb, exp := MBToGB(b)
+	return fmt.Sprintf("%.1f%cB", bGb, "KMGTPE"[exp])
+}
+
 func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, sessionName string, result string) {
 	var list = LogList{SessionName: sessionName}
 	if success {
@@ -436,7 +462,7 @@ func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, se
 					list.Success = false
 					break
 				}
-				list.List = append(list.List, LogListItem{Filename: terms[0], Size: int64(size)})
+				list.List = append(list.List, LogListItem{Filename: terms[0], Size: int64(size), PrintedSize: ByteCount(size)})
 			}
 		} else {
 			list.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
@@ -493,6 +519,112 @@ func (sh *SessionHandler) lookupSession(r *http.Request, uiSession *UiSession) c
 	return nil
 }
 
+var logReadFirstLine = regexp.MustCompile("^SUCCESS: ([0-9]+)-([0-9]+)/([0-9]+)$")
+
+func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64, []byte, string) {
+	nodeRequest.lock.Lock()
+	defer nodeRequest.lock.Unlock()
+	if !nodeRequest.served {
+		return false, 0, 0, nil, ""
+	}
+	clear := nodeRequest.retries >= 16
+	if nodeRequest.err != "" {
+		return clear, 0, 0, nil, nodeRequest.err
+	}
+	firstLineEnd := bytes.IndexByte(nodeRequest.response, '\n')
+	if firstLineEnd == -1 {
+		return clear, 0, 0, nil, fmt.Sprintf("could not find first line in log part response")
+	}
+	m := logReadFirstLine.FindSubmatch(nodeRequest.response[:firstLineEnd])
+	if m == nil {
+		return clear, 0, 0, nil, fmt.Sprintf("first line needs to have format SUCCESS: from-to/total, was [%sn", nodeRequest.response[:firstLineEnd])
+	}
+	from, err := strconv.ParseUint(string(m[1]), 10, 64)
+	if err != nil {
+		return clear, 0, 0, nil, fmt.Sprintf("parsing from: %v", err)
+	}
+	if from != offset {
+		return clear, 0, 0, nil, fmt.Sprintf("Unexpected from %d, wanted %d", from, offset)
+	}
+	to, err := strconv.ParseUint(string(m[2]), 10, 64)
+	if err != nil {
+		return clear, 0, 0, nil, fmt.Sprintf("parsing to: %v", err)
+	}
+	total, err := strconv.ParseUint(string(m[3]), 10, 64)
+	if err != nil {
+		return clear, 0, 0, nil, fmt.Sprintf("parsing total: %v", err)
+	}
+	return true, to, total, nodeRequest.response[firstLineEnd+1:], ""
+}
+
+type LogReader struct {
+	filename       string
+	requestChannel chan *NodeRequest
+	total          uint64
+	offset         uint64
+	ctx            context.Context
+}
+
+func (lr *LogReader) Read(p []byte) (n int, err error) {
+	nodeRequest := &NodeRequest{url: fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(lr.filename), lr.offset)}
+	lr.requestChannel <- nodeRequest
+	var total uint64
+	var clear bool
+	var part []byte
+	var errStr string
+	for nodeRequest != nil {
+		select {
+		case <-lr.ctx.Done():
+			return 0, fmt.Errorf("interrupted")
+		default:
+		}
+		clear, _, total, part, errStr = parseLogPart(nodeRequest, lr.offset)
+		if clear {
+			nodeRequest = nil
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	if errStr != "" {
+		return 0, fmt.Errorf(errStr)
+	}
+	lr.total = total
+	copied := copy(p, part)
+	lr.offset += uint64(copied)
+	if lr.offset == total {
+		return copied, io.EOF
+	}
+	return copied, nil
+}
+
+func (lr *LogReader) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+		lr.offset = uint64(offset)
+	case io.SeekCurrent:
+		lr.offset = uint64(int64(lr.offset) + offset)
+	case io.SeekEnd:
+		if lr.total > 0 {
+			lr.offset = uint64(int64(lr.total) + offset)
+		} else {
+			lr.offset = 0
+		}
+	}
+	return int64(lr.offset), nil
+}
+
+func transmitLogFile(ctx context.Context, r *http.Request, w http.ResponseWriter, sessionName string, filename string, size uint64, requestChannel chan *NodeRequest) {
+	if requestChannel == nil {
+		fmt.Fprintf(w, "ERROR: Node is not allocated\n")
+		return
+	}
+	cd := mime.FormatMediaType("attachment", map[string]string{"filename": sessionName + "_" + filename})
+	w.Header().Set("Content-Disposition", cd)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	logReader := &LogReader{filename: filename, requestChannel: requestChannel, offset: 0, total: size, ctx: ctx}
+	http.ServeContent(w, r, filename, time.Now(), logReader)
+}
+
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -528,19 +660,20 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestChannel := sh.lookupSession(r, uiSession)
-	filename := r.Form.Get("filename")
+	filename := r.Form.Get("file")
 	sizeStr := r.Form.Get("size")
+	sessionName := r.Form.Get("current_sessionname")
 	switch m[1] {
 	case "cmd_line":
-		success, result := sh.fetch(r, "/cmdline\n", requestChannel)
+		success, result := sh.fetch("/cmdline\n", requestChannel)
 		sh.processCmdLineArgs(w, success, result)
 		return
 	case "log_list":
-		success, result := sh.fetch(r, "/logs/list\n", requestChannel)
+		success, result := sh.fetch("/logs/list\n", requestChannel)
 		sh.processLogList(w, success, uiSession.SessionName, result)
 		return
 	case "log_head":
-		success, result := sh.fetch(r, fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
+		success, result := sh.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
 		sh.processLogPart(w, success, uiSession.SessionName, result)
 		return
 	case "log_tail":
@@ -553,8 +686,16 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if size > 16*1024 {
 			offset = size - 16*1024
 		}
-		success, result := sh.fetch(r, fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
+		success, result := sh.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
 		sh.processLogPart(w, success, uiSession.SessionName, result)
+		return
+	case "log_download":
+		size, err := strconv.ParseUint(sizeStr, 10, 64)
+		if err != nil {
+			fmt.Fprintf(w, "Parsing size %s: %v", sizeStr, err)
+			return
+		}
+		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()
@@ -565,7 +706,7 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.UiNodes = nil
 		uiSession.lock.Unlock()
 	}()
-	sessionName := r.FormValue("sessionname")
+	sessionName = r.FormValue("sessionname")
 	switch {
 	case r.FormValue("new_session") != "":
 		// Generate new node session PIN that does not exist yet
@@ -653,10 +794,10 @@ func webServer() error {
 		RootCAs: certPool,
 	}
 	s := &http.Server{
-		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		Addr:    fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler: mux,
+		//ReadTimeout:    10 * time.Second,
+		//WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		ConnContext: func(_ context.Context, _ net.Conn) context.Context {
 			return ctx

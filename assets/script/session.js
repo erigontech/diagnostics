@@ -51,7 +51,7 @@ async function fetchLogHead(logPartId, sessionName, filename, size) {
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
-    formData.append('filename', filename);
+    formData.append('file', filename);
     formData.append('size', size);
     const request = new Request("/ui/log_head", {
         method: "POST",
@@ -77,7 +77,7 @@ async function fetchLogTail(logPartId, sessionName, filename, size) {
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
-    formData.append('filename', filename);
+    formData.append('file', filename);
     formData.append('size', size);
     const request = new Request("/ui/log_tail", {
         method: "POST",

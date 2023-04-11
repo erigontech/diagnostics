@@ -3,12 +3,11 @@
         {{$sessionName := .SessionName}}
         {{range $index, $element := .List}}
             <div class="solid">
-                <p><b>Name:</b> {{.Filename}}, <b>Size:</b> {{.Size}}</p>
-                <div id="log_part_{{$index}}"></div>
+                <a href="/ui/log_download?&current_sessionname={{$sessionName}}&file={{.Filename}}&size={{.Size}}" download="{{$sessionName}}_{{.Filename}}">{{.Filename}}</a> {{.PrintedSize}}
                 <button type="button" onclick="fetchLogHead('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Head</button>
                 <button type="button" onclick="fetchLogTail('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Tail</button>
                 <button type="button" onclick="clearLog('log_part_{{$index}}')">Clear</button>
-                <button type="button" onclick="">Download</button>
+                <div id="log_part_{{$index}}"></div>
             </div>
         {{end}}
     </div>
