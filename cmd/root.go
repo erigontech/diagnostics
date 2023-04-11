@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -260,6 +259,12 @@ type UiSession struct {
 	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
 }
 
+func (uiSession *UiSession) appendError(err string) {
+	uiSession.lock.Lock()
+	defer uiSession.lock.Unlock()
+	uiSession.Errors = append(uiSession.Errors, err)
+}
+
 type CmdLineArgs struct {
 	Success bool
 	Args    string
@@ -347,35 +352,13 @@ func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSess
 	return true
 }
 
-func (sh *SessionHandler) fetch(r *http.Request, url string, uiSession *UiSession) (bool, string) {
-	rbuf := bufio.NewReaderSize(r.Body, 128 /* Maximum length of the sessionName */)
-	line, isPrefix, err := rbuf.ReadLine()
-	if err != nil {
-		return false, fmt.Sprintf("ERROR: Reading sessionName: %v\n", err)
-	}
-	if isPrefix {
-		return false, fmt.Sprintf("ERROR: Session name is too long\n")
-	}
-	sessionName := string(line)
-	if sessionName == "" {
-		return false, fmt.Sprintf("ERROR: Empty session name\n")
-	}
-	if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: sessionName}); ok {
-		if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
-			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
-			uiSession.uiNodeTree.Delete(v)
-		} else {
-			uiSession.Session = true
-			uiSession.SessionName = sessionName
-			uiSession.SessionPin = v.SessionPin
-		}
-	}
-	if uiSession.NodeS == nil {
+func (sh *SessionHandler) fetch(r *http.Request, url string, requestChannel chan *NodeRequest) (bool, string) {
+	if requestChannel == nil {
 		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
 	}
 	// Request command line arguments
 	nodeRequest := &NodeRequest{url: url}
-	uiSession.NodeS.requestCh <- nodeRequest
+	requestChannel <- nodeRequest
 	var sb strings.Builder
 	var success bool
 	for nodeRequest != nil {
@@ -460,6 +443,35 @@ func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, se
 	}
 }
 
+func (sh *SessionHandler) processLogHead(w http.ResponseWriter, success bool, sessionName string, result string) {
+}
+
+func (sh *SessionHandler) processLogTail(w http.ResponseWriter, success bool, sessionName string, result string) {
+}
+
+func (sh *SessionHandler) lookupSession(r *http.Request, uiSession *UiSession) chan *NodeRequest {
+	uiSession.lock.Lock()
+	defer uiSession.lock.Unlock()
+	uiSession.NodeS = nil
+	currentSessionName := r.FormValue("current_sessionname")
+	if currentSessionName != "" {
+		if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: currentSessionName}); ok {
+			if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
+				uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
+				uiSession.uiNodeTree.Delete(v)
+			} else {
+				uiSession.Session = true
+				uiSession.SessionName = currentSessionName
+				uiSession.SessionPin = v.SessionPin
+			}
+		}
+	}
+	if uiSession.NodeS != nil {
+		return uiSession.NodeS.requestCh
+	}
+	return nil
+}
+
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -483,8 +495,44 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			cookie := http.Cookie{Name: sessionIdCookieName, Value: url.QueryEscape(sessionId), Path: "/", HttpOnly: true, MaxAge: sessionIdCookieDuration}
 			http.SetCookie(w, &cookie)
 		} else {
-			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Creating new UI session: %v", e))
+			uiSession.appendError(fmt.Sprintf("Creating new UI session: %v", e))
 		}
+	}
+	if err != nil {
+		uiSession.appendError(fmt.Sprintf("Cookie handling: %v", err))
+	}
+	// Try to lookup current session name
+	/*
+		if m[1] == "cmd_line" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				fmt.Fprintf(w, "Reading body: %v", err)
+			}
+			fmt.Printf("Body: %s\n", body)
+		}
+	*/
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "Parsing form: %v", err)
+		return
+	}
+	requestChannel := sh.lookupSession(r, uiSession)
+	switch m[1] {
+	case "cmd_line":
+		success, result := sh.fetch(r, "/cmdline\n", requestChannel)
+		sh.processCmdLineArgs(w, success, result)
+		return
+	case "log_list":
+		success, result := sh.fetch(r, "/logs/list\n", requestChannel)
+		sh.processLogList(w, success, uiSession.SessionName, result)
+		return
+	case "log_head":
+		success, result := sh.fetch(r, "/logs/read\n", requestChannel)
+		sh.processLogHead(w, success, uiSession.SessionName, result)
+		return
+	case "log_tail":
+		success, result := sh.fetch(r, "/logs/read\n", requestChannel)
+		sh.processLogTail(w, success, uiSession.SessionName, result)
+		return
 	}
 	uiSession.lock.Lock()
 	defer func() {
@@ -494,39 +542,6 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.UiNodes = nil
 		uiSession.lock.Unlock()
 	}()
-	if err != nil {
-		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Cookie handling: %v", err))
-	}
-	switch m[1] {
-	case "cmd_line":
-		success, result := sh.fetch(r, "/cmdline\n", uiSession)
-		sh.processCmdLineArgs(w, success, result)
-		return
-	case "log_list":
-		success, result := sh.fetch(r, "/logs/list\n", uiSession)
-		sh.processLogList(w, success, uiSession.SessionName, result)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		fmt.Fprintf(w, "Parsing form: %v", err)
-		return
-	}
-	if !uiSession.Session {
-		// Try to lookup current session name
-		currentSessionName := r.FormValue("current_sessionname")
-		if currentSessionName != "" {
-			if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: currentSessionName}); ok {
-				if uiSession.NodeS, ok = sh.findNodeSession(v.SessionPin); !ok {
-					uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
-					uiSession.uiNodeTree.Delete(v)
-				} else {
-					uiSession.Session = true
-					uiSession.SessionName = currentSessionName
-					uiSession.SessionPin = v.SessionPin
-				}
-			}
-		}
-	}
 	sessionName := r.FormValue("sessionname")
 	switch {
 	case r.FormValue("new_session") != "":
