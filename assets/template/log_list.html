@@ -1,12 +1,12 @@
 {{if .Success}}
     <div>
         {{$sessionName := .SessionName}}
-        {{range .List}}
+        {{range $index, $element := .List}}
             <div class="solid">
                 <p><b>Name:</b> {{.Filename}}, <b>Size:</b> {{.Size}}</p>
-                <div id="log_part"></div>
-                <button type="button" onclick="fetchLogHead('{{$sessionName}}', '{{.Filename}}', {{.Size}})">Head</button>
-                <button type="button" onclick="fetchLogTail('{{$sessionName}}', '{{.Filename}}', {{.Size}})">Tail</button>
+                <div id="log_part_{{$index}}"></div>
+                <button type="button" onclick="fetchLogHead('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Head</button>
+                <button type="button" onclick="fetchLogTail('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Tail</button>
                 <button type="button" onclick="">Download</button>
             </div>
         {{end}}

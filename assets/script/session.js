@@ -46,11 +46,11 @@ async function fetchLogList(sessionName) {
     }
 }
 
-async function fetchLogHead(sessionName, filename, size) {
+async function fetchLogHead(logPartId, sessionName, filename, size) {
     console.log("Session = " + sessionName)
     console.log("Filename = " + filename)
     console.log("Size = " + size)
-    const d = document.getElementById('log_part');
+    const d = document.getElementById(logPartId);
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
@@ -74,11 +74,11 @@ async function fetchLogHead(sessionName, filename, size) {
     }
 }
 
-async function fetchLogTail(sessionName, filename, size) {
+async function fetchLogTail(logPartId, sessionName, filename, size) {
     console.log("Session = " + sessionName)
     console.log("Filename = " + filename)
     console.log("Size = " + size)
-    const d = document.getElementById('log_part');
+    const d = document.getElementById(logPartId);
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
