@@ -7,6 +7,7 @@
                 <div id="log_part_{{$index}}"></div>
                 <button type="button" onclick="fetchLogHead('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Head</button>
                 <button type="button" onclick="fetchLogTail('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Tail</button>
+                <button type="button" onclick="clearLog('log_part_{{$index}}')">Clear</button>
                 <button type="button" onclick="">Download</button>
             </div>
         {{end}}

@@ -282,6 +282,12 @@ type LogList struct {
 	Error       string
 }
 
+type LogPart struct {
+	Success bool
+	Lines   []string
+	Error   string
+}
+
 type SessionHandler struct {
 	nodeSessionsLock sync.Mutex
 	nodeSessions     map[uint64]*NodeSession
@@ -338,7 +344,7 @@ const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|)$")
 
 func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
@@ -366,6 +372,7 @@ func (sh *SessionHandler) fetch(r *http.Request, url string, requestChannel chan
 		clear := nodeRequest.served
 		if nodeRequest.served {
 			if nodeRequest.err == "" {
+				sb.Reset()
 				sb.Write(nodeRequest.response)
 				success = true
 			} else {
@@ -443,10 +450,24 @@ func (sh *SessionHandler) processLogList(w http.ResponseWriter, success bool, se
 	}
 }
 
-func (sh *SessionHandler) processLogHead(w http.ResponseWriter, success bool, sessionName string, result string) {
-}
-
-func (sh *SessionHandler) processLogTail(w http.ResponseWriter, success bool, sessionName string, result string) {
+func (sh *SessionHandler) processLogPart(w http.ResponseWriter, success bool, sessionName string, result string) {
+	var part LogPart
+	if success {
+		lines := strings.Split(result, "\n")
+		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
+			part.Lines = lines[1:]
+		} else {
+			part.Lines = lines
+		}
+		part.Success = true
+	} else {
+		part.Success = false
+		part.Error = result
+	}
+	if err := sh.uiTemplate.ExecuteTemplate(w, "log_read.html", part); err != nil {
+		fmt.Fprintf(w, "Executing log_read template: %v", err)
+		return
+	}
 }
 
 func (sh *SessionHandler) lookupSession(r *http.Request, uiSession *UiSession) chan *NodeRequest {
@@ -502,20 +523,13 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.appendError(fmt.Sprintf("Cookie handling: %v", err))
 	}
 	// Try to lookup current session name
-	/*
-		if m[1] == "cmd_line" {
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				fmt.Fprintf(w, "Reading body: %v", err)
-			}
-			fmt.Printf("Body: %s\n", body)
-		}
-	*/
 	if err := r.ParseForm(); err != nil {
 		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
 	}
 	requestChannel := sh.lookupSession(r, uiSession)
+	filename := r.Form.Get("filename")
+	sizeStr := r.Form.Get("size")
 	switch m[1] {
 	case "cmd_line":
 		success, result := sh.fetch(r, "/cmdline\n", requestChannel)
@@ -526,12 +540,21 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sh.processLogList(w, success, uiSession.SessionName, result)
 		return
 	case "log_head":
-		success, result := sh.fetch(r, "/logs/read\n", requestChannel)
-		sh.processLogHead(w, success, uiSession.SessionName, result)
+		success, result := sh.fetch(r, fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
+		sh.processLogPart(w, success, uiSession.SessionName, result)
 		return
 	case "log_tail":
-		success, result := sh.fetch(r, "/logs/read\n", requestChannel)
-		sh.processLogTail(w, success, uiSession.SessionName, result)
+		size, err := strconv.ParseUint(sizeStr, 10, 64)
+		if err != nil {
+			fmt.Fprintf(w, "Parsing size %s: %v", sizeStr, err)
+			return
+		}
+		var offset uint64
+		if size > 16*1024 {
+			offset = size - 16*1024
+		}
+		success, result := sh.fetch(r, fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
+		sh.processLogPart(w, success, uiSession.SessionName, result)
 		return
 	}
 	uiSession.lock.Lock()

@@ -47,14 +47,12 @@ async function fetchLogList(sessionName) {
 }
 
 async function fetchLogHead(logPartId, sessionName, filename, size) {
-    console.log("Session = " + sessionName)
-    console.log("Filename = " + filename)
-    console.log("Size = " + size)
     const d = document.getElementById(logPartId);
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
     formData.append('filename', filename);
+    formData.append('size', size);
     const request = new Request("/ui/log_head", {
         method: "POST",
         mode: "cors",
@@ -75,14 +73,12 @@ async function fetchLogHead(logPartId, sessionName, filename, size) {
 }
 
 async function fetchLogTail(logPartId, sessionName, filename, size) {
-    console.log("Session = " + sessionName)
-    console.log("Filename = " + filename)
-    console.log("Size = " + size)
     const d = document.getElementById(logPartId);
     d.innerHTML = "Fetch log head...";
     let formData = new FormData();
     formData.append('current_sessionname', sessionName);
     formData.append('filename', filename);
+    formData.append('size', size);
     const request = new Request("/ui/log_tail", {
         method: "POST",
         mode: "cors",
@@ -100,4 +96,9 @@ async function fetchLogTail(logPartId, sessionName, filename, size) {
     } catch (error) {
         d.innerHTML = "ERROR: " + error.message
     }
+}
+
+async function clearLog(logPartId) {
+    const d = document.getElementById(logPartId);
+    d.innerHTML = ""
 }
