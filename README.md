@@ -19,3 +19,32 @@ To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use
 
 In the browser, go to the URL `https://localhost:8080/ui`. You browser will likely ask to to accept the risks (due to self-signed certificate), do that.
 
+# How to run an Erigon node that can be connected to the diagnosgics system
+
+For an Erigon node to be connected to the diagnostics system, it needs to expose metrics using this command line flag:
+
+```
+--metrics
+```
+
+By default the metrics are exposed on `localhost` and port `6060`. In order to expose them on a different networking interface and/or different port,
+the following command line flags can be used:
+
+```
+--metrics.addr <IP of interface> --metrics.port <port>
+```
+
+In order to check is the metrics are exposed on given interface or port, you can check it in the browser by going to
+```
+http://<metrics.addr>:<metrics.port>/debug/metrics/prometheus
+```
+
+If metrics are exposed, textual representation of metrics will be displayed in the browser.
+
+# How to connect Erigon node to the diagnostics system
+
+TODO
+
+```
+./build/bin/erigon support --metrics.urls http://metrics.addr:metrics.port/debug/metrics --diagnostics.url https://localhost:8080/support/47779410 --insecure
+```
