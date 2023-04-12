@@ -1,3 +1,27 @@
+async function fetchVersions(sessionName) {
+    const d = document.getElementById('versions');
+    d.innerHTML = "Fetching command line args...";
+    var formData = new FormData();
+    formData.append('current_sessionname', sessionName);
+    const request = new Request("/ui/versions", {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: new URLSearchParams(formData),
+    });
+    try {
+        const response = await fetch(request);
+        if (!response.ok) {
+            d.innerHTML = "ERROR: Network response was not OK";
+            return
+        }
+        const result = await response.text();
+        d.innerHTML = result
+    } catch (error) {
+        d.innerHTML = "ERROR: " + error.message
+    }
+}
+
 async function fetchCmdLineArgs(sessionName) {
     const d = document.getElementById('cmdlineargs');
     d.innerHTML = "Fetching command line args...";

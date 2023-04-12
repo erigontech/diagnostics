@@ -119,20 +119,21 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	pin, err := strconv.ParseUint(m[1], 10, 64)
 	if err != nil {
-		http.Error(w, "Error parsing session PIN", http.StatusNotFound)
-		log.Printf("Errir parsing session pin %s: %v", m[1], err)
+		http.Error(w, "Error parsing session PIN", http.StatusBadRequest)
+		log.Printf("Errir parsing session pin %s: %v\n", m[1], err)
 		return
 	}
 	nodeSession, ok := bh.sh.findNodeSession(pin)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusNotFound)
-		log.Printf("Session with specified PIN %d not found", pin)
+		http.Error(w, fmt.Sprintf("Session with specified PIN %d not found", pin), http.StatusBadRequest)
+		log.Printf("Session with specified PIN %d not found\n", pin)
 		return
 	}
 	fmt.Fprintf(w, "SUCCESS\n")
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	defer r.Body.Close()
+
 	nodeSession.connect(r.RemoteAddr)
 	defer nodeSession.disconnect()
 
@@ -143,6 +144,14 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
+	var versionBytes [8]byte
+	if _, err := io.ReadFull(r.Body, versionBytes[:]); err != nil {
+		http.Error(w, fmt.Sprintf("Error reading version bytes: %v", err), http.StatusBadRequest)
+		log.Printf("Error reading version bytes: %v\n", err)
+		return
+	}
+	nodeSession.SupportVersion = binary.BigEndian.Uint64(versionBytes[:])
+
 	var writeBuf bytes.Buffer
 	for request := range nodeSession.requestCh {
 		request.lock.Lock()
@@ -152,7 +161,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeBuf.Reset()
 		fmt.Fprintf(&writeBuf, url)
 		if _, err := w.Write(writeBuf.Bytes()); err != nil {
-			log.Printf("Writing metrics request: %v", err)
+			log.Printf("Writing metrics request: %v\n", err)
 			request.lock.Lock()
 			request.served = true
 			request.response = nil
@@ -171,7 +180,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Read the response
 		var sizeBuf [4]byte
 		if _, err := io.ReadFull(r.Body, sizeBuf[:]); err != nil {
-			log.Printf("Reading size of metrics response: %v", err)
+			log.Printf("Reading size of metrics response: %v\n", err)
 			request.lock.Lock()
 			request.served = true
 			request.response = nil
@@ -188,7 +197,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		metricsBuf := make([]byte, binary.BigEndian.Uint32(sizeBuf[:]))
 		if _, err := io.ReadFull(r.Body, metricsBuf); err != nil {
-			log.Printf("Reading metrics response: %v", err)
+			log.Printf("Reading metrics response: %v\n", err)
 			request.lock.Lock()
 			request.served = true
 			request.response = nil
@@ -223,11 +232,12 @@ type NodeRequest struct {
 const MaxRequestRetries = 16 // How many time to retry a request to the support
 
 type NodeSession struct {
-	lock       sync.Mutex
-	sessionPin uint64
-	Connected  bool
-	RemoteAddr string
-	requestCh  chan *NodeRequest // Channel for incoming metrics requests
+	lock           sync.Mutex
+	sessionPin     uint64
+	Connected      bool
+	RemoteAddr     string
+	SupportVersion uint64            // Version of the erigon support command
+	requestCh      chan *NodeRequest // Channel for incoming metrics requests
 }
 
 func (ns *NodeSession) connect(remoteAddr string) {
@@ -266,28 +276,34 @@ func (uiSession *UiSession) appendError(err string) {
 	uiSession.Errors = append(uiSession.Errors, err)
 }
 
+type Versions struct {
+	Success        bool
+	Error          string
+	NodeVersion    uint64
+	SupportVersion uint64
+	CodeVersion    string
+	GitCommit      string
+}
 type CmdLineArgs struct {
 	Success bool
-	Args    string
 	Error   string
+	Args    string
 }
 type LogListItem struct {
 	Filename    string
 	Size        int64
 	PrintedSize string
 }
-
 type LogList struct {
 	Success     bool
+	Error       string
 	SessionName string
 	List        []LogListItem
-	Error       string
 }
-
 type LogPart struct {
 	Success bool
-	Lines   []string
 	Error   string
+	Lines   []string
 }
 
 type SessionHandler struct {
@@ -346,8 +362,6 @@ const resumeOperatorSessionName = "resume_session"
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|)$")
-
 func (sh *SessionHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
@@ -396,6 +410,44 @@ func (sh *SessionHandler) fetch(url string, requestChannel chan *NodeRequest) (b
 }
 
 const successLine = "SUCCESS"
+
+func (sh *SessionHandler) processVersions(w http.ResponseWriter, success bool, result string) {
+	var versions Versions
+	if success {
+		lines := strings.Split(result, "\n")
+		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
+			versions.Success = true
+			if len(lines) < 2 {
+				versions.Error = fmt.Sprintf("at least node version needs to be present")
+				versions.Success = false
+			} else {
+				var err error
+				versions.NodeVersion, err = strconv.ParseUint(lines[1], 10, 64)
+				if err != nil {
+					versions.Error = fmt.Sprintf("parsing node version [%s]: %v", lines[1], err)
+					versions.Success = false
+				} else {
+					for idx, line := range lines[2:] {
+						switch idx {
+						case 0:
+							versions.CodeVersion = line
+						case 1:
+							versions.GitCommit = line
+						}
+					}
+				}
+			}
+		} else {
+			versions.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
+		}
+	} else {
+		versions.Error = result
+	}
+	if err := sh.uiTemplate.ExecuteTemplate(w, "versions.html", versions); err != nil {
+		fmt.Fprintf(w, "Executing versions template: %v", err)
+		return
+	}
+}
 
 func (sh *SessionHandler) processCmdLineArgs(w http.ResponseWriter, success bool, result string) {
 	var args CmdLineArgs
@@ -625,6 +677,8 @@ func transmitLogFile(ctx context.Context, r *http.Request, w http.ResponseWriter
 	http.ServeContent(w, r, filename, time.Now(), logReader)
 }
 
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|)$")
+
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
@@ -664,6 +718,10 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sizeStr := r.Form.Get("size")
 	sessionName := r.Form.Get("current_sessionname")
 	switch m[1] {
+	case "versions":
+		success, result := sh.fetch("/version\n", requestChannel)
+		sh.processVersions(w, success, result)
+		return
 	case "cmd_line":
 		success, result := sh.fetch("/cmdline\n", requestChannel)
 		sh.processCmdLineArgs(w, success, result)
@@ -794,10 +852,8 @@ func webServer() error {
 		RootCAs: certPool,
 	}
 	s := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler: mux,
-		//ReadTimeout:    10 * time.Second,
-		//WriteTimeout:   10 * time.Second,
+		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler:        mux,
 		MaxHeaderBytes: 1 << 20,
 		ConnContext: func(_ context.Context, _ net.Conn) context.Context {
 			return ctx
@@ -812,7 +868,12 @@ func webServer() error {
 		s.Shutdown(ctx)
 	}()
 	if err = s.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
-		return fmt.Errorf("running server: %v", err)
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			return fmt.Errorf("running server: %v", err)
+		}
 	}
 	return nil
 }

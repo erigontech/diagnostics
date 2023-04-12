@@ -2,7 +2,19 @@
     <head>
         <meta charset="utf-8"/>
         <style>
-            div.solid {border-style: solid;}
+            div.solid {
+                margin: 10px 0;
+                padding: 5px;
+                border: 1px solid #999;
+            }
+            table {
+                margin: 10px 0;
+                padding: 5px;
+                border: 1px solid #999;
+            }
+            table, tr, td {
+                border: 1px solid #999;
+            }
             p.solid {
                 margin: 10px 0;
                 padding: 5px;
@@ -39,10 +51,14 @@
                 {{if .Session}}
                     <h2>SESSION: {{.SessionName}} PIN: {{.SessionPin}}</h2>
                     {{if .NodeS.Connected}}
-                        <p class="solid">Connected, Remote Address: {{.NodeS.RemoteAddr}}</p>
+                        <p class="solid">Connected, Remote Address: {{.NodeS.RemoteAddr}}, Support Version: {{.NodeS.SupportVersion}}</p>
                     {{else}}
                         <p class="solid">NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
+                    <div>
+                        <button type="button" onclick="fetchVersions('{{.SessionName}}')">Fetch Versions</button>
+                        <div id="versions"></div>
+                    </div>
                     <div>
                         <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
                         <div id="cmdlineargs"></div>
