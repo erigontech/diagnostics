@@ -43,7 +43,17 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 
 # How to connect Erigon node to the diagnostics system
 
-TODO
+First, in the brower window, create a new operator session. Choose an arbitraty name. In real operations, one would choose the name
+that can be easily correlate to the node being supported, for example, name or pseudonym of the person or the company operating the node.
+
+![create new operation session](/images/create_new_session.png)
+
+After new session is created, it will be allocated a unique 8-digit PIN number. The pin is then displayed together with the session number on the screen.
+Currently generation of PIN numbers is not secure and always follows the same sequence, which makes testing easier. For example, the first
+allocated session PIN is always `47779410`.
+
+Next, in a console window, run the following command, specfying the session PIN at the end of the `--diagnostics.url` command line flag.
+Since the web site is using self-signed certificate without properly allocated CName, one needs to use `--insecure` flag to be able to connect.
 
 ```
 ./build/bin/erigon support --metrics.urls http://metrics.addr:metrics.port/debug/metrics --diagnostics.url https://localhost:8080/support/47779410 --insecure
