@@ -157,7 +157,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		request.lock.Lock()
 		url := request.url
 		request.lock.Unlock()
-		fmt.Printf("Sending request %s\n", url)
+		log.Printf("Sending request %s\n", url)
 		writeBuf.Reset()
 		fmt.Fprintf(&writeBuf, url)
 		if _, err := w.Write(writeBuf.Bytes()); err != nil {
@@ -609,11 +609,12 @@ func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64
 	return true, to, total, nodeRequest.response[firstLineEnd+1:], ""
 }
 
+// Implements io.ReaderSeeker to be used as parameter to http.ServeContent
 type LogReader struct {
-	filename       string
+	filename       string // Name of the log files to download
 	requestChannel chan *NodeRequest
-	total          uint64
-	offset         uint64
+	total          uint64 // Size of the log file to be downloaded. Needs to be known before download
+	offset         uint64 // Current offset set either by the Seek() or Read() functions
 	ctx            context.Context
 }
 
@@ -677,7 +678,11 @@ func transmitLogFile(ctx context.Context, r *http.Request, w http.ResponseWriter
 	http.ServeContent(w, r, filename, time.Now(), logReader)
 }
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|)$")
+func findReorgs(ctx context.Context, r *http.Request, w http.ResponseWriter, sessionName string, requestChannel chan *NodeRequest) {
+	fmt.Fprintf(w, "Placeholder for reorg finding\n")
+}
+
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|reorgs|)$")
 
 func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -754,6 +759,9 @@ func (sh *SessionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
+		return
+	case "reorgs":
+		findReorgs(r.Context(), r, w, sessionName, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()

@@ -4,8 +4,8 @@
         {{range $index, $element := .List}}
             <div class="solid">
                 <a href="/ui/log_download?&current_sessionname={{$sessionName}}&file={{.Filename}}&size={{.Size}}" download="{{$sessionName}}_{{.Filename}}">{{.Filename}}</a> {{.PrintedSize}}
-                <button type="button" onclick="fetchLogHead('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Head</button>
-                <button type="button" onclick="fetchLogTail('log_part_{{$index}}', '{{$sessionName}}', '{{$element.Filename}}', {{$element.Size}})">Tail</button>
+                <button type="button" onclick="fetchLogPart('log_part_{{$index}}', '{{$sessionName}}', 'log head', '/ui/log_head', '{{$element.Filename}}', {{$element.Size}})">Head</button>
+                <button type="button" onclick="fetchLogPart('log_part_{{$index}}', '{{$sessionName}}', 'log tail', '/ui/log_tail', '{{$element.Filename}}', {{$element.Size}})">Tail</button>
                 <button type="button" onclick="clearLog('log_part_{{$index}}')">Clear</button>
                 <div id="log_part_{{$index}}"></div>
             </div>

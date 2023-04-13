@@ -1,26 +1,7 @@
 <html>  
     <head>
         <meta charset="utf-8"/>
-        <style>
-            div.solid {
-                margin: 10px 0;
-                padding: 5px;
-                border: 1px solid #999;
-            }
-            table {
-                margin: 10px 0;
-                padding: 5px;
-                border: 1px solid #999;
-            }
-            table, tr, td {
-                border: 1px solid #999;
-            }
-            p.solid {
-                margin: 10px 0;
-                padding: 5px;
-                border: 1px solid #999;
-            }
-        </style>
+        <link href="/script/style.css" rel="stylesheet"/>
         <script src="/script/session.js"></script>
     </head>
     <body>
@@ -56,16 +37,20 @@
                         <p class="solid">NOT Connected, Last Remote Address: {{.NodeS.RemoteAddr}}</p>
                     {{end}}
                     <div>
-                        <button type="button" onclick="fetchVersions('{{.SessionName}}')">Fetch Versions</button>
+                        <button type="button" onclick="fetchContent('{{.SessionName}}', 'versions', '/ui/versions', 'versions')">Fetch Versions</button>
                         <div id="versions"></div>
                     </div>
                     <div>
-                        <button type="button" onclick="fetchCmdLineArgs('{{.SessionName}}')">Fetch Command Line</button>
+                        <button type="button" onclick="fetchContent('{{.SessionName}}', 'command line args', '/ui/cmd_line', 'cmdlineargs')">Fetch Command Line</button>
                         <div id="cmdlineargs"></div>
                     </div>
                     <div>
-                        <button type="button" onclick="fetchLogList('{{.SessionName}}')">Fetch Log List</button>
+                        <button type="button" onclick="fetchContent('{{.SessionName}}', 'log list', '/ui/log_list', 'loglist')">Fetch Log List</button>
                         <div id="loglist"></div>
+                    </div>
+                    <div>
+                        <button type="button" onclick="findReorgs('{{.SessionName}}')">Find Reorgs</button>
+                        <div id="reorgs"></div>
                     </div>
                 {{end}}
             </div>

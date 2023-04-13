@@ -1,0 +1,18 @@
+div.solid {
+    margin: 10px 0;
+    padding: 5px;
+    border: 1px solid #999;
+}
+table {
+    margin: 10px 0;
+    padding: 5px;
+    border: 1px solid #999;
+}
+table, tr, td {
+    border: 1px solid #999;
+}
+p.solid {
+    margin: 10px 0;
+    padding: 5px;
+    border: 1px solid #999;
+}
