@@ -43,7 +43,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 
 # How to connect Erigon node to the diagnostics system
 
-First, in the brower window, create a new operator session. Choose an arbitraty name. In real operations, one would choose the name
+First, in the browser window, create a new operator session. Choose an arbitraty name. In real operations, one would choose the name
 that can be easily correlate to the node being supported, for example, name or pseudonym of the person or the company operating the node.
 
 ![create new operation session](/images/create_new_session.png)
