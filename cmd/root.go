@@ -127,10 +127,6 @@ func (uiSession *UiSession) appendError(err string) {
 	uiSession.Errors = append(uiSession.Errors, err)
 }
 
-func findReorgs(ctx context.Context, r *http.Request, w http.ResponseWriter, sessionName string, requestChannel chan *NodeRequest) {
-	fmt.Fprintf(w, "Placeholder for reorg finding\n")
-}
-
 func webServer() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

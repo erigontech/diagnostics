@@ -100,7 +100,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
 		return
 	case "reorgs":
-		findReorgs(r.Context(), r, w, sessionName, requestChannel)
+		uih.findReorgs(r.Context(), r, w, sessionName, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()
