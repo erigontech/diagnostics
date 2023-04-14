@@ -81,6 +81,7 @@ func initConfig() {
 
 const successLine = "SUCCESS"
 
+// NodeSession corresponds to one Erigon node connected via "erigon support" bridge to an operator
 type NodeSession struct {
 	lock           sync.Mutex
 	sessionPin     uint64

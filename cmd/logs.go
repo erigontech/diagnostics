@@ -56,6 +56,7 @@ func ByteCount(b uint64) string {
 	return fmt.Sprintf("%.1f%cB", bGb, "KMGTPE"[exp])
 }
 
+// Produces (into the writer w) the list of available lots inside the div element, using log_list.html template and LogList object
 func processLogList(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
 	var list = LogList{SessionName: sessionName}
 	if success {
@@ -93,6 +94,7 @@ func processLogList(w http.ResponseWriter, templ *template.Template, success boo
 	}
 }
 
+// Produces (into writer w) log part (head or tail) inside the div HTML element, using log_read.html template and LogPart object
 func processLogPart(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
 	var part LogPart
 	if success {
@@ -115,6 +117,9 @@ func processLogPart(w http.ResponseWriter, templ *template.Template, success boo
 
 var logReadFirstLine = regexp.MustCompile("^SUCCESS: ([0-9]+)-([0-9]+)/([0-9]+)$")
 
+// Parses the response from the erigon node, which contains a part of a log file.
+// It should start with a line of format: SUCCESS from_offset/to_offset/total_size,
+// followed by the actual log chunk
 func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64, []byte, string) {
 	nodeRequest.lock.Lock()
 	defer nodeRequest.lock.Unlock()
@@ -160,6 +165,7 @@ type LogReader struct {
 	ctx            context.Context
 }
 
+// Part of the io.Reader interface - emulates reading from the remote logs as if it was from the web server itself
 func (lr *LogReader) Read(p []byte) (n int, err error) {
 	nodeRequest := &NodeRequest{url: fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(lr.filename), lr.offset)}
 	lr.requestChannel <- nodeRequest
@@ -192,6 +198,7 @@ func (lr *LogReader) Read(p []byte) (n int, err error) {
 	return copied, nil
 }
 
+// Part of the io.Seeker interface. Please note io.SeekEnd - this is used by http.ServeContent to establish content length
 func (lr *LogReader) Seek(offset int64, whence int) (int64, error) {
 	switch whence {
 	case io.SeekStart:
@@ -208,6 +215,8 @@ func (lr *LogReader) Seek(offset int64, whence int) (int64, error) {
 	return int64(lr.offset), nil
 }
 
+// Handles the use case when operator clicks on the link with the log file name, and this initiates the download of this file
+// to the operator's computer (via browser). See LogReader above which is used in http.ServeContent
 func transmitLogFile(ctx context.Context, r *http.Request, w http.ResponseWriter, sessionName string, filename string, size uint64, requestChannel chan *NodeRequest) {
 	if requestChannel == nil {
 		fmt.Fprintf(w, "ERROR: Node is not allocated\n")
