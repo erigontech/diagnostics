@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -12,8 +13,7 @@ import (
 // Demonstration of the working with the Erigon database remotely on the example of getting information
 // about past reorganisation of the chain
 
-func (uih *UiHandler) findReorgs(w http.ResponseWriter, requestChannel chan *NodeRequest) {
-	//w.Header().Set("Content-Type", "application/octet-stream")
+func (uih *UiHandler) findReorgs(w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	start := time.Now()
 	// First, fetch list of DB paths
 	success, result := uih.fetch("/db/list\n", requestChannel)
@@ -50,7 +50,9 @@ func (uih *UiHandler) findReorgs(w http.ResponseWriter, requestChannel chan *Nod
 	for k, _, e = rc.Next(); e == nil && k != nil; k, _, e = rc.Next() {
 		if len(k) >= 8 && len(prevK) >= 8 && bytes.Equal(k[:8], prevK[:8]) {
 			bn := binary.BigEndian.Uint64(k[:8])
-			fmt.Fprintf(w, "<div class=\"block\">%d</div>\n", bn)
+			if err := templ.ExecuteTemplate(w, "reorg_block.html", bn); err != nil {
+				fmt.Fprintf(w, "Executing reorg_block template: %v\n", err)
+			}
 			if f, ok := w.(http.Flusher); ok {
 				f.Flush()
 			}
@@ -59,7 +61,9 @@ func (uih *UiHandler) findReorgs(w http.ResponseWriter, requestChannel chan *Nod
 		prevK = k
 		count++
 		if count%1000 == 0 {
-			fmt.Fprintf(w, "<div class=\"progress\"></div>\n")
+			if err := templ.ExecuteTemplate(w, "reorg_spacer.html", nil); err != nil {
+				fmt.Fprintf(w, "Executing reorg_spacer template: %v\n", err)
+			}
 			if f, ok := w.(http.Flusher); ok {
 				f.Flush()
 			}

@@ -27,6 +27,6 @@ func processCmdLineArgs(w http.ResponseWriter, templ *template.Template, success
 		args.Error = result
 	}
 	if err := templ.ExecuteTemplate(w, "cmd_line.html", args); err != nil {
-		fmt.Fprintf(w, "Executing cmd_line template: %v", err)
+		fmt.Fprintf(w, "Executing cmd_line template: %v\n", err)
 	}
 }
