@@ -53,6 +53,33 @@ async function clearLog(logPartId) {
     d.innerHTML = ""
 }
 
+async function processReader(d, reader) {
+    var first = true
+    const utf8Decoder = new TextDecoder("utf-8");
+    var buffer = ''
+    for (let chunk = await reader.read();!chunk.done;chunk = await reader.read()) {
+        if (!chunk.done) {
+            buffer += utf8Decoder.decode(chunk.value, { stream: false });
+        }
+        var lastLineBreak = buffer.lastIndexOf('\n')
+        if (lastLineBreak != -1) {
+            if (first) {
+                d.innerHTML = buffer.substring(0, lastLineBreak);
+                first = false
+            } else {
+                d.innerHTML += buffer.substring(0, lastLineBreak);
+            }
+            buffer = buffer.substring(lastLineBreak + 1)
+        }
+    }
+    if (first) {
+        d.innerHTML = buffer;
+        first = false;
+    } else {
+        d.innerHTML += buffer;
+    }
+}
+
 async function findReorgs(sessionName) {
     const d = document.getElementById('reorgs');
     d.innerHTML = "Looking for reorgs...";
@@ -64,15 +91,10 @@ async function findReorgs(sessionName) {
         cache: "default",
         body: new URLSearchParams(formData),
     });
-    try {
-        const response = await fetch(request);
-        if (!response.ok) {
-            d.innerHTML = "ERROR: Network response was not OK";
-            return
-        }
-        const result = await response.text();
-        d.innerHTML = result
-    } catch (error) {
-        d.innerHTML = "ERROR: " + error.message
-    }
+    fetch(request)
+        .then((response) => response.body)
+        .then((body) => body.getReader())
+        .then((reader) => processReader(d, reader))
+        .then(() => console.log('completed'))
+        .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
