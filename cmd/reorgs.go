@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"html/template"
@@ -13,7 +14,7 @@ import (
 // Demonstration of the working with the Erigon database remotely on the example of getting information
 // about past reorganisation of the chain
 
-func (uih *UiHandler) findReorgs(w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	start := time.Now()
 	// First, fetch list of DB paths
 	success, result := uih.fetch("/db/list\n", requestChannel)
@@ -48,6 +49,12 @@ func (uih *UiHandler) findReorgs(w http.ResponseWriter, templ *template.Template
 	var e error
 	var count int
 	for k, _, e = rc.Next(); e == nil && k != nil; k, _, e = rc.Next() {
+		select {
+		case <-ctx.Done():
+			fmt.Fprintf(w, "Interrupted\n")
+			return
+		default:
+		}
 		if len(k) >= 8 && len(prevK) >= 8 && bytes.Equal(k[:8], prevK[:8]) {
 			bn := binary.BigEndian.Uint64(k[:8])
 			if err := templ.ExecuteTemplate(w, "reorg_block.html", bn); err != nil {

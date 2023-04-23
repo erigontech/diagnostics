@@ -21,7 +21,7 @@ import (
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|reorgs|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
 
 func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -100,8 +100,12 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
 		return
 	case "reorgs":
-		uih.findReorgs(w, uih.uiTemplate, requestChannel)
+		uih.findReorgs(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
+	case "bodies_download":
+		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
+		return
+
 	}
 	uiSession.lock.Lock()
 	defer func() {

@@ -98,3 +98,22 @@ async function findReorgs(sessionName) {
         .then(() => console.log('completed'))
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
+
+async function bodiesDownload(sessionName) {
+    const d = document.getElementById('bodies_download');
+    d.innerHTML = "Tracking bodies download...";
+    var formData = new FormData();
+    formData.append('current_sessionname', sessionName);
+    const request = new Request("/ui/bodies_download", {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: new URLSearchParams(formData),
+    });
+    fetch(request)
+        .then((response) => response.body)
+        .then((body) => body.getReader())
+        .then((reader) => processReader(d, reader))
+        .then(() => console.log('completed'))
+        .catch((err) => d.innerHTML = "ERROR: " + err.message);
+}
