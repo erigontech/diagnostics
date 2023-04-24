@@ -99,6 +99,26 @@ async function findReorgs(sessionName) {
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
 
+async function processReaderReplace(d, reader) {
+    const utf8Decoder = new TextDecoder("utf-8");
+    var buffer = ''
+    for (let chunk = await reader.read();!chunk.done;chunk = await reader.read()) {
+        if (!chunk.done) {
+            buffer += utf8Decoder.decode(chunk.value, { stream: false });
+        }
+        var lastLineBreak = buffer.lastIndexOf('\n')
+        if (lastLineBreak != -1) {
+            lines = buffer.substring(0, lastLineBreak).split('\n')
+            buffer = buffer.substring(lastLineBreak + 1)
+            d.innerHTML = buffer.substring(0, lastLineBreak);
+            lines.forEach(line => {
+                d.innerHTML = line;
+            });
+        }
+    }
+    d.innerHTML = buffer;
+}
+
 async function bodiesDownload(sessionName) {
     const d = document.getElementById('bodies_download');
     d.innerHTML = "Tracking bodies download...";
@@ -113,7 +133,7 @@ async function bodiesDownload(sessionName) {
     fetch(request)
         .then((response) => response.body)
         .then((body) => body.getReader())
-        .then((reader) => processReader(d, reader))
+        .then((reader) => processReaderReplace(d, reader))
         .then(() => console.log('completed'))
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }

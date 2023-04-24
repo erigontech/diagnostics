@@ -7,21 +7,40 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/btree"
 	"golang.org/x/exp/maps"
 )
 
+const VisLimit = 1000
+
+type BodyDownload struct {
+	Legends [9]bool
+	BlockNum uint64
+	Pre1 []struct{}
+	Pre10 []struct{}
+	Pre100 []struct{}
+	Pre1_000 []struct{}
+	Pre10_000 []struct{}
+	Pre100_000 []struct{}
+	Pre1_000_000 []struct{}
+	Pre10_000_000 []struct{}
+	States []SnapshotItem
+}
+
 type SnapshotItem struct {
-	id    uint64
-	state byte
+	Id    uint64
+	State byte
 }
 
 func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	snapshot := btree.NewG[SnapshotItem](16, func(a, b SnapshotItem) bool {
-		return a.id < b.id
+		return a.Id < b.Id
 	})
-	var tick int
+	var tick int64
+	sendEvery := time.NewTicker(1000 * time.Millisecond)
+	defer sendEvery.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -42,16 +61,14 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 		}
 		lines = lines[1:]
 		var changesMode bool
-		var tick int64
 		var err error
 		changes := map[uint64]struct{}{}
-		for len(lines) > 0 {
-			line := lines[0]
+		for _, line := range lines {
 			switch {
 			case len(line) == 0:
 				// Skip empty lines
 			case strings.HasPrefix(line, "snapshot "):
-				tick, err = strconv.ParseInt(line[len("snapshot: "):], 10, 64)
+				tick, err = strconv.ParseInt(line[len("snapshot "):], 10, 64)
 				if err != nil {
 					fmt.Fprintf(w, "parsing snapshot tick [%s]: %v\n", line, err)
 					return
@@ -59,7 +76,7 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 				changesMode = false
 				snapshot.Clear(true)
 			case strings.HasPrefix(line, "changes "):
-				tick, err = strconv.ParseInt(line[len("changes: "):], 10, 64)
+				tick, err = strconv.ParseInt(line[len("changes "):], 10, 64)
 				if err != nil {
 					fmt.Fprintf(w, "parsing changes tick [%s]: %v\n", line, err)
 					return
@@ -82,23 +99,63 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 					return
 				}
 				if changesMode {
+					/*
 					if _, ok := changes[id]; ok {
-						sendSnapshot(snapshot, w, templ)
-						maps.Clear(changes)
+						if firstItem, firstOk := snapshot.Min(); firstOk {
+							if id < firstItem.Id + VisLimit {
+								sendSnapshot(snapshot, w, templ, sendEvery)
+								maps.Clear(changes)
+							}
+						}
 					}
+					*/
 					tick++
 				}
 				changes[id] = struct{}{}
 				if state == 0 {
-					snapshot.Delete(SnapshotItem{id: id})
+					snapshot.Delete(SnapshotItem{Id: id})
 				} else {
-					snapshot.ReplaceOrInsert(SnapshotItem{id: id, state: byte(state)})
+					snapshot.ReplaceOrInsert(SnapshotItem{Id: id, State: byte(state)})
 				}
 			}
 		}
+		sendSnapshot(snapshot, w, templ, sendEvery)
+		maps.Clear(changes)
+		<- sendEvery.C
 	}
 }
 
-func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template) {
-
+func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template, sendEvery *time.Ticker) {
+	//<- sendEvery.C
+	var bd BodyDownload
+	first := true
+	snapshot.Ascend(func(item SnapshotItem) bool {
+		if first {
+			first = false
+			bd.BlockNum = item.Id
+			pre := int(bd.BlockNum)
+			bd.Pre10_000_000 = make([]struct{}, pre / 10_000_000)
+			pre %= 10_000_000
+			bd.Pre1_000_000 = make([]struct{}, pre / 1_000_000)
+			pre %= 1_000_000
+			bd.Pre100_000 = make([]struct{}, pre / 100_000)
+			pre %= 100_000
+			bd.Pre10_000 = make([]struct{}, pre / 10_000)
+			pre %= 10_000
+			bd.Pre1_000 = make([]struct{}, pre / 1_000)
+			pre %= 1_000
+			bd.Pre100 = make([]struct{}, pre / 100)
+			pre %= 100
+			bd.Pre10 = make([]struct{}, pre / 10)
+			pre %= 10
+			bd.Pre1 = make([]struct{}, pre)
+		}
+		bd.States = append(bd.States, item)
+		bd.Legends[item.State] = true
+		return item.Id < bd.BlockNum + VisLimit // We limit visualisation to VisLimit first blocks
+	})
+	if err := templ.ExecuteTemplate(w, "body_download.html", bd); err != nil {
+		fmt.Fprintf(w, "Executing body_download template: %v", err)
+		return
+	}
 }
