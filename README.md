@@ -2,7 +2,7 @@
 
 ## Statement of the problem
 
-According to our estimations, Erigon is used by hundreds people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
+According to our estimations, Erigon is used by hundreds of people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
 Very often, users encounter issues when working with Erigon. We can classify them roughly in the following categories by their cause:
 * Caused by the mismatching expectation. User expects Erigon to do something that it cannot do.
 * Caused by accidental user errors (typos in the command line, for example).
