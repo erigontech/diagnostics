@@ -1,4 +1,44 @@
-# diagnostics system web application
+# DIAGNOSTICS SYSTEM WEB APPLICATION FOR ERIGON
+
+## Statement of the problem
+
+According to our estimations, Erigon is used by hundreds people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
+Very often, users encounter issues when working with Erigon. We can classify them roughly in the following categories by their cause:
+* Caused by the mismatching expectation. User expects Erigon to do something that it cannot do.
+* Caused by accidental user errors (typos in the command line, for example).
+* Caused by underlying software or hardware issues on user’s system (for example, running out of disk space, faulty memory, bug in operating system).
+* Caused by bugs in Erigon.
+* Caused by bugs in libraries that Erigon uses.
+* Caused by other systems that are used in conjunction with Erigon (for example, Consensus Layer implementations).
+
+This classification should be viewed as "work in progress" and we will refine it as we move on with the project.
+As we communicate with the users about these issues, we would like to first determine whether it is an issue of type (1), (2), (3), or (4), and so on, or perhaps a new kind of issue. Some issues, for example, of type (4), which are the most “interesting” for Erigon developers, can be further classified.
+Often, it is enough to ask the user to show error message or console output or log file to identify the cause. Often the issues are easy to reproduce if developers have the same type of node that user has.
+But there are many cases where even looking at the console output is not enough to diagnose the issue. Moreover, the issue may be transient and disappear when the user tries to restart the system with some additional tracing code.
+Our prediction is that as the complexity of Erigon as a system grows, the diagnostics of user issues will pose bigger and bigger challenge unless it is addressed in a systematic way.
+
+## Idea of a possible solution
+
+We do not know if this possible solution will be workable, but we should try. In order to address the problem described above in a systematic way, we need to create a system and/or a process for dealing with user issues, i.e. to diagnose their cause.
+Diagnostics require gathering information about the user’s Erigon node. Some information should be gathered in any case, because it is universally useful for investigating the cause of most issues:
+Version of Erigon.
+Basic parameters of the user’s systems and its hardware, for example, available and used memory, available disk space.
+Snippet of the recent console output.
+
+Further investigation often requires more data, and probing for such data is usually done in an interactive manner, in order to optimise for the amount of communication. This applies both to human communication (when diagnostics is done in our current way), and to the communications between diagnostics system and user’s Erigon node.
+Diagnostics may be performed by the diagnostics system in the manual mode, where probing for more data is done by the human operator, who uses the diagnostics system to visualise the data received before, and decides what else needs to be seen. This would be initial mode of operation for the diagnostics system, as we start to learn what capabilities it should have.
+It is conceivable that as the diagnostics system develops, it may be able to perform diagnostics automatically using some pattern matching and heuristics.
+
+## Role for recruting and on-boarding
+
+Since the diagnostics system is an application which is only very loosely connected with Erigon, and so far is more self-contained, learning it and working with it should require much
+less time than learning to work with the Erigon code.
+Also, working with the diagnostics system requires understanding how Erigon is run and operated by the user, and hopefully should also give some exposure to what kind of issues
+usually occur and what are useful diagnostics to deal with them.
+
+Therefore, we think it can be very useful to ask for contributions (improvements) to the diagnostics system as a part of our recruiting process (to pre-screen the candidates who are
+interested and capable), and also as a part of on-boarding for the developers who have recently joined the team. For worthy improvements, bounties can be paid, since we do not
+necessarily want people to work for free.
 
 # How to build and run
 To build, perform `git clone`, change to the directory with the source code and run:
