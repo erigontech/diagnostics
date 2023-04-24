@@ -81,16 +81,57 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 ## Code version
 
+Operator can look at the code version that Erigon node has been built with.
+
+![versions](/images/versions.png)
+
 ## Command line arguments
 
+Operator can look at the command line arguments that were used to launch erigon node.
+
+![cmd line](/images/cmd_line.png)
+
 ## Logs
+
+Since version 2.43.0, erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log roation. Using diagnosics system,
+these logs can be looked at and downloaded to the operator's computer.
+
+![logs](/images/logs.png)
 
 ## Reorg scanner
 
 This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel. Re-orgs can be identified by
 the presence of multiple block headers with the same block height but different block hashes.
 
+![scan reorgs](/images/scan_reorgs.png)
+
 # Block Body Download
 
 This is the first crude example of monitoring an algorithms involving many items (in that case block bodies) transitioning through the series of states.
 
+![body download](/images/body_download.png)
+
+# Ideas for possible improvements
+
+If you are looking at this because you would like to apply to be a part of Erigon development team, the best you can do is to try to first the diagnostics
+system locally as described above, then study the code in the repository and think of a way to improve it. This repository has been intitially created by
+a person with very little experience in web server development, web design, javascript, and, more crucially, it has been created in a bit of a rush.
+Therefore, there should be a lot of things that can be improved in terms of best practices, more pleasant user interface, code simplicity, etc.
+
+There are some functional improvements that could be quite useful, for example:
+
+* Reorg scanner is very basic and it does not have a concept of a "deep" reorg (deeper than 1 block). For such situations, it will just show the consequitive
+block numbers as all havign a reorg. It would be better to aggregate these into deep reorgs, and also perhaps show if there are more than 1 branch at each
+reorg point.
+* For the reorg scanner, add the ability to click on the block numbers and get more information about that particular reorg, for example, block producers
+for each of the block participating in the reorg, or difference in terms of transactions.
+* Any sessions created via User Interface, stay in the server forever and are never cleaned up, so theoretically eventually the server will run out of memory.
+This needs to be addressed by introducing some kind of expiration mechanism and cleaning up expired sessions.
+* The user interface for selecting sessions and entering PIN numbers use a different way of interacting (HTML forms) with the server than the buttons that
+invoke various diagnostics. Perhaps this can be changed with a bit more javascript.
+* As mentioned above, the generation of session PIN is currently performed using a non-secure random number genetator, which is convinient for testing
+(because the URL one needs to pass to `erigon support` stays the same), but for real-life use, this is not good. A simple improvement could be the default
+behaviour being secure random number generator, with an option to use insecure (for example, `--insecure`) to keep it convinient for testing.
+* Retrieving command line arguments is only useful if the erigon node is not launched using configuration file. If configutation file is used, then
+most of the settings are still not visible to the operator. A possible improvement (which involves also changes in Erigon itself) is to either provide
+access to the configutation file, or somehow give access to the "effective" launch settings (i.e. after the configuration file is parsed and applied).
