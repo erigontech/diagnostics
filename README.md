@@ -137,6 +137,17 @@ one for each reorged block found).
 # Block Body Download
 
 This is the first crude example of monitoring an algorithms involving many items (in that case block bodies) transitioning through the series of states.
+On the erigon side, the code is spread across files `dataflow/stages.go`, where the states of each block body in the downloading algorithm are listed,
+and the structure `States` is described. This structure allows the body downloader algorithm (in the files `eth/stagedsync/stage_bodies.go` and
+`turbo/stages/bodydownload/body_algos.go`) to invoke `AddChange` to report the change of state for any block number. The structure `States` intends to
+have a strict upper bound on memory usage and to be very allocation-light. On the other hand, the function `ChangesSince` is called by the code in
+`diagnostics/block_body_download.go` to send the recent history of state changes to the diagnostics system (via logical tunner of `erigon support` of course).
+On the side of the diagnostics system, in the file `cmd/bodies_download.go`, there are two functions. One, `bodies_download` is generating output
+HTML representing the current view of the some limited number of block bodies being downloaded (1000). This function keeps querying the erigon node
+roughly every second and re-generates the HTML (using temlate in `assets/template/body_download.hml`). The re-generated HTML is written to, and is
+consumed by the javascript function `bodiesDownload` in the `assets/script/session.js`, which keeps replacing the `innerHTML` field in a div element
+whenever the new HTML piece is available.
+Each state is represented by a distinct colour, with the colour legend is also defined in the temlate file.
 
 ![body download](/images/body_download.png)
 
@@ -165,3 +176,6 @@ behaviour being secure random number generator, with an option to use insecure (
 * Retrieving command line arguments is only useful if the erigon node is not launched using configuration file. If configutation file is used, then
 most of the settings are still not visible to the operator. A possible improvement (which involves also changes in Erigon itself) is to either provide
 access to the configutation file, or somehow give access to the "effective" launch settings (i.e. after the configuration file is parsed and applied).
+* Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
+* Adding a monitoring for header downloader as well as for body downloader.
+* Perhaps embeeding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics sytem?
