@@ -4,12 +4,12 @@
 
 According to our estimations, Erigon is used by hundreds of people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
 Very often, users encounter issues when working with Erigon. We can classify them roughly in the following categories by their cause:
-* Caused by the mismatching expectation. User expects Erigon to do something that it cannot do.
-* Caused by accidental user errors (typos in the command line, for example).
-* Caused by underlying software or hardware issues on user’s system (for example, running out of disk space, faulty memory, bug in operating system).
-* Caused by bugs in Erigon.
-* Caused by bugs in libraries that Erigon uses.
-* Caused by other systems that are used in conjunction with Erigon (for example, Consensus Layer implementations).
+1. Caused by the mismatching expectation. User expects Erigon to do something that it cannot do.
+2. Caused by accidental user errors (typos in the command line, for example).
+3. Caused by underlying software or hardware issues on user’s system (for example, running out of disk space, faulty memory, bug in operating system).
+4. Caused by bugs in Erigon.
+5. Caused by bugs in libraries that Erigon uses.
+6. Caused by other systems that are used in conjunction with Erigon (for example, Consensus Layer implementations).
 
 This classification should be viewed as "work in progress" and we will refine it as we move on with the project.
 As we communicate with the users about these issues, we would like to first determine whether it is an issue of type (1), (2), (3), or (4), and so on, or perhaps a new kind of issue. Some issues, for example, of type (4), which are the most “interesting” for Erigon developers, can be further classified.
