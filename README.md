@@ -113,9 +113,10 @@ This is the first crude example of monitoring an algorithms involving many items
 
 # Ideas for possible improvements
 
-If you are looking at this because you would like to apply to be a part of Erigon development team, the best you can do is to try to first the diagnostics
-system locally as described above, then study the code in the repository and think of a way to improve it. This repository has been intitially created by
-a person with very little experience in web server development, web design, javascript, and, more crucially, it has been created in a bit of a rush.
+If you are looking at this because you would like to apply to be a part of Erigon development team, the best you can do is to try to first run the
+diagnostics system locally as described above, then study the code in the repository and think of a way to improve it. This repository has been
+intitially created by a person with very little experience in web server development, web design, javascript, and, more crucially, it has been
+created in a bit of a rush.
 Therefore, there should be a lot of things that can be improved in terms of best practices, more pleasant user interface, code simplicity, etc.
 
 There are some functional improvements that could be quite useful, for example:
