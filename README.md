@@ -74,6 +74,16 @@ the following command line flags can be used:
 --metrics.addr <IP of interface> --metrics.port <port>
 ```
 
+If you are not sure what kind of node to run, you can try Ethereum Sepolia testnet with Caplin (Erigon's experimental embedded Consensus Layer support).
+Caplin does not yet correctly work on Sepolia in `devel` branch of Erigon, but this is coming very soon (currently it is in `erigon-cl` branch, but will
+be soon merged to `devel` and then included into the next release). Choose data directory and run this command:
+
+```
+erigon --datadir <data_directory> --chain sepolia --internalcl
+```
+
+The flag `--internalcl` enables Caplin, which means that you won't need to install a Consensus Layer separately, and this will make your work simpler.
+
 In order to check is the metrics are exposed on given interface or port, you can check it in the browser by going to
 ```
 http://<metrics.addr>:<metrics.port>/debug/metrics/prometheus
