@@ -232,3 +232,4 @@ access to the configutation file, or somehow give access to the "effective" laun
 * Ability to extract and analyse go-routine stack traces from Erigon node. To start with, extract something like `debug/pprof/goroutine?debug=2`, but for Erigon
 this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
 stack traces and show them as aggregates.
+* Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).
