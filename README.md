@@ -75,8 +75,8 @@ the following command line flags can be used:
 ```
 
 If you are not sure what kind of node to run, you can try Ethereum Sepolia testnet with Caplin (Erigon's experimental embedded Consensus Layer support).
-Caplin does not yet correctly work on Sepolia in `devel` branch of Erigon, but this is coming very soon (currently it is in `erigon-cl` branch, but will
-be soon merged to `devel` and then included into the next release). Choose data directory and run this command:
+Caplin works on Sepolia in `devel` branch of Erigon, but this wll be included into the next release. Build Erigon from `devel` branch, choose data directory
+and run this command:
 
 ```
 erigon --datadir <data_directory> --chain sepolia --internalcl
@@ -229,3 +229,6 @@ access to the configutation file, or somehow give access to the "effective" laun
 * Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
 * Adding a monitoring for header downloader as well as for body downloader.
 * Perhaps embeeding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics sytem?
+* Ability to extract and analyse go-routine stack traces from Erigon node. To start with, extract something like `debug/pprof/goroutine?debug=2`, but for Erigon
+this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
+stack traces and show them as aggregates.
