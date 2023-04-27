@@ -1,5 +1,25 @@
 # DIAGNOSTICS SYSTEM WEB APPLICATION FOR ERIGON
 
+- [Overview](#overview) 
+    - [Statement of the problem](#statement-of-the-problem)
+    - [Idea of a possible solution](#idea-of-a-possible-solution)
+    - [Role for recruiting and onboarding](#role-for-recruiting-and-on-boarding)
+- [Development Environment Setup](#development-environment-setup)
+    - [Pre-requisites](#pre-requisites)
+    - [Erigon Node](#erigon-node-set-up)
+    - [Diagnostics](#diagnostics-set-up)
+    - [Connect Erigon The Diagnostics System](#how-to-connect-erigon-node-to-the-diagnostics-system)
+- [Architecture of diagnostics system](#architecture-of-diagnostics-system)
+- [Currently implemented diagnostics](#currently-implemented-diagnostics)
+    - [Code version](#code-version)
+    - [Command line arguments](#command-line-arguments)
+    - [Logs](#logs)
+    - [Reorg scanner](#reorg-scanner)
+- [Block body download](#block-body-download)
+- [Ideas for Possible improvements](#ideas-for-possible-improvements)
+
+# Overview
+
 ## Statement of the problem
 
 According to our estimations, Erigon is used by hundreds of people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
@@ -29,7 +49,7 @@ Further investigation often requires more data, and probing for such data is usu
 Diagnostics may be performed by the diagnostics system in the manual mode, where probing for more data is done by the human operator, who uses the diagnostics system to visualise the data received before, and decides what else needs to be seen. This would be initial mode of operation for the diagnostics system, as we start to learn what capabilities it should have.
 It is conceivable that as the diagnostics system develops, it may be able to perform diagnostics automatically using some pattern matching and heuristics.
 
-## Role for recruting and on-boarding
+## Role for recruiting and on-boarding
 
 Since the diagnostics system is an application which is only very loosely connected with Erigon, and so far is more self-contained, learning it and working with it should require much
 less time than learning to work with the Erigon code.
@@ -40,7 +60,71 @@ Therefore, we think it can be very useful to ask for contributions (improvements
 interested and capable), and also as a part of on-boarding for the developers who have recently joined the team. For worthy improvements, bounties can be paid, since we do not
 necessarily want people to work for free.
 
-# How to build and run
+# Development Environment Setup
+
+
+## Pre-requisites
+- Golang installed locally
+- Erigon Node running locally (if needed, please review the Erigon Node quick setup guide below)
+
+
+## Erigon Node Set Up
+Clone the Erigon repository
+```
+git clone --recurse-submodules -j8 https://github.com/ledgerwatch/erigon.git
+```
+
+Change into the repo, and make sure you are on the ```devel``` branch
+```
+cd erigon
+git checkout devel
+```
+
+Build the repo
+```
+make erigon
+```
+
+Run the Node. To make sure that it connects to the diagnostics system, add the --metrics flag. 
+The `<data_directory>` field will be the directory path to your database. The sepolia chain and the --internalcl options will allow for quicker setup for testing
+
+```
+./build/bin/erigon --datadir <data_directory> --chain sepolia --internalcl --metrics
+```
+
+Check the prometheus logs by navigating to the url below
+```
+http://localhost:6060/debug/metrics/prometheus
+```
+To set and use a custom address and port, here a 
+[link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
+
+## Diagnostics Set Up
+Clone the diagnostics repository
+```
+git clone https://github.com/ledgerwatch/diagnostics.git
+```
+Change into the folder
+```
+cd diagnostics
+```
+
+Build the project
+```
+go build .
+```
+
+Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
+```
+./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+```
+
+To view the application in your browser, go to the URL `https://localhost:8080/ui`. You browser will likely ask to to accept the risks (due to self-signed certificate), do that.
+
+[Link to more information on this step](#how-to-build-and-run)
+
+
+## How to build and run
 To build, perform `git clone`, change to the directory with the source code and run:
 
 ```
@@ -59,7 +143,7 @@ To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use
 
 In the browser, go to the URL `https://localhost:8080/ui`. You browser will likely ask to to accept the risks (due to self-signed certificate), do that.
 
-# How to run an Erigon node that can be connected to the diagnosgics system
+# How to run an Erigon node that can be connected to the diagnostics system
 
 For an Erigon node to be connected to the diagnostics system, it needs to expose metrics using this command line flag:
 
