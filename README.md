@@ -6,9 +6,9 @@
     - [Role for recruiting and onboarding](#role-for-recruiting-and-on-boarding)
 - [Development Environment Setup](#development-environment-setup)
     - [Pre-requisites](#pre-requisites)
-    - [Erigon Node](#erigon-node-set-up)
-    - [Diagnostics](#diagnostics-set-up)
-    - [Connect Erigon The Diagnostics System](#how-to-connect-erigon-node-to-the-diagnostics-system)
+    - [Erigon Node Setup](#erigon-node-set-up)
+    - [Diagnostics Setup](#diagnostics-set-up)
+    - [Connect Erigon The Diagnostics System](#connect-the-erigon-node-to-the-diagnostics-system-setup)
 - [Architecture of diagnostics system](#architecture-of-diagnostics-system)
 - [Currently implemented diagnostics](#currently-implemented-diagnostics)
     - [Code version](#code-version)
@@ -123,6 +123,8 @@ To view the application in your browser, go to the URL `https://localhost:8080/u
 
 [Link to more information on this step](#how-to-build-and-run)
 
+## Connect the Erigon Node to the Diagnostics System setup
+[Link to more information on this step](#how-to-connect-erigon-node-to-the-diagnostics-system)
 
 ## How to build and run
 To build, perform `git clone`, change to the directory with the source code and run:
