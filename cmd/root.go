@@ -28,7 +28,7 @@ var (
 	serverKeyFile  string
 	serverCertFile string
 	caCertFiles    []string
-	insecure	   bool
+	insecure       bool
 
 	rootCmd = &cobra.Command{
 		Use:   "diagnostics",

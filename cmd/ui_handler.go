@@ -213,14 +213,14 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 	uih.nodeSessionsLock.Lock()
 	defer uih.nodeSessionsLock.Unlock()
 	pin, err := generatePIN()
-	if err != nil{
+	if err != nil {
 		return pin, nil, err
 	}
-	
+
 	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
 		pin, err = generatePIN()
 	}
-	if err != nil{
+	if err != nil {
 		return pin, nil, err
 	}
 	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}

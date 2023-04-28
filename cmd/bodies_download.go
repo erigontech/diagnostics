@@ -16,17 +16,17 @@ import (
 const VisLimit = 1000
 
 type BodyDownload struct {
-	Legends [9]bool
-	BlockNum uint64
-	Pre1 []struct{}
-	Pre10 []struct{}
-	Pre100 []struct{}
-	Pre1_000 []struct{}
-	Pre10_000 []struct{}
-	Pre100_000 []struct{}
-	Pre1_000_000 []struct{}
+	Legends       [9]bool
+	BlockNum      uint64
+	Pre1          []struct{}
+	Pre10         []struct{}
+	Pre100        []struct{}
+	Pre1_000      []struct{}
+	Pre10_000     []struct{}
+	Pre100_000    []struct{}
+	Pre1_000_000  []struct{}
 	Pre10_000_000 []struct{}
-	States []SnapshotItem
+	States        []SnapshotItem
 }
 
 type SnapshotItem struct {
@@ -100,14 +100,14 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 				}
 				if changesMode {
 					/*
-					if _, ok := changes[id]; ok {
-						if firstItem, firstOk := snapshot.Min(); firstOk {
-							if id < firstItem.Id + VisLimit {
-								sendSnapshot(snapshot, w, templ, sendEvery)
-								maps.Clear(changes)
+						if _, ok := changes[id]; ok {
+							if firstItem, firstOk := snapshot.Min(); firstOk {
+								if id < firstItem.Id + VisLimit {
+									sendSnapshot(snapshot, w, templ, sendEvery)
+									maps.Clear(changes)
+								}
 							}
 						}
-					}
 					*/
 					tick++
 				}
@@ -121,7 +121,7 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 		}
 		sendSnapshot(snapshot, w, templ, sendEvery)
 		maps.Clear(changes)
-		<- sendEvery.C
+		<-sendEvery.C
 	}
 }
 
@@ -134,25 +134,25 @@ func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, t
 			first = false
 			bd.BlockNum = item.Id
 			pre := int(bd.BlockNum)
-			bd.Pre10_000_000 = make([]struct{}, pre / 10_000_000)
+			bd.Pre10_000_000 = make([]struct{}, pre/10_000_000)
 			pre %= 10_000_000
-			bd.Pre1_000_000 = make([]struct{}, pre / 1_000_000)
+			bd.Pre1_000_000 = make([]struct{}, pre/1_000_000)
 			pre %= 1_000_000
-			bd.Pre100_000 = make([]struct{}, pre / 100_000)
+			bd.Pre100_000 = make([]struct{}, pre/100_000)
 			pre %= 100_000
-			bd.Pre10_000 = make([]struct{}, pre / 10_000)
+			bd.Pre10_000 = make([]struct{}, pre/10_000)
 			pre %= 10_000
-			bd.Pre1_000 = make([]struct{}, pre / 1_000)
+			bd.Pre1_000 = make([]struct{}, pre/1_000)
 			pre %= 1_000
-			bd.Pre100 = make([]struct{}, pre / 100)
+			bd.Pre100 = make([]struct{}, pre/100)
 			pre %= 100
-			bd.Pre10 = make([]struct{}, pre / 10)
+			bd.Pre10 = make([]struct{}, pre/10)
 			pre %= 10
 			bd.Pre1 = make([]struct{}, pre)
 		}
 		bd.States = append(bd.States, item)
 		bd.Legends[item.State] = true
-		return item.Id < bd.BlockNum + VisLimit // We limit visualisation to VisLimit first blocks
+		return item.Id < bd.BlockNum+VisLimit // We limit visualisation to VisLimit first blocks
 	})
 	if err := templ.ExecuteTemplate(w, "body_download.html", bd); err != nil {
 		fmt.Fprintf(w, "Executing body_download template: %v", err)
