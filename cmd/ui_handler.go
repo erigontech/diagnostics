@@ -124,7 +124,11 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
-		uiSession.SessionPin, uiSession.NodeS = uih.allocateNewNodeSession()
+		uiSession.SessionPin, uiSession.NodeS, err = uih.allocateNewNodeSession()
+		if err != nil {
+			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Generating new node session PIN %v", err))
+			break
+		}
 		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
 	case r.FormValue("resume_session") != "":
 		// Resume (take over) node session using known PIN
@@ -205,22 +209,23 @@ type UiHandler struct {
 	uiTemplate       *template.Template
 }
 
-func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession) {
+func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 	uih.nodeSessionsLock.Lock()
 	defer uih.nodeSessionsLock.Unlock()
 	pin, err := generatePIN()
-	if err != nil {
-		pin = uint64(weakrand.Int63n(100_000_000))
+	if err != nil{
+		return pin, nil, err
 	}
+	
 	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
 		pin, err = generatePIN()
-		if err != nil {
-			pin = uint64(weakrand.Int63n(100_000_000))
-		}
+	}
+	if err != nil{
+		return pin, nil, err
 	}
 	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
 	uih.nodeSessions[pin] = nodeSession
-	return pin, nodeSession
+	return pin, nodeSession, nil
 }
 
 func (sh *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
@@ -311,5 +316,5 @@ func generatePIN() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return uint64(randNum.Uint64()), nil
+	return randNum.Uint64(), nil
 }
