@@ -28,6 +28,7 @@ var (
 	serverKeyFile  string
 	serverCertFile string
 	caCertFiles    []string
+	insecure	   bool
 
 	rootCmd = &cobra.Command{
 		Use:   "diagnostics",
@@ -55,6 +56,7 @@ func init() {
 	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")
 	rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
+	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
 }
 
 func initConfig() {

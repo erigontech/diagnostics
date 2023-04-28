@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"math/big"
 	weakrand "math/rand"
 	"net/http"
 	"net/url"
@@ -105,7 +106,6 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "bodies_download":
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
-
 	}
 	uiSession.lock.Lock()
 	defer func() {
@@ -208,9 +208,15 @@ type UiHandler struct {
 func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession) {
 	uih.nodeSessionsLock.Lock()
 	defer uih.nodeSessionsLock.Unlock()
-	pin := uint64(weakrand.Int63n(100_000_000))
-	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
+	pin, err := generatePIN()
+	if err != nil {
 		pin = uint64(weakrand.Int63n(100_000_000))
+	}
+	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
+		pin, err = generatePIN()
+		if err != nil {
+			pin = uint64(weakrand.Int63n(100_000_000))
+		}
 	}
 	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
 	uih.nodeSessions[pin] = nodeSession
@@ -294,4 +300,16 @@ func (sh *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, 
 		}
 	}
 	return success, sb.String()
+}
+
+func generatePIN() (uint64, error) {
+	if insecure {
+		return uint64(weakrand.Int63n(100_000_000)), nil
+	}
+	max := big.NewInt(100_000_000) // For an 8-digit PIN
+	randNum, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(randNum.Uint64()), nil
 }
