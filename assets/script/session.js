@@ -1,3 +1,4 @@
+
 async function fetchContent(sessionName, description, url, divId) {
     const d = document.getElementById(divId);
     d.innerHTML = "Fetching " + description + " ...";
@@ -136,4 +137,71 @@ async function bodiesDownload(sessionName) {
         .then((reader) => processReaderReplace(d, reader))
         .then(() => console.log('completed'))
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
+}
+
+async function switchSession(sessionName, sessionPin) {
+    var formData = new FormData();
+    var current_session_name = document.getElementById("current_sessionname").value
+    var url = '/ui/switch_session'
+    formData.append("current_sessionname", current_session_name);
+    formData.append("sessionname", "");
+    formData.append("pin", "");
+    formData.append(sessionPin, sessionName);
+    console.log(formData)
+    const request = new Request(url, {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: new URLSearchParams(formData),
+    });
+    fetch(request)
+    .then(response => response.text())
+    .then(html => {
+        // replace entire page with rendered HTML template
+        document.body.innerHTML = html;
+    })
+}
+async function newSession() {
+    var formData = new FormData();
+    var session_name = document.getElementById("sessionname").value
+    var current_sessionname = document.getElementById("current_sessionname").value
+    var url = '/ui/'
+    formData.append("current_sessionname ", current_sessionname );
+    formData.append("sessionname", session_name);
+    formData.append("new_session", "New operator session");
+    formData.append("pin", "");
+    console.log(formData)
+    const request = new Request(url, {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: new URLSearchParams(formData),
+    });
+    fetch(request)
+    .then(response => response.text())
+    .then(html => {
+        document.body.innerHTML = html;
+    })
+}
+
+async function resumeSession(sessionName) {
+    var newSessionName = document.getElementById("sessionname").value
+    var newPin = document.getElementById("pin").value
+
+    var formData = new FormData();
+    formData.append("current_sessionname", sessionName);
+    formData.append("sessionname", newSessionName);
+    formData.append("resume_session", "Resume or take over operator session");
+    formData.append("pin", newPin);
+    const request = new Request('/ui/', {
+        method: "POST",
+        mode: "cors",
+        cache: "default",
+        body: new URLSearchParams(formData),
+    });
+    fetch(request)
+    .then(response => response.text())
+    .then(html => {
+        document.body.innerHTML = html;
+    })
 }
