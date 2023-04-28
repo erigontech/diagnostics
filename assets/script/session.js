@@ -4,12 +4,7 @@ async function fetchContent(sessionName, description, url, divId) {
     d.innerHTML = "Fetching " + description + " ...";
     var formData = new FormData();
     formData.append('current_sessionname', sessionName);
-    const request = new Request(url, {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
+    const request =  createRequest(url, "POST", formData) 
     try {
         const response = await fetch(request);
         if (!response.ok) {
@@ -27,15 +22,12 @@ async function fetchLogPart(logPartId, sessionName, description, url, filename, 
     const d = document.getElementById(logPartId);
     d.innerHTML = "Fetch " +description + " ...";
     let formData = new FormData();
-    formData.append('current_sessionname', sessionName);
-    formData.append('file', filename);
-    formData.append('size', size);
-    const request = new Request(url, {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
+    formData = createForm({
+        'current_sessionname': sessionName,
+        'file': filename,
+        'size': size,
+    })
+    const request =  createRequest(url, "POST", formData) 
     try {
         const response = await fetch(request);
         if (!response.ok) {
@@ -86,12 +78,7 @@ async function findReorgs(sessionName) {
     d.innerHTML = "Looking for reorgs...";
     var formData = new FormData();
     formData.append('current_sessionname', sessionName);
-    const request = new Request("/ui/reorgs", {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
+    const request =  createRequest("/ui/reorgs", "POST", formData) 
     fetch(request)
         .then((response) => response.body)
         .then((body) => body.getReader())
@@ -125,12 +112,7 @@ async function bodiesDownload(sessionName) {
     d.innerHTML = "Tracking bodies download...";
     var formData = new FormData();
     formData.append('current_sessionname', sessionName);
-    const request = new Request("/ui/bodies_download", {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
+    const request =  createRequest("/ui/bodies_download", "POST", formData) 
     fetch(request)
         .then((response) => response.body)
         .then((body) => body.getReader())
@@ -139,19 +121,28 @@ async function bodiesDownload(sessionName) {
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
 
-async function switchSession(sessionName, sessionPin) {
-    var formData = new FormData();
-    var current_session_name = document.getElementById("current_sessionname").value
-    formData.append("current_sessionname", current_session_name);
-    formData.append("sessionname", "");
-    formData.append("pin", "");
-    formData.append(sessionPin, sessionName);
-    const request = new Request('/ui/', {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
+async function fetchSession(sessionName, description, sessionPin) {
+    var formData = null
+    if(description == 'switch'){
+        var current_session_name = document.getElementById("current_sessionname").value
+        formData = createForm({
+            "current_sessionname": current_session_name,
+            "sessionname": "",
+            "pin": "",
+            [sessionPin]: sessionName
+        })
+    }
+    else if(description == 'resume'){
+        var newSessionName = document.getElementById("sessionname").value
+        var newPin = document.getElementById("pin").value
+        formData = createForm({
+            "current_sessionname": sessionName,
+            "sessionname": newSessionName,
+            "resume_session": "Resume or take over operator session",
+            "pin": newPin
+        })
+    }
+    const request =  createRequest('/ui/', "POST", formData) 
     fetch(request)
     .then(response => response.text())
     .then(html => {
@@ -159,24 +150,20 @@ async function switchSession(sessionName, sessionPin) {
     })
 }
 
-async function resumeSession(sessionName) {
-    var newSessionName = document.getElementById("sessionname").value
-    var newPin = document.getElementById("pin").value
-
+function createForm(jsonData) {
     var formData = new FormData();
-    formData.append("current_sessionname", sessionName);
-    formData.append("sessionname", newSessionName);
-    formData.append("resume_session", "Resume or take over operator session");
-    formData.append("pin", newPin);
-    const request = new Request('/ui/', {
-        method: "POST",
+    for (const [key, value] of Object.entries(jsonData)) {
+        formData.append(key, value)
+    }
+    return formData;
+}
+
+function createRequest(url, method, formData) {
+    const request = new Request(url, {
+        method: method,
         mode: "cors",
         cache: "default",
         body: new URLSearchParams(formData),
     });
-    fetch(request)
-    .then(response => response.text())
-    .then(html => {
-        document.body.innerHTML = html;
-    })
+    return  request
 }
