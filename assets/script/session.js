@@ -142,36 +142,11 @@ async function bodiesDownload(sessionName) {
 async function switchSession(sessionName, sessionPin) {
     var formData = new FormData();
     var current_session_name = document.getElementById("current_sessionname").value
-    var url = '/ui/switch_session'
     formData.append("current_sessionname", current_session_name);
     formData.append("sessionname", "");
     formData.append("pin", "");
     formData.append(sessionPin, sessionName);
-    console.log(formData)
-    const request = new Request(url, {
-        method: "POST",
-        mode: "cors",
-        cache: "default",
-        body: new URLSearchParams(formData),
-    });
-    fetch(request)
-    .then(response => response.text())
-    .then(html => {
-        // replace entire page with rendered HTML template
-        document.body.innerHTML = html;
-    })
-}
-async function newSession() {
-    var formData = new FormData();
-    var session_name = document.getElementById("sessionname").value
-    var current_sessionname = document.getElementById("current_sessionname").value
-    var url = '/ui/'
-    formData.append("current_sessionname ", current_sessionname );
-    formData.append("sessionname", session_name);
-    formData.append("new_session", "New operator session");
-    formData.append("pin", "");
-    console.log(formData)
-    const request = new Request(url, {
+    const request = new Request('/ui/', {
         method: "POST",
         mode: "cors",
         cache: "default",
