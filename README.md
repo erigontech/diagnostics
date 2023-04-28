@@ -15,7 +15,7 @@
     - [Command line arguments](#command-line-arguments)
     - [Logs](#logs)
     - [Reorg scanner](#reorg-scanner)
-- [Block body download](#block-body-download)
+    - [Block body download](#block-body-download)
 - [Ideas for Possible improvements](#ideas-for-possible-improvements)
 
 # Overview
@@ -270,7 +270,7 @@ one for each reorged block found).
 
 ![scan reorgs](/images/scan_reorgs.png)
 
-# Block Body Download
+## Block Body Download
 
 This is the first crude example of monitoring an algorithms involving many items (in that case block bodies) transitioning through the series of states.
 On the erigon side, the code is spread across files `dataflow/stages.go`, where the states of each block body in the downloading algorithm are listed,
@@ -306,9 +306,6 @@ for each of the block participating in the reorg, or difference in terms of tran
 This needs to be addressed by introducing some kind of expiration mechanism and cleaning up expired sessions.
 * The user interface for selecting sessions and entering PIN numbers use a different way of interacting (HTML forms) with the server than the buttons that
 invoke various diagnostics. Perhaps this can be changed with a bit more javascript.
-* As mentioned above, the generation of session PIN is currently performed using a non-secure random number genetator, which is convinient for testing
-(because the URL one needs to pass to `erigon support` stays the same), but for real-life use, this is not good. A simple improvement could be the default
-behaviour being secure random number generator, with an option to use insecure (for example, `--insecure`) to keep it convinient for testing.
 * Retrieving command line arguments is only useful if the erigon node is not launched using configuration file. If configutation file is used, then
 most of the settings are still not visible to the operator. A possible improvement (which involves also changes in Erigon itself) is to either provide
 access to the configutation file, or somehow give access to the "effective" launch settings (i.e. after the configuration file is parsed and applied).
@@ -319,3 +316,4 @@ access to the configutation file, or somehow give access to the "effective" laun
 this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
 stack traces and show them as aggregates.
 * Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).
+* Github action for PRs and for `main` branch to perform basic checks - ensure that Go code compiles, and run linter.
