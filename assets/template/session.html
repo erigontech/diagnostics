@@ -14,13 +14,13 @@
                     <input id="newsession" type="submit" name="new_session" value="New operator session"/>
                     <label for="pin">Session PIN (up to 8 digits)</label>
                     <input id="pin" type="number" name="pin" min="0" max="99999999"/>
-                    <input id="resumesession" type="submit" name="resume_session" value="Resume or take over operator session"/>
+                    <button id="resumesession" type="button" onclick="fetchSession('{{.SessionName}}', 'resume')">Resume or take over operator session</button>
                 </div>
             </div>
             <div class="solid">
                 <label>Switch to existing session: </label>
                 {{range .UiNodes}}
-                    <input id="pin{{.SessionPin}}" type="submit" name="pin{{.SessionPin}}" value="{{.SessionName}}"/>
+                    <button id="pin{{.SessionPin}}" name="pin{{.SessionPin}}"  type="button" onclick="fetchSession('{{.SessionName}}', 'switch', 'pin{{.SessionPin}}')">{{.SessionName}}</button>
                 {{end}}
             </div>
             <div>
@@ -58,7 +58,7 @@
                     </div>
                 {{end}}
             </div>
-        </form>
+</form>
     </body>
     <script>
      </script>
