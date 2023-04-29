@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/google/btree v1.1.2
+	github.com/hashicorp/golang-lru/v2 v2.0.2
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
 	golang.org/x/exp v0.0.0-20230420155640-133eef4313cb

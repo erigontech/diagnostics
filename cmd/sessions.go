@@ -7,8 +7,6 @@ import (
 	"github.com/google/btree"
 )
 
-const nodeSessionMaxAge = 30 * 24 * time.Hour // 30 days
-
 type UiSession struct {
 	lock               sync.Mutex
 	Session            bool

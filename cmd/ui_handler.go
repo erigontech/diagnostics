@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/google/btree"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 const sessionIdCookieName = "sessionId"
@@ -203,7 +204,7 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan 
 
 type UiHandler struct {
 	nodeSessionsLock sync.Mutex
-	nodeSessions     map[uint64]*NodeSession
+	nodeSessions     *lru.ARCCache[uint64, *NodeSession]
 	uiSessionsLock   sync.Mutex
 	uiSessions       map[string]*UiSession
 	uiTemplate       *template.Template
@@ -217,30 +218,20 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 		return pin, nil, err
 	}
 
-	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
+	for uih.nodeSessions.Contains(pin) {
 		pin, err = generatePIN()
+		if err != nil {
+			return pin, nil, err
+		}
 	}
-	if err != nil {
-		return pin, nil, err
-	}
-	exp := time.Now().Add(nodeSessionMaxAge)
-	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16), expires: exp}
-	uih.nodeSessions[pin] = nodeSession
+
+	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
+	uih.nodeSessions.Add(pin, nodeSession)
 	return pin, nodeSession, nil
 }
 
 func (uih *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
-	uih.nodeSessionsLock.Lock()
-	defer uih.nodeSessionsLock.Unlock()
-	nodeSession, ok := uih.nodeSessions[pin]
-
-	// Check if sessions expire and remove expired sessions
-	if ok && time.Now().After(nodeSession.expires) {
-		delete(uih.nodeSessions, pin)
-		nodeSession = nil
-		ok = false
-	}
-
+	nodeSession, ok := uih.nodeSessions.Get(pin)
 	return nodeSession, ok
 }
 

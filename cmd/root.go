@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -28,6 +29,7 @@ var (
 	serverCertFile string
 	caCertFiles    []string
 	insecure       bool
+	maxSessions    int
 
 	rootCmd = &cobra.Command{
 		Use:   "diagnostics",
@@ -56,6 +58,7 @@ func init() {
 	rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
+	rootCmd.Flags().IntVar(&maxSessions, "max.sessions", 50, "maximum number of sessions to allow")
 }
 
 func initConfig() {
@@ -90,8 +93,14 @@ func webServer() error {
 	if err != nil {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
+
+	ns, err := lru.NewARC[uint64, *NodeSession](maxSessions)
+	if err != nil {
+		return fmt.Errorf("failed to create nodeSessions: %v", err)
+	}
+
 	uih := &UiHandler{
-		nodeSessions: map[uint64]*NodeSession{},
+		nodeSessions: ns,
 		uiSessions:   map[string]*UiSession{},
 		uiTemplate:   uiTemplate,
 	}
