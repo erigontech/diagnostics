@@ -6,7 +6,6 @@
     </head>
     <body>
         <form action="" method="post" id="session_form">
-        <!-- <div> -->
             <input type="hidden" id="current_sessionname" name="current_sessionname" value="{{.SessionName}}"/>
             <div class="solid">
                 <div>
@@ -24,7 +23,6 @@
                     <button id="pin{{.SessionPin}}" name="pin{{.SessionPin}}"  type="button" onclick="fetchSession('{{.SessionName}}', 'switch', 'pin{{.SessionPin}}')">{{.SessionName}}</button>
                 {{end}}
             </div>
-        <!-- </div> -->
             <div>
                 <ul>
                     {{range .Errors}}
@@ -60,7 +58,6 @@
                     </div>
                 {{end}}
             </div>
-        <!-- </div> -->
 </form>
     </body>
     <script>
