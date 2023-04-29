@@ -223,19 +223,28 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 	if err != nil {
 		return pin, nil, err
 	}
-	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
+	exp := time.Now().Add(nodeSessionMaxAge)
+	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16), expires: exp}
 	uih.nodeSessions[pin] = nodeSession
 	return pin, nodeSession, nil
 }
 
-func (sh *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
-	sh.nodeSessionsLock.Lock()
-	defer sh.nodeSessionsLock.Unlock()
-	nodeSession, ok := sh.nodeSessions[pin]
+func (uih *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
+	uih.nodeSessionsLock.Lock()
+	defer uih.nodeSessionsLock.Unlock()
+	nodeSession, ok := uih.nodeSessions[pin]
+
+	// Check if sessions expire and remove expired sessions
+	if ok && time.Now().After(nodeSession.expires) {
+		delete(uih.nodeSessions, pin)
+		nodeSession = nil
+		ok = false
+	}
+
 	return nodeSession, ok
 }
 
-func (sh *UiHandler) newUiSession() (string, *UiSession, error) {
+func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
 	var b [32]byte
 	var sessionId string
 	_, err := io.ReadFull(rand.Reader, b[:])
@@ -245,22 +254,22 @@ func (sh *UiHandler) newUiSession() (string, *UiSession, error) {
 	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
 	})}
-	sh.uiSessionsLock.Lock()
-	defer sh.uiSessionsLock.Unlock()
+	uih.uiSessionsLock.Lock()
+	defer uih.uiSessionsLock.Unlock()
 	if sessionId != "" {
-		sh.uiSessions[sessionId] = uiSession
+		uih.uiSessions[sessionId] = uiSession
 	}
 	return sessionId, uiSession, err
 }
 
-func (sh *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
-	sh.uiSessionsLock.Lock()
-	defer sh.uiSessionsLock.Unlock()
-	uiSession, ok := sh.uiSessions[sessionId]
+func (uih *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
+	uih.uiSessionsLock.Lock()
+	defer uih.uiSessionsLock.Unlock()
+	uiSession, ok := uih.uiSessions[sessionId]
 	return uiSession, ok
 }
 
-func (sh *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
+func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
 		return false
@@ -272,7 +281,7 @@ func (sh *UiHandler) validSessionName(sessionName string, uiSession *UiSession) 
 	return true
 }
 
-func (sh *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
+func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
 	if requestChannel == nil {
 		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
 	}
