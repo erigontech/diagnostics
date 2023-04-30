@@ -11,24 +11,26 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
-	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics/assets"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/ledgerwatch/diagnostics/assets"
 )
 
 var (
 	// Used for flags.
-	cfgFile        string
-	listenAddr     string
-	listenPort     int
-	serverKeyFile  string
-	serverCertFile string
-	caCertFiles    []string
-	insecure       bool
+	cfgFile         string
+	listenAddr      string
+	listenPort      int
+	serverKeyFile   string
+	serverCertFile  string
+	caCertFiles     []string
+	insecure        bool
+	maxNodeSessions int
+	maxUISessions   int
 
 	rootCmd = &cobra.Command{
 		Use:   "diagnostics",
@@ -57,6 +59,8 @@ func init() {
 	_ = rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
+	rootCmd.Flags().IntVar(&maxNodeSessions, "node.sessions", 5000, "maximum number of node sessions to allow")
+	rootCmd.Flags().IntVar(&maxUISessions, "ui.sessions", 5000, "maximum number of UI sessions to allow")
 }
 
 func initConfig() {
@@ -83,52 +87,6 @@ func initConfig() {
 
 const successLine = "SUCCESS"
 
-// NodeSession corresponds to one Erigon node connected via "erigon support" bridge to an operator
-type NodeSession struct {
-	lock sync.Mutex
-	//sessionPin     uint64
-	Connected      bool
-	RemoteAddr     string
-	SupportVersion uint64            // Version of the erigon support command
-	requestCh      chan *NodeRequest // Channel for incoming metrics requests
-}
-
-func (ns *NodeSession) connect(remoteAddr string) {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
-	ns.Connected = true
-	ns.RemoteAddr = remoteAddr
-}
-
-func (ns *NodeSession) disconnect() {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
-	ns.Connected = false
-}
-
-type UiNodeSession struct {
-	SessionName string
-	SessionPin  uint64
-}
-
-type UiSession struct {
-	lock        sync.Mutex
-	Session     bool
-	SessionPin  uint64
-	SessionName string
-	Errors      []string // Transient field - only filled for the time of template execution
-	//currentSessionName string
-	NodeS      *NodeSession // Transient field - only filled for the time of template execution
-	uiNodeTree *btree.BTreeG[UiNodeSession]
-	UiNodes    []UiNodeSession // Transient field - only filled forthe time of template execution
-}
-
-func (uiSession *UiSession) appendError(err string) {
-	uiSession.lock.Lock()
-	defer uiSession.lock.Unlock()
-	uiSession.Errors = append(uiSession.Errors, err)
-}
-
 func webServer() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -137,9 +95,20 @@ func webServer() error {
 	if err != nil {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
+
+	ns, err := lru.NewARC[uint64, *NodeSession](maxNodeSessions)
+	if err != nil {
+		return fmt.Errorf("failed to create nodeSessions: %v", err)
+	}
+
+	uis, err := lru.NewARC[string, *UiSession](maxUISessions)
+	if err != nil {
+		return fmt.Errorf("failed to create uiSessions: %v", err)
+	}
+
 	uih := &UiHandler{
-		nodeSessions: map[uint64]*NodeSession{},
-		uiSessions:   map[string]*UiSession{},
+		nodeSessions: ns,
+		uiSessions:   uis,
 		uiTemplate:   uiTemplate,
 	}
 	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))
