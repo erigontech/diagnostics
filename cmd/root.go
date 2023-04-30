@@ -22,14 +22,15 @@ import (
 
 var (
 	// Used for flags.
-	cfgFile        string
-	listenAddr     string
-	listenPort     int
-	serverKeyFile  string
-	serverCertFile string
-	caCertFiles    []string
-	insecure       bool
-	maxSessions    int
+	cfgFile         string
+	listenAddr      string
+	listenPort      int
+	serverKeyFile   string
+	serverCertFile  string
+	caCertFiles     []string
+	insecure        bool
+	maxNodeSessions int
+	maxUISessions   int
 
 	rootCmd = &cobra.Command{
 		Use:   "diagnostics",
@@ -58,7 +59,8 @@ func init() {
 	_ = rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
-	rootCmd.Flags().IntVar(&maxSessions, "max.sessions", 50, "maximum number of sessions to allow")
+	rootCmd.Flags().IntVar(&maxNodeSessions, "node.sessions", 5000, "maximum number of node sessions to allow")
+	rootCmd.Flags().IntVar(&maxUISessions, "ui.sessions", 5000, "maximum number of UI sessions to allow")
 }
 
 func initConfig() {
@@ -94,14 +96,19 @@ func webServer() error {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
 
-	ns, err := lru.NewARC[uint64, *NodeSession](maxSessions)
+	ns, err := lru.NewARC[uint64, *NodeSession](maxNodeSessions)
 	if err != nil {
 		return fmt.Errorf("failed to create nodeSessions: %v", err)
 	}
 
+	uis, err := lru.NewARC[string, *UiSession](maxUISessions)
+	if err != nil {
+		return fmt.Errorf("failed to create uiSessions: %v", err)
+	}
+
 	uih := &UiHandler{
 		nodeSessions: ns,
-		uiSessions:   map[string]*UiSession{},
+		uiSessions:   uis,
 		uiTemplate:   uiTemplate,
 	}
 	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))

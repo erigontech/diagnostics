@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/btree"
@@ -203,16 +202,12 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan 
 }
 
 type UiHandler struct {
-	nodeSessionsLock sync.Mutex
-	nodeSessions     *lru.ARCCache[uint64, *NodeSession]
-	uiSessionsLock   sync.Mutex
-	uiSessions       map[string]*UiSession
-	uiTemplate       *template.Template
+	nodeSessions *lru.ARCCache[uint64, *NodeSession]
+	uiSessions   *lru.ARCCache[string, *UiSession]
+	uiTemplate   *template.Template
 }
 
 func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
-	uih.nodeSessionsLock.Lock()
-	defer uih.nodeSessionsLock.Unlock()
 	pin, err := generatePIN()
 	if err != nil {
 		return pin, nil, err
@@ -231,8 +226,7 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 }
 
 func (uih *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
-	nodeSession, ok := uih.nodeSessions.Get(pin)
-	return nodeSession, ok
+	return uih.nodeSessions.Get(pin)
 }
 
 func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
@@ -245,19 +239,15 @@ func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
 	uiSession := &UiSession{uiNodeTree: btree.NewG(32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
 	})}
-	uih.uiSessionsLock.Lock()
-	defer uih.uiSessionsLock.Unlock()
+
 	if sessionId != "" {
-		uih.uiSessions[sessionId] = uiSession
+		uih.uiSessions.Add(sessionId, uiSession)
 	}
 	return sessionId, uiSession, err
 }
 
 func (uih *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
-	uih.uiSessionsLock.Lock()
-	defer uih.uiSessionsLock.Unlock()
-	uiSession, ok := uih.uiSessions[sessionId]
-	return uiSession, ok
+	return uih.uiSessions.Get(sessionId)
 }
 
 func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
