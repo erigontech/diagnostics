@@ -242,7 +242,7 @@ func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
 	if err == nil {
 		sessionId = base64.URLEncoding.EncodeToString(b[:])
 	}
-	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
+	uiSession := &UiSession{uiNodeTree: btree.NewG(32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
 	})}
 	uih.uiSessionsLock.Lock()
@@ -274,7 +274,7 @@ func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession)
 
 func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
 	if requestChannel == nil {
-		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
+		return false, "ERROR: Node is not allocated\n"
 	}
 	// Request command line arguments
 	nodeRequest := &NodeRequest{url: url}

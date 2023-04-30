@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -53,9 +53,9 @@ func init() {
 	rootCmd.Flags().StringVar(&listenAddr, "addr", "localhost", "network interface to listen on")
 	rootCmd.Flags().IntVar(&listenPort, "port", 8080, "port to listen on")
 	rootCmd.Flags().StringVar(&serverKeyFile, "tls.key", "", "path to server TLS key")
-	rootCmd.MarkFlagRequired("tls.key")
+	_ = rootCmd.MarkFlagRequired("tls.key")
 	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")
-	rootCmd.MarkFlagRequired("tls.cert")
+	_ = rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
 	rootCmd.Flags().IntVar(&maxSessions, "max.sessions", 50, "maximum number of sessions to allow")
@@ -110,7 +110,7 @@ func webServer() error {
 	mux.Handle("/support/", bh)
 	certPool := x509.NewCertPool()
 	for _, caCertFile := range caCertFiles {
-		caCert, err := ioutil.ReadFile(caCertFile)
+		caCert, err := os.ReadFile(caCertFile)
 		if err != nil {
 			return fmt.Errorf("reading server certificate: %v", err)
 		}
@@ -133,8 +133,12 @@ func webServer() error {
 	go func() {
 		<-sigs
 		cancel()
-		s.Shutdown(ctx)
+		err := s.Shutdown(ctx)
+		if err != nil {
+			log.Printf("Failed to shutdown server due to error:%s", err.Error())
+		}
 	}()
+	log.Printf("Starting diagnostics Server listening at %s:%d", listenAddr, listenPort)
 	if err = s.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
 		select {
 		case <-ctx.Done():
