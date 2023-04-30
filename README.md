@@ -304,8 +304,6 @@ reorg point.
 for each of the block participating in the reorg, or difference in terms of transactions.
 * Any sessions created via User Interface, stay in the server forever and are never cleaned up, so theoretically eventually the server will run out of memory.
 This needs to be addressed by introducing some kind of expiration mechanism and cleaning up expired sessions.
-* The user interface for selecting sessions and entering PIN numbers use a different way of interacting (HTML forms) with the server than the buttons that
-invoke various diagnostics. Perhaps this can be changed with a bit more javascript.
 * Retrieving command line arguments is only useful if the Erigon node is not launched using configuration file. If configuration file is used, then
 most of the settings are still not visible to the operator. A possible improvement (which involves also changes in Erigon itself) is to either provide
 access to the configuration file, or somehow give access to the "effective" launch settings (i.e. after the configuration file is parsed and applied).
@@ -316,4 +314,3 @@ access to the configuration file, or somehow give access to the "effective" laun
 this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
 stack traces and show them as aggregates.
 * Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).
-* GitHub action for PRs and for `main` branch to perform basic checks - ensure that Go code compiles, and run linter.
