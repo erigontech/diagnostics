@@ -35,7 +35,7 @@ type SnapshotItem struct {
 }
 
 func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
-	snapshot := btree.NewG[SnapshotItem](16, func(a, b SnapshotItem) bool {
+	snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
 		return a.Id < b.Id
 	})
 	var tick int64

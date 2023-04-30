@@ -132,7 +132,7 @@ func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64
 	}
 	firstLineEnd := bytes.IndexByte(nodeRequest.response, '\n')
 	if firstLineEnd == -1 {
-		return clear, 0, 0, nil, fmt.Sprintf("could not find first line in log part response")
+		return clear, 0, 0, nil, "could not find first line in log part response"
 	}
 	m := logReadFirstLine.FindSubmatch(nodeRequest.response[:firstLineEnd])
 	if m == nil {
