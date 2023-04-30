@@ -24,7 +24,7 @@ func processVersions(w http.ResponseWriter, templ *template.Template, success bo
 		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
 			versions.Success = true
 			if len(lines) < 2 {
-				versions.Error = fmt.Sprintf("at least node version needs to be present")
+				versions.Error = "at least node version needs to be present"
 				versions.Success = false
 			} else {
 				var err error

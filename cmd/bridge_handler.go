@@ -25,8 +25,8 @@ type NodeRequest struct {
 const MaxRequestRetries = 16 // How many time to retry a request to the support
 
 type BridgeHandler struct {
-	cancel context.CancelFunc
-	uih    *UiHandler
+	//cancel context.CancelFunc
+	uih *UiHandler
 }
 
 var supportUrlRegex = regexp.MustCompile("^/support/([0-9]+)$")
@@ -90,7 +90,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		request.lock.Unlock()
 		log.Printf("Sending request %s\n", url)
 		writeBuf.Reset()
-		fmt.Fprintf(&writeBuf, url)
+		fmt.Fprint(&writeBuf, url)
 		if _, err := w.Write(writeBuf.Bytes()); err != nil {
 			log.Printf("Writing metrics request: %v\n", err)
 			request.lock.Lock()

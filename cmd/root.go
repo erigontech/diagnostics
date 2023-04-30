@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -52,9 +52,9 @@ func init() {
 	rootCmd.Flags().StringVar(&listenAddr, "addr", "localhost", "network interface to listen on")
 	rootCmd.Flags().IntVar(&listenPort, "port", 8080, "port to listen on")
 	rootCmd.Flags().StringVar(&serverKeyFile, "tls.key", "", "path to server TLS key")
-	rootCmd.MarkFlagRequired("tls.key")
+	_ = rootCmd.MarkFlagRequired("tls.key")
 	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")
-	rootCmd.MarkFlagRequired("tls.cert")
+	_ = rootCmd.MarkFlagRequired("tls.cert")
 	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
 }
@@ -85,8 +85,8 @@ const successLine = "SUCCESS"
 
 // NodeSession corresponds to one Erigon node connected via "erigon support" bridge to an operator
 type NodeSession struct {
-	lock           sync.Mutex
-	sessionPin     uint64
+	lock sync.Mutex
+	//sessionPin     uint64
 	Connected      bool
 	RemoteAddr     string
 	SupportVersion uint64            // Version of the erigon support command
@@ -112,15 +112,15 @@ type UiNodeSession struct {
 }
 
 type UiSession struct {
-	lock               sync.Mutex
-	Session            bool
-	SessionPin         uint64
-	SessionName        string
-	Errors             []string // Transient field - only filled for the time of template execution
-	currentSessionName string
-	NodeS              *NodeSession // Transient field - only filled for the time of template execution
-	uiNodeTree         *btree.BTreeG[UiNodeSession]
-	UiNodes            []UiNodeSession // Transient field - only filled forthe time of template execution
+	lock        sync.Mutex
+	Session     bool
+	SessionPin  uint64
+	SessionName string
+	Errors      []string // Transient field - only filled for the time of template execution
+	//currentSessionName string
+	NodeS      *NodeSession // Transient field - only filled for the time of template execution
+	uiNodeTree *btree.BTreeG[UiNodeSession]
+	UiNodes    []UiNodeSession // Transient field - only filled forthe time of template execution
 }
 
 func (uiSession *UiSession) appendError(err string) {
@@ -148,7 +148,7 @@ func webServer() error {
 	mux.Handle("/support/", bh)
 	certPool := x509.NewCertPool()
 	for _, caCertFile := range caCertFiles {
-		caCert, err := ioutil.ReadFile(caCertFile)
+		caCert, err := os.ReadFile(caCertFile)
 		if err != nil {
 			return fmt.Errorf("reading server certificate: %v", err)
 		}
@@ -171,8 +171,12 @@ func webServer() error {
 	go func() {
 		<-sigs
 		cancel()
-		s.Shutdown(ctx)
+		err := s.Shutdown(ctx)
+		if err != nil {
+			log.Printf("Failed to shutdown server due to error:%s", err.Error())
+		}
 	}()
+	log.Printf("Starting diagnostics Server listening at %s:%d", listenAddr, listenPort)
 	if err = s.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
 		select {
 		case <-ctx.Done():
