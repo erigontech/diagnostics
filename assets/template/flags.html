@@ -1,0 +1,12 @@
+<table>
+    <tr>
+        <th>Flag</th>
+        <th>Value</th>
+    </tr>
+    {{range $key, $value := .FlagPayload}}
+        <tr>
+            <td><code>{{$key}}</code></td>
+            <td><code>{{$value}}</code></td>
+        </tr>
+    {{end}}
+</table>

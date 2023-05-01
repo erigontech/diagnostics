@@ -17,8 +17,19 @@ type Versions struct {
 	GitCommit      string
 }
 
-func processVersions(w http.ResponseWriter, templ *template.Template, success bool, result string) {
+func processVersions(w http.ResponseWriter, templ *template.Template, success bool, result string, skipUpdateHTML ...bool) Versions {
+	versions := processVersionsResponse(w, templ, success, result)
+
+	if len(skipUpdateHTML) == 0 || !skipUpdateHTML[0] {
+		updateHTML(w, templ, versions)
+	}
+
+	return versions
+}
+
+func processVersionsResponse(w http.ResponseWriter, templ *template.Template, success bool, result string) Versions {
 	var versions Versions
+
 	if success {
 		lines := strings.Split(result, "\n")
 		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
@@ -49,8 +60,12 @@ func processVersions(w http.ResponseWriter, templ *template.Template, success bo
 	} else {
 		versions.Error = result
 	}
+
+	return versions
+}
+
+func updateHTML(w http.ResponseWriter, templ *template.Template, versions Versions) {
 	if err := templ.ExecuteTemplate(w, "versions.html", versions); err != nil {
 		fmt.Fprintf(w, "Executing versions template: %v", err)
-		return
 	}
 }

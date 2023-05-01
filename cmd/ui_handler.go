@@ -22,7 +22,7 @@ import (
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
 
 func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -70,6 +70,12 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "cmd_line":
 		success, result := uih.fetch("/cmdline\n", requestChannel)
 		processCmdLineArgs(w, uih.uiTemplate, success, result)
+		return
+	case "flags":
+		versionCallSuccess, versionCallResult := uih.fetch("/version\n", requestChannel)
+		versions := processVersions(w, uih.uiTemplate, versionCallSuccess, versionCallResult, true)
+		success, result := uih.fetch("/flags\n", requestChannel)
+		processFlags(w, uih.uiTemplate, success, result, versions)
 		return
 	case "log_list":
 		success, result := uih.fetch("/logs/list\n", requestChannel)
