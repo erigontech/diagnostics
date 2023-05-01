@@ -50,7 +50,7 @@ func processFlags(w http.ResponseWriter, templ *template.Template, success bool,
 		flags.Error = result
 	}
 	if err := templ.ExecuteTemplate(w, "flags.html", flags); err != nil {
-		fmt.Fprintf(w, "Executing versions template: %v", err)
+		fmt.Fprintf(w, "Executing flags template: %v", err)
 		return
 	}
 }
