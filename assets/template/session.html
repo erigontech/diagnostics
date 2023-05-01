@@ -45,6 +45,10 @@
                         <div id="cmdlineargs"></div>
                     </div>
                     <div>
+                        <button type="button" onclick="fetchContent('{{.SessionName}}', 'context flags', '/ui/flags', 'flags')">Fetch Flags</button>
+                        <div id="flags"></div>
+                    </div>
+                    <div>
                         <button type="button" onclick="fetchContent('{{.SessionName}}', 'log list', '/ui/log_list', 'loglist')">Fetch Log List</button>
                         <div id="loglist"></div>
                     </div>
