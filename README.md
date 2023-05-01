@@ -235,6 +235,14 @@ for the content fetched by the `fetchContent` javascript function and inserted i
 
 ![cmd line](/images/cmd_line.png)
 
+## Flags
+Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `diagnostics/flags.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
+
+The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processFlags` function), `cmd/flags.go`, `assests/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assests/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
+
+![flags](/images/flags.png)
+
+
 ## Logs
 
 Since version 2.43.0, Erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log rotation. Using diagnostics system,
