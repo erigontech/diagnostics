@@ -72,8 +72,10 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		processCmdLineArgs(w, uih.uiTemplate, success, result)
 		return
 	case "flags":
+		versionCallSuccess, versionCallResult := uih.fetch("/version\n", requestChannel)
+		versions := processVersions(w, uih.uiTemplate, versionCallSuccess, versionCallResult, true)
 		success, result := uih.fetch("/flags\n", requestChannel)
-		processFlags(w, uih.uiTemplate, success, result)
+		processFlags(w, uih.uiTemplate, success, result, versions)
 		return
 	case "log_list":
 		success, result := uih.fetch("/logs/list\n", requestChannel)

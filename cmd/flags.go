@@ -13,7 +13,18 @@ type Flags struct {
 	FlagPayload map[string]string
 }
 
-func processFlags(w http.ResponseWriter, templ *template.Template, success bool, result string) {
+func processFlags(w http.ResponseWriter, templ *template.Template, success bool, result string, versions Versions) {
+
+	if !versions.Success {
+		fmt.Fprintf(w, "Unable to process flag due to inability to get node version: %s", versions.Error)
+		return
+	}
+
+	if versions.NodeVersion < 2 {
+		fmt.Fprintf(w, "Flags only support version >= 2. Node version: %d", versions.NodeVersion)
+		return
+	}
+
 	var flags Flags
 	flags.FlagPayload = make(map[string]string)
 	if success {
