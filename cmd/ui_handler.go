@@ -13,10 +13,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/btree"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 const sessionIdCookieName = "sessionId"
@@ -206,65 +206,55 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan 
 }
 
 type UiHandler struct {
-	nodeSessionsLock sync.Mutex
-	nodeSessions     map[uint64]*NodeSession
-	uiSessionsLock   sync.Mutex
-	uiSessions       map[string]*UiSession
-	uiTemplate       *template.Template
+	nodeSessions *lru.ARCCache[uint64, *NodeSession]
+	uiSessions   *lru.ARCCache[string, *UiSession]
+	uiTemplate   *template.Template
 }
 
 func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
-	uih.nodeSessionsLock.Lock()
-	defer uih.nodeSessionsLock.Unlock()
 	pin, err := generatePIN()
 	if err != nil {
 		return pin, nil, err
 	}
 
-	for _, ok := uih.nodeSessions[pin]; ok; _, ok = uih.nodeSessions[pin] {
+	for uih.nodeSessions.Contains(pin) {
 		pin, err = generatePIN()
+		if err != nil {
+			return pin, nil, err
+		}
 	}
-	if err != nil {
-		return pin, nil, err
-	}
+
 	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
-	uih.nodeSessions[pin] = nodeSession
+	uih.nodeSessions.Add(pin, nodeSession)
 	return pin, nodeSession, nil
 }
 
-func (sh *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
-	sh.nodeSessionsLock.Lock()
-	defer sh.nodeSessionsLock.Unlock()
-	nodeSession, ok := sh.nodeSessions[pin]
-	return nodeSession, ok
+func (uih *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
+	return uih.nodeSessions.Get(pin)
 }
 
-func (sh *UiHandler) newUiSession() (string, *UiSession, error) {
+func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
 	var b [32]byte
 	var sessionId string
 	_, err := io.ReadFull(rand.Reader, b[:])
 	if err == nil {
 		sessionId = base64.URLEncoding.EncodeToString(b[:])
 	}
-	uiSession := &UiSession{uiNodeTree: btree.NewG[UiNodeSession](32, func(a, b UiNodeSession) bool {
+	uiSession := &UiSession{uiNodeTree: btree.NewG(32, func(a, b UiNodeSession) bool {
 		return strings.Compare(a.SessionName, b.SessionName) < 0
 	})}
-	sh.uiSessionsLock.Lock()
-	defer sh.uiSessionsLock.Unlock()
+
 	if sessionId != "" {
-		sh.uiSessions[sessionId] = uiSession
+		uih.uiSessions.Add(sessionId, uiSession)
 	}
 	return sessionId, uiSession, err
 }
 
-func (sh *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
-	sh.uiSessionsLock.Lock()
-	defer sh.uiSessionsLock.Unlock()
-	uiSession, ok := sh.uiSessions[sessionId]
-	return uiSession, ok
+func (uih *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
+	return uih.uiSessions.Get(sessionId)
 }
 
-func (sh *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
+func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
 		return false
@@ -276,9 +266,9 @@ func (sh *UiHandler) validSessionName(sessionName string, uiSession *UiSession) 
 	return true
 }
 
-func (sh *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
+func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
 	if requestChannel == nil {
-		return false, fmt.Sprintf("ERROR: Node is not allocated\n")
+		return false, "ERROR: Node is not allocated\n"
 	}
 	// Request command line arguments
 	nodeRequest := &NodeRequest{url: url}
