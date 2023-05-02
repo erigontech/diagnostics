@@ -310,9 +310,6 @@ block numbers as all having a reorg. It would be better to aggregate these into 
 reorg point.
 * For the reorg scanner, add the ability to click on the block numbers and get more information about that particular reorg, for example, block producers
 for each of the block participating in the reorg, or difference in terms of transactions.
-* Retrieving command line arguments is only useful if the Erigon node is not launched using configuration file. If configuration file is used, then
-most of the settings are still not visible to the operator. A possible improvement (which involves also changes in Erigon itself) is to either provide
-access to the configuration file, or somehow give access to the "effective" launch settings (i.e. after the configuration file is parsed and applied).
 * Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
 * Adding a monitoring for header downloader as well as for body downloader.
 * Perhaps embedding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics system?
