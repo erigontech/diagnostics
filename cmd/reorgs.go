@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -16,31 +15,11 @@ import (
 
 func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	start := time.Now()
-	// First, fetch list of DB paths
-	success, result := uih.fetch("/db/list\n", requestChannel)
-	if !success {
-		fmt.Fprintf(w, "Fetching list of db paths: %s", result)
-		return
-	}
-	lines := strings.Split(result, "\n")
-	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
-		fmt.Fprintf(w, "Incorrect response (first line needs to be SUCCESS): %v", lines)
-		return
-	}
-	var chaindataPath string
-	for _, line := range lines[1:] {
-		if strings.HasSuffix(line, "/chaindata") {
-			chaindataPath = line
-		}
-	}
-	if chaindataPath == "" {
-		fmt.Fprintf(w, "DB path chaindata not found: %v", lines)
-		return
-	}
+
 	// Go through "Header" table and look for entries with the same block number but different hashes
 	var prevK []byte
 	reorgCount := 0
-	rc, err := NewRemoteCursor(chaindataPath, "Header", requestChannel, nil)
+	rc, err := NewRemoteCursor(uih, "chaindata", "Header", requestChannel, nil)
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
 		return

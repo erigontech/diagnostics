@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // Demonstration of the working with the Erigon database remotely on the example of getting information
@@ -15,29 +14,11 @@ import (
 
 type SyncStages = map[string]string
 
-func (uih *UiHandler) getSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
-	success, result := uih.fetch("/db/list\n", requestChannel)
-	if !success {
-		fmt.Fprintf(w, "Fetching list of db paths: %s", result)
-		return
-	}
-	lines := strings.Split(result, "\n")
-	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
-		fmt.Fprintf(w, "Incorrect response (first line needs to be SUCCESS): %v", lines)
-		return
-	}
-	var chaindataPath string
-	for _, line := range lines[1:] {
-		if strings.HasSuffix(line, "/chaindata") {
-			chaindataPath = line
-		}
-	}
-	if chaindataPath == "" {
-		fmt.Fprintf(w, "DB path chaindata not found: %v", lines)
-		return
-	}
+const syncStageDb = "chaindata"
+const syncStageTable = "SyncStage"
 
-	rc, err := NewRemoteCursor(chaindataPath, "SyncStage", requestChannel, nil)
+func (uih *UiHandler) getSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+	rc, err := NewRemoteCursor(uih, syncStageDb, syncStageTable, requestChannel, nil)
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
 		return
@@ -55,18 +36,18 @@ func (uih *UiHandler) getSyncStages(ctx context.Context, w http.ResponseWriter, 
 		default:
 		}
 		syncStage := string(k)
-		syncProgress, err := unmarshalData(v)
-		if err != nil {
-			fmt.Printf("Unable to unmarshal sync stage data: %v\n", err)
+		syncProgress, unmarshalError := unmarshalData(v)
 
+		if unmarshalError != nil {
+			fmt.Printf("Unable to unmarshal sync stage data: %v\n", unmarshalError)
 			return
 		}
 
 		syncStages[syncStage] = strconv.FormatUint(syncProgress, 10)
 	}
 
-	if err := templ.ExecuteTemplate(w, "sync_stages.html", syncStages); err != nil {
-		fmt.Fprintf(w, "Executing Sync stages template update: %v\n", err)
+	if templateErr := templ.ExecuteTemplate(w, "sync_stages.html", syncStages); templateErr != nil {
+		fmt.Fprintf(w, "Executing Sync stages template: %v\n", templateErr)
 	}
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()

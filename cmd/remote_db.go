@@ -14,12 +14,42 @@ type RemoteCursor struct {
 	lines          []string // Parsed response
 }
 
-func NewRemoteCursor(dbPath string, table string, requestChannel chan *NodeRequest, initialKey []byte) (*RemoteCursor, error) {
-	rc := &RemoteCursor{dbPath: dbPath, table: table, requestChannel: requestChannel}
+func NewRemoteCursor(uih *UiHandler, db string, table string, requestChannel chan *NodeRequest, initialKey []byte) (*RemoteCursor, error) {
+	success, result := uih.fetch("/db/list\n", requestChannel)
+	if !success {
+		return nil, fmt.Errorf("fetching list of db paths: %s", result)
+	}
+
+	dbPath, dbPathErr := extractDbPath(result, db)
+	if dbPathErr != nil {
+		return nil, dbPathErr
+	}
+
+	rc := &RemoteCursor{uih: uih, dbPath: dbPath, table: table, requestChannel: requestChannel}
 	if err := rc.nextTableChunk(initialKey); err != nil {
 		return nil, err
 	}
 	return rc, nil
+}
+
+func extractDbPath(dbList string, db string) (string, error) {
+	lines := strings.Split(dbList, "\n")
+	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
+		return "", fmt.Errorf("incorrect response (first line needs to be SUCCESS): %v", lines)
+	}
+
+	var dbPath string
+	for _, line := range lines[1:] {
+		if strings.HasSuffix(line, fmt.Sprintf("/%s", db)) {
+			dbPath = line
+		}
+	}
+
+	if dbPath == "" {
+		return "", fmt.Errorf("db path chaindata not found: %v", lines)
+	}
+
+	return dbPath, nil
 }
 
 func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
