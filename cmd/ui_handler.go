@@ -22,7 +22,7 @@ import (
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|sync_stages|)$")
 
 func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -111,6 +111,9 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "bodies_download":
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
+		return
+	case "sync_stages":
+		uih.getSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()
