@@ -18,54 +18,49 @@ type Versions struct {
 }
 
 func processVersions(w http.ResponseWriter, templ *template.Template, success bool, result string, skipUpdateHTML ...bool) Versions {
-	versions := processVersionsResponse(w, templ, success, result)
+	var ver Versions
+	ver.processResponse(result, success)
 
 	if len(skipUpdateHTML) == 0 || !skipUpdateHTML[0] {
-		updateHTML(w, templ, versions)
-	}
-
-	return versions
-}
-
-func processVersionsResponse(w http.ResponseWriter, templ *template.Template, success bool, result string) Versions {
-	var versions Versions
-
-	if success {
-		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
-			versions.Success = true
-			if len(lines) < 2 {
-				versions.Error = "at least node version needs to be present"
-				versions.Success = false
-			} else {
-				var err error
-				versions.NodeVersion, err = strconv.ParseUint(lines[1], 10, 64)
-				if err != nil {
-					versions.Error = fmt.Sprintf("parsing node version [%s]: %v", lines[1], err)
-					versions.Success = false
-				} else {
-					for idx, line := range lines[2:] {
-						switch idx {
-						case 0:
-							versions.CodeVersion = line
-						case 1:
-							versions.GitCommit = line
-						}
-					}
-				}
-			}
-		} else {
-			versions.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
+		if err := templ.ExecuteTemplate(w, "versions.html", ver); err != nil {
+			fmt.Fprintf(w, "Failed executing versions template: %v", err)
 		}
-	} else {
-		versions.Error = result
 	}
 
-	return versions
+	return ver
 }
 
-func updateHTML(w http.ResponseWriter, templ *template.Template, versions Versions) {
-	if err := templ.ExecuteTemplate(w, "versions.html", versions); err != nil {
-		fmt.Fprintf(w, "Executing versions template: %v", err)
+func (v *Versions) processResponse(result string, success bool) {
+	if !success {
+		v.Error = result
+		return
 	}
+
+	lines := strings.Split(result, "\n")
+	if len(lines) < 2 {
+		v.Error = fmt.Sprintf("incorrect response (at least node version needs to be present): %v", lines)
+		return
+	}
+	if !strings.HasPrefix(lines[0], successLine) {
+		v.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
+		return
+	}
+
+	nodeVer, err := strconv.ParseUint(lines[1], 10, 64)
+	if err != nil {
+		v.Error = fmt.Sprintf("failed parsing node version: %v", err)
+		return
+	}
+
+	v.NodeVersion = nodeVer
+	v.Success = true
+	for i, l := range lines[2:] {
+		switch i {
+		case 0:
+			v.CodeVersion = l
+		case 1:
+			v.GitCommit = l
+		}
+	}
+	return
 }
