@@ -12,6 +12,8 @@ import (
 
 // Demonstration of the working with the Erigon database remotely on the example of getting information
 // about past reorganisation of the chain
+const headersDb = "chaindata"
+const headersTable = "Header"
 
 func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	start := time.Now()
@@ -19,7 +21,7 @@ func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, tem
 	// Go through "Header" table and look for entries with the same block number but different hashes
 	var prevK []byte
 	reorgCount := 0
-	rc, err := NewRemoteCursor(uih, "chaindata", "Header", requestChannel, nil)
+	rc, err := NewRemoteCursor(uih, headersDb, headersTable, requestChannel, nil)
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
 		return
