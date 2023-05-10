@@ -113,7 +113,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	case "sync_stages":
-		uih.getSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
+		uih.findSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()

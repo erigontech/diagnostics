@@ -238,7 +238,7 @@ for the content fetched by the `fetchContent` javascript function and inserted i
 ## Flags
 Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `diagnostics/flags.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
 
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processFlags` function), `cmd/flags.go`, `assests/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assests/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
+The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processFlags` function), `cmd/flags.go`, `assets/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
 ![flags](/images/flags.png)
 
@@ -277,6 +277,17 @@ progress of the scanning for reorgs (with spacer html pieces, one for each 1000 
 one for each reorged block found).
 
 ![scan reorgs](/images/scan_reorgs.png)
+
+## Sync stages
+
+This is another example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel. 
+This feature adds an ability to see the current sync stage of the node, by showing the number of synced blocks per stage.
+
+The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `findSyncStages` function), `cmd/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html` 
+(html template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
+(html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
+
+![sync_stage](/images/sync_stages.png)
 
 ## Block Body Download
 

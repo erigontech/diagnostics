@@ -17,7 +17,7 @@ type SyncStages = map[string]string
 const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
 
-func (uih *UiHandler) getSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	rc, err := NewRemoteCursor(uih, syncStageDb, syncStageTable, requestChannel, nil)
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
