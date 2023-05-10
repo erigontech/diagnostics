@@ -52,74 +52,87 @@ func ByteCount(b uint64) string {
 	if b < unit {
 		return fmt.Sprintf("%dB", b)
 	}
-	bGb, exp := MBToGB(b)
-	return fmt.Sprintf("%.1f%cB", bGb, "KMGTPE"[exp])
+	bGB, exp := MBToGB(b)
+	return fmt.Sprintf("%.1f%cB", bGB, "KMGTPE"[exp])
 }
 
-// Produces (into the writer w) the list of available lots inside the div element, using log_list.html template and LogList object
+// processLogList produces the list of available lots inside the div element (into the writer w), using log_list.html template and LogList object.
 func processLogList(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
-	var list = LogList{SessionName: sessionName}
-	if success {
-		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
-			list.Success = true
-			for _, line := range lines[1:] {
-				if len(line) == 0 {
-					// skip empty line (usually at the end)
-					continue
-				}
-				terms := strings.Split(line, " | ")
-				if len(terms) != 2 {
-					list.Error = fmt.Sprintf("incorrect response line (need to have 2 terms divided by |): %v", line)
-					list.Success = false
-					break
-				}
-				size, err := strconv.ParseUint(terms[1], 10, 64)
-				if err != nil {
-					list.Error = fmt.Sprintf("incorrect size: %v", terms[1])
-					list.Success = false
-					break
-				}
-				list.List = append(list.List, LogListItem{Filename: terms[0], Size: int64(size), PrintedSize: ByteCount(size)})
-			}
-		} else {
-			list.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
-		}
-	} else {
-		list.Error = result
-	}
-	if err := templ.ExecuteTemplate(w, "log_list.html", list); err != nil {
-		fmt.Fprintf(w, "Executing log_list template: %v", err)
+	var ll = LogList{SessionName: sessionName}
+	ll.processResponse(result, success)
+	if err := templ.ExecuteTemplate(w, "log_list.html", ll); err != nil {
+		fmt.Fprintf(w, "Failed executing log_list template: %v", err)
 		return
 	}
+}
+
+func (ll *LogList) processResponse(result string, success bool) {
+	if !success {
+		ll.Error = result
+		return
+	}
+
+	lines := strings.Split(result, "\n")
+	if len(lines) < 2 {
+		ll.Error = fmt.Sprintf("incorrect response (length of lines should be at least 2): %v", lines)
+		return
+	}
+	if !strings.HasPrefix(lines[0], successLine) {
+		ll.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
+		return
+	}
+
+	for _, l := range lines[1:] {
+		if len(l) == 0 {
+			continue
+		}
+
+		terms := strings.Split(l, " | ")
+		if len(terms) != 2 {
+			ll.Error = fmt.Sprintf("incorrect response line (need to have 2 terms divided by |): %v", l)
+			return
+		}
+
+		size, err := strconv.ParseUint(terms[1], 10, 64)
+		if err != nil {
+			ll.Error = fmt.Sprintf("incorrect size: %v", terms[1])
+			return
+		}
+		ll.List = append(ll.List, LogListItem{Filename: terms[0], Size: int64(size), PrintedSize: ByteCount(size)})
+	}
+	ll.Success = true
 }
 
 // Produces (into writer w) log part (head or tail) inside the div HTML element, using log_read.html template and LogPart object
 func processLogPart(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
-	var part LogPart
-	if success {
-		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
-			part.Lines = lines[1:]
-		} else {
-			part.Lines = lines
-		}
-		part.Success = true
-	} else {
-		part.Success = false
-		part.Error = result
-	}
-	if err := templ.ExecuteTemplate(w, "log_read.html", part); err != nil {
-		fmt.Fprintf(w, "Executing log_read template: %v", err)
+	var lp LogPart
+	lp.processResponse(result, success)
+	if err := templ.ExecuteTemplate(w, "log_read.html", lp); err != nil {
+		fmt.Fprintf(w, "Failed executing log_read template: %v", err)
 		return
 	}
 }
 
+func (lp *LogPart) processResponse(result string, success bool) {
+	if !success {
+		lp.Success = false
+		lp.Error = result
+		return
+	}
+	lp.Success = true
+
+	lines := strings.Split(result, "\n")
+	if len(lines) >= 1 && strings.HasPrefix(lines[0], successLine) {
+		lines = lines[1:]
+	}
+	lp.Lines = lines
+}
+
 var logReadFirstLine = regexp.MustCompile("^SUCCESS: ([0-9]+)-([0-9]+)/([0-9]+)$")
 
-// Parses the response from the erigon node, which contains a part of a log file.
+// parseLogPart parses the response from the erigon node, which contains a part of a log file.
 // It should start with a line of format: SUCCESS from_offset/to_offset/total_size,
-// followed by the actual log chunk
+// followed by the actual log chunk.
 func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64, []byte, string) {
 	nodeRequest.lock.Lock()
 	defer nodeRequest.lock.Unlock()
@@ -156,7 +169,7 @@ func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64
 	return true, to, total, nodeRequest.response[firstLineEnd+1:], ""
 }
 
-// Implements io.ReaderSeeker to be used as parameter to http.ServeContent
+// LogReader implements io.ReaderSeeker to be used as parameter to http.ServeContent.
 type LogReader struct {
 	filename       string // Name of the log files to download
 	requestChannel chan *NodeRequest
@@ -165,7 +178,7 @@ type LogReader struct {
 	ctx            context.Context
 }
 
-// Part of the io.Reader interface - emulates reading from the remote logs as if it was from the web server itself
+// Read is part of the io.Reader interface - emulates reading from the remote logs as if it was from the web server itself.
 func (lr *LogReader) Read(p []byte) (n int, err error) {
 	nodeRequest := &NodeRequest{url: fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(lr.filename), lr.offset)}
 	lr.requestChannel <- nodeRequest
