@@ -280,12 +280,13 @@ one for each reorged block found).
 
 ## Sync stages
 
-This is another example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel.
-This feature adds an ability to see the current sync stage of the node, by showing the number of synced blocks per stage.
+This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
+This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
 
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `findSyncStages` function), `cmd/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html` 
-(html template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
-(html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
+
+The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `findSyncStages` function), `cmd/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html`
+(HTML template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
+(HTML template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
 
 ![sync_stage](/images/sync_stages.png)
 
