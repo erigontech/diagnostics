@@ -280,7 +280,7 @@ one for each reorged block found).
 
 ## Sync stages
 
-This is another example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel. 
+This is another example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel.
 This feature adds an ability to see the current sync stage of the node, by showing the number of synced blocks per stage.
 
 The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `findSyncStages` function), `cmd/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html` 
