@@ -14,26 +14,36 @@ type RemoteCursor struct {
 	lines          []string // Parsed response
 }
 
-func NewRemoteCursor(uih *UiHandler, db string, table string, requestChannel chan *NodeRequest, initialKey []byte) (*RemoteCursor, error) {
-	success, result := uih.fetch("/db/list\n", requestChannel)
-	if !success {
-		return nil, fmt.Errorf("fetching list of db paths: %s", result)
-	}
+func NewRemoteCursor(uih *UiHandler, requestChannel chan *NodeRequest) *RemoteCursor {
+	rc := &RemoteCursor{uih: uih, requestChannel: requestChannel}
 
-	dbPath, dbPathErr := extractDbPath(result, db)
+	return rc
+}
+
+func (rc *RemoteCursor) init(db string, table string, initialKey []byte) (*RemoteCursor, error) {
+	dbPath, dbPathErr := rc.findFullDbPath(db)
+
 	if dbPathErr != nil {
 		return nil, dbPathErr
 	}
 
-	rc := &RemoteCursor{uih: uih, dbPath: dbPath, table: table, requestChannel: requestChannel}
+	rc.setDbPath(dbPath)
+	rc.setTable(table)
+
 	if err := rc.nextTableChunk(initialKey); err != nil {
 		return nil, err
 	}
+
 	return rc, nil
 }
 
-func extractDbPath(dbList string, db string) (string, error) {
-	lines := strings.Split(dbList, "\n")
+func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
+	success, dbListResponse := rc.uih.fetch("/db/list\n", rc.requestChannel)
+	if !success {
+		return "", fmt.Errorf("fetching list of db paths: %s", dbListResponse)
+	}
+
+	lines := strings.Split(dbListResponse, "\n")
 	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
 		return "", fmt.Errorf("incorrect response (first line needs to be SUCCESS): %v", lines)
 	}
@@ -46,7 +56,7 @@ func extractDbPath(dbList string, db string) (string, error) {
 	}
 
 	if dbPath == "" {
-		return "", fmt.Errorf("db path chaindata not found: %v", lines)
+		return "", fmt.Errorf("db path %s not found: %v", db, lines)
 	}
 
 	return dbPath, nil
@@ -114,4 +124,11 @@ func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
 		}
 	}
 	return k, v, e
+}
+
+func (rc *RemoteCursor) setTable(table string) {
+	rc.table = table
+}
+func (rc *RemoteCursor) setDbPath(dbPath string) {
+	rc.dbPath = dbPath
 }

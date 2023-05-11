@@ -16,9 +16,11 @@ type SyncStages = map[string]string
 
 const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
+const syncProgressBase = 10
 
-func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
-	rc, err := NewRemoteCursor(uih, syncStageDb, syncStageTable, requestChannel, nil)
+func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, remoteCursor *RemoteCursor) {
+	rc, err := remoteCursor.init(syncStageDb, syncStageTable, nil)
+
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
 		return
@@ -43,7 +45,7 @@ func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter,
 			return
 		}
 
-		syncStages[syncStage] = strconv.FormatUint(syncProgress, 10)
+		syncStages[syncStage] = strconv.FormatUint(syncProgress, syncProgressBase)
 	}
 
 	if templateErr := templ.ExecuteTemplate(w, "sync_stages.html", syncStages); templateErr != nil {

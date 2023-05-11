@@ -15,13 +15,13 @@ import (
 const headersDb = "chaindata"
 const headersTable = "Header"
 
-func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, remoteCursor *RemoteCursor) {
 	start := time.Now()
 
 	// Go through "Header" table and look for entries with the same block number but different hashes
 	var prevK []byte
 	reorgCount := 0
-	rc, err := NewRemoteCursor(uih, headersDb, headersTable, requestChannel, nil)
+	rc, err := remoteCursor.init(headersDb, headersTable, nil)
 	if err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
 		return

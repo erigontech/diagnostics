@@ -107,13 +107,15 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
 		return
 	case "reorgs":
-		uih.findReorgs(r.Context(), w, uih.uiTemplate, requestChannel)
+		remoteCursor := NewRemoteCursor(uih, requestChannel)
+		uih.findReorgs(r.Context(), w, uih.uiTemplate, remoteCursor)
 		return
 	case "bodies_download":
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	case "sync_stages":
-		uih.findSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
+		remoteCursor := NewRemoteCursor(uih, requestChannel)
+		uih.findSyncStages(r.Context(), w, uih.uiTemplate, remoteCursor)
 		return
 	}
 	uiSession.lock.Lock()
