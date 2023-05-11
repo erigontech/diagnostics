@@ -27,8 +27,8 @@ func (rc *RemoteCursor) init(db string, table string, initialKey []byte) (*Remot
 		return nil, dbPathErr
 	}
 
-	rc.setDbPath(dbPath)
-	rc.setTable(table)
+	rc.dbPath = dbPath
+	rc.table = table
 
 	if err := rc.nextTableChunk(initialKey); err != nil {
 		return nil, err
@@ -124,11 +124,4 @@ func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
 		}
 	}
 	return k, v, e
-}
-
-func (rc *RemoteCursor) setTable(table string) {
-	rc.table = table
-}
-func (rc *RemoteCursor) setDbPath(dbPath string) {
-	rc.dbPath = dbPath
 }
