@@ -23,29 +23,7 @@ func (uiSession *UiSession) appendError(err string) {
 	uiSession.Errors = append(uiSession.Errors, err)
 }
 
-// NodeSession corresponds to one Erigon node connected via "erigon support" bridge to an operator
-type NodeSession struct {
-	lock           sync.Mutex
-	Connected      bool
-	RemoteAddr     string
-	SupportVersion uint64            // Version of the erigon support command
-	requestCh      chan *NodeRequest // Channel for incoming metrics requests
-}
-
-func (ns *NodeSession) connect(remoteAddr string) {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
-	ns.Connected = true
-	ns.RemoteAddr = remoteAddr
-}
-
-func (ns *NodeSession) disconnect() {
-	ns.lock.Lock()
-	defer ns.lock.Unlock()
-	ns.Connected = false
-}
-
-type UiNodeSession struct {
-	SessionName string
-	SessionPin  uint64
-}
+// type UiNodeSession struct {
+// 	SessionName string
+// 	SessionPin  uint64
+// }

@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/btree"
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/ledgerwatch/diagnostics/pkg/session"
 )
 
 const sessionIdCookieName = "sessionId"
@@ -32,7 +32,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	cookie, err := r.Cookie(sessionIdCookieName)
 	var sessionId string
-	var uiSession *UiSession
+	var uiSession *session.UI
 	var sessionFound bool
 	if err == nil && cookie.Value != "" {
 		sessionId, err = url.QueryUnescape(cookie.Value)
@@ -47,11 +47,11 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			cookie := http.Cookie{Name: sessionIdCookieName, Value: url.QueryEscape(sessionId), Path: "/", HttpOnly: true, MaxAge: sessionIdCookieDuration}
 			http.SetCookie(w, &cookie)
 		} else {
-			uiSession.appendError(fmt.Sprintf("Creating new UI session: %v", e))
+			uiSession.AppendError(fmt.Sprintf("Creating new UI session: %v", e))
 		}
 	}
 	if err != nil {
-		uiSession.appendError(fmt.Sprintf("Cookie handling: %v", err))
+		uiSession.AppendError(fmt.Sprintf("Cookie handling: %v", err))
 	}
 	// Try to lookup current session name
 	if err := r.ParseForm(); err != nil {
@@ -113,13 +113,13 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	}
-	uiSession.lock.Lock()
+	uiSession.Mx.Lock()
 	defer func() {
 		uiSession.Session = false
 		uiSession.Errors = nil
-		uiSession.NodeS = nil
+		uiSession.Node = nil
 		uiSession.UiNodes = nil
-		uiSession.lock.Unlock()
+		uiSession.Mx.Unlock()
 	}()
 	sessionName = r.FormValue("sessionname")
 	switch {
@@ -130,12 +130,12 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
-		uiSession.SessionPin, uiSession.NodeS, err = uih.allocateNewNodeSession()
+		uiSession.SessionPin, uiSession.Node, err = uih.allocateNewNodeSession()
 		if err != nil {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Generating new node session PIN %v", err))
 			break
 		}
-		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
+		uiSession.UINodeTree.ReplaceOrInsert(session.UINodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
 	case r.FormValue("resume_session") != "":
 		// Resume (take over) node session using known PIN
 		pinStr := r.FormValue("pin")
@@ -145,7 +145,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		var ok bool
-		if uiSession.NodeS, ok = uih.findNodeSession(sessionPin); !ok {
+		if uiSession.Node, ok = uih.findNodeSession(sessionPin); !ok {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", sessionPin))
 			break
 		}
@@ -155,7 +155,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
-		uiSession.uiNodeTree.ReplaceOrInsert(UiNodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
+		uiSession.UINodeTree.ReplaceOrInsert(session.UINodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
 	default:
 		// Make one of the previously known sessions active
 		for k, vs := range r.Form {
@@ -174,7 +174,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Populate transient field UiNodes to display the buttons (with the labels)
-	uiSession.uiNodeTree.Ascend(func(uiNodeSession UiNodeSession) bool {
+	uiSession.UINodeTree.Ascend(func(uiNodeSession UiNodeSession) bool {
 		uiSession.UiNodes = append(uiSession.UiNodes, uiNodeSession)
 		return true
 	})
@@ -184,7 +184,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan *NodeRequest {
+func (uih *UiHandler) lookupSession(r *http.Request, uiSession *session.UI) chan *NodeRequest {
 	uiSession.lock.Lock()
 	defer uiSession.lock.Unlock()
 	uiSession.NodeS = nil
@@ -202,18 +202,18 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan 
 		}
 	}
 	if uiSession.NodeS != nil {
-		return uiSession.NodeS.requestCh
+		return uiSession.NodeS.requests
 	}
 	return nil
 }
 
 type UiHandler struct {
-	nodeSessions *lru.ARCCache[uint64, *NodeSession]
-	uiSessions   *lru.ARCCache[string, *UiSession]
+	nodeSessions *lru.ARCCache[uint64, *session.Node]
+	uiSessions   *lru.ARCCache[string, *session.UI]
 	uiTemplate   *template.Template
 }
 
-func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
+func (uih *UiHandler) allocateNewNodeSession() (uint64, *session.Node, error) {
 	pin, err := generatePIN()
 	if err != nil {
 		return pin, nil, err
@@ -226,42 +226,43 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
 		}
 	}
 
-	nodeSession := &NodeSession{requestCh: make(chan *NodeRequest, 16)}
+	// TODO: prob could be good to have the "16" parameterized in conf.
+	nodeSession := session.NewNode(16)
 	uih.nodeSessions.Add(pin, nodeSession)
 	return pin, nodeSession, nil
 }
 
-func (uih *UiHandler) findNodeSession(pin uint64) (*NodeSession, bool) {
+func (uih *UiHandler) findNodeSession(pin uint64) (*session.Node, bool) {
 	return uih.nodeSessions.Get(pin)
 }
 
-func (uih *UiHandler) newUiSession() (string, *UiSession, error) {
+func (uih *UiHandler) newUiSession() (string, *session.UI, error) {
 	var b [32]byte
-	var sessionId string
+	var sessionID string
 	_, err := io.ReadFull(rand.Reader, b[:])
 	if err == nil {
-		sessionId = base64.URLEncoding.EncodeToString(b[:])
+		sessionID = base64.URLEncoding.EncodeToString(b[:])
 	}
-	uiSession := &UiSession{uiNodeTree: btree.NewG(32, func(a, b UiNodeSession) bool {
-		return strings.Compare(a.SessionName, b.SessionName) < 0
-	})}
 
-	if sessionId != "" {
-		uih.uiSessions.Add(sessionId, uiSession)
+	// TODO: might be worth considering parameterizing degree
+	deg := 32
+	uiSession := session.NewUI(deg)
+	if sessionID != "" {
+		uih.uiSessions.Add(sessionID, uiSession)
 	}
-	return sessionId, uiSession, err
+	return sessionID, uiSession, err
 }
 
-func (uih *UiHandler) findUiSession(sessionId string) (*UiSession, bool) {
+func (uih *UiHandler) findUiSession(sessionId string) (*session.UI, bool) {
 	return uih.uiSessions.Get(sessionId)
 }
 
-func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession) bool {
+func (uih *UiHandler) validSessionName(sessionName string, uiSession *session.UI) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
 		return false
 	}
-	if uiSession.uiNodeTree.Has(UiNodeSession{SessionName: sessionName}) {
+	if uiSession.UINodeTree.Has(session.UINodeSession{SessionName: sessionName}) {
 		uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("session with name [%s] already present, choose another name or close [%s]", sessionName, sessionName))
 		return false
 	}

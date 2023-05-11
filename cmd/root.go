@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ledgerwatch/diagnostics/assets"
+	"github.com/ledgerwatch/diagnostics/pkg/session"
 )
 
 var (
@@ -96,12 +97,12 @@ func webServer() error {
 		return fmt.Errorf("parsing session.html template: %v", err)
 	}
 
-	ns, err := lru.NewARC[uint64, *NodeSession](maxNodeSessions)
+	ns, err := lru.NewARC[uint64, *session.Node](maxNodeSessions)
 	if err != nil {
 		return fmt.Errorf("failed to create nodeSessions: %v", err)
 	}
 
-	uis, err := lru.NewARC[string, *UiSession](maxUISessions)
+	uis, err := lru.NewARC[string, *session.UI](maxUISessions)
 	if err != nil {
 		return fmt.Errorf("failed to create uiSessions: %v", err)
 	}
