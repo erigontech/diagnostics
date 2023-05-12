@@ -55,7 +55,7 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 			return
 		}
 
-		lines, resultExtractErr := uih.remoteApi.extractMultilineResult(result)
+		lines, resultExtractErr := uih.remoteApi.getResultLines(result)
 		if resultExtractErr != nil {
 			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
 			return

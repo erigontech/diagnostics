@@ -8,7 +8,7 @@ import (
 
 type RemoteApiReader interface {
 	fetch(url string, requestChannel chan *NodeRequest) (bool, string)
-	extractMultilineResult(result string) ([]string, error)
+	getResultLines(result string) ([]string, error)
 }
 
 type RemoteApi struct{}
@@ -48,7 +48,7 @@ func (ra *RemoteApi) fetch(url string, requestChannel chan *NodeRequest) (bool, 
 	return success, sb.String()
 }
 
-func (ra *RemoteApi) extractMultilineResult(result string) ([]string, error) {
+func (ra *RemoteApi) getResultLines(result string) ([]string, error) {
 	lines := strings.Split(result, "\n")
 	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
 		return nil, fmt.Errorf("incorrect response (first line needs to be SUCCESS): %s", result)

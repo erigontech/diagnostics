@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestExtractMultilineResult(t *testing.T) {
+func TestGetResultLines(t *testing.T) {
 	tt := []struct {
 		name       string
 		result     string
@@ -14,19 +14,19 @@ func TestExtractMultilineResult(t *testing.T) {
 		wantErrMsg string
 	}{
 		{
-			name:   "should successfully extract data lines from multi line result",
+			name:   "should successfully get data lines from multi line result",
 			result: "SUCCESS\nfirst_line",
 			assert: func(lines []string) {
 				assert.Equal(t, []string{"first_line"}, lines)
 			},
 		},
 		{
-			name:       "should return first line needs to be success error when first line is not success",
+			name:       "should return first line needs to be SUCCESS error when first line is not SUCCESS",
 			result:     "FAILURE\nfirst_line",
 			wantErrMsg: fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %s", "FAILURE\nfirst_line"),
 		},
 		{
-			name:       "should return first line needs to be success error when no lines are returned",
+			name:       "should return first line needs to be SUCCESS error when no lines are returned",
 			result:     "",
 			wantErrMsg: fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %s", ""),
 		},
@@ -36,7 +36,7 @@ func TestExtractMultilineResult(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			remoteApi := &RemoteApi{}
 
-			syncStageProgress, err := remoteApi.extractMultilineResult(tc.result)
+			syncStageProgress, err := remoteApi.getResultLines(tc.result)
 
 			if tc.wantErrMsg != "" {
 				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)

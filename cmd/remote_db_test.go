@@ -15,7 +15,7 @@ func (ra *mockRemoteApiReader) fetch(url string, requestChannel chan *NodeReques
 	args := ra.Called(url, requestChannel)
 	return args.Bool(0), args.String(1)
 }
-func (ra *mockRemoteApiReader) extractMultilineResult(result string) ([]string, error) {
+func (ra *mockRemoteApiReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
 }
@@ -50,9 +50,9 @@ func TestInit(t *testing.T) {
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
-				df.remoteApi.On("extractMultilineResult", dbListResult).Return([]string{dbPath}, nil)
+				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
 				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
-				df.remoteApi.On("extractMultilineResult", tableLinesResult).Return([]string{tableLine}, nil)
+				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{tableLine}, nil)
 			},
 			assert: func(rc *RemoteCursor) {
 				assert.Equal(t, dbPath, rc.dbPath)
@@ -66,7 +66,7 @@ func TestInit(t *testing.T) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
-				df.remoteApi.On("extractMultilineResult", dbListResult).Return([]string{"notFoundDb"}, nil)
+				df.remoteApi.On("getResultLines", dbListResult).Return([]string{"notFoundDb"}, nil)
 
 			},
 			wantErrMsg: fmt.Sprintf("database %s not found: %s", db, fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")),
@@ -84,7 +84,7 @@ func TestInit(t *testing.T) {
 				dbPathResult := fmt.Sprintf("FAILURE\n/full/path/%s", db)
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbPathResult)
-				df.remoteApi.On("extractMultilineResult", dbPathResult).Return([]string{}, dependencyError)
+				df.remoteApi.On("getResultLines", dbPathResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),
 		},
@@ -94,7 +94,7 @@ func TestInit(t *testing.T) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
-				df.remoteApi.On("extractMultilineResult", dbListResult).Return([]string{dbPath}, nil)
+				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
 				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(false, "")
 			},
 			wantErrMsg: fmt.Sprintf("reading %s table: %s", table, ""),
@@ -106,9 +106,9 @@ func TestInit(t *testing.T) {
 				tableLinesResult := fmt.Sprintf("FAILURE\n%s", "")
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
-				df.remoteApi.On("extractMultilineResult", dbListResult).Return([]string{dbPath}, nil)
+				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
 				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
-				df.remoteApi.On("extractMultilineResult", tableLinesResult).Return([]string{}, dependencyError)
+				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),
 		},

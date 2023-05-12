@@ -48,7 +48,7 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 		return "", fmt.Errorf("unable to fetch database list: %s", dbListResponse)
 	}
 
-	lines, err := rc.uih.remoteApi.extractMultilineResult(dbListResponse)
+	lines, err := rc.uih.remoteApi.getResultLines(dbListResponse)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
 	if !success {
 		return fmt.Errorf("reading %s table: %s", rc.table, result)
 	}
-	lines, err := rc.uih.remoteApi.extractMultilineResult(result)
+	lines, err := rc.uih.remoteApi.getResultLines(result)
 	if err != nil {
 		return err
 	}
