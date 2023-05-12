@@ -15,6 +15,7 @@
     - [Command line arguments](#command-line-arguments)
     - [Logs](#logs)
     - [Reorg scanner](#reorg-scanner)
+    - [Sync stages](#sync-stages)
     - [Block body download](#block-body-download)
 - [Ideas for Possible improvements](#ideas-for-possible-improvements)
 

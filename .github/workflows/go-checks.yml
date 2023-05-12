@@ -23,5 +23,7 @@ jobs:
         with:
           version: latest
           skip-pkg-cache: true
+      - name : Test
+        run: go test -v ./...
       - name: Build
         run: go build -v ./...

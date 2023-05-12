@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type RemoteDbReader interface {
+	Init(db string, table string, initialKey []byte) error
+	Next() ([]byte, []byte, error)
+}
+
 type RemoteCursor struct {
 	uih            *UiHandler
 	requestChannel chan *NodeRequest
@@ -20,21 +25,21 @@ func NewRemoteCursor(uih *UiHandler, requestChannel chan *NodeRequest) *RemoteCu
 	return rc
 }
 
-func (rc *RemoteCursor) init(db string, table string, initialKey []byte) (*RemoteCursor, error) {
+func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 	dbPath, dbPathErr := rc.findFullDbPath(db)
 
 	if dbPathErr != nil {
-		return nil, dbPathErr
+		return dbPathErr
 	}
 
 	rc.dbPath = dbPath
 	rc.table = table
 
 	if err := rc.nextTableChunk(initialKey); err != nil {
-		return nil, err
+		return err
 	}
 
-	return rc, nil
+	return nil
 }
 
 func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
@@ -101,6 +106,10 @@ func advance(key []byte) []byte {
 }
 
 func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
+	if rc.dbPath == "" || rc.table == "" {
+		return nil, nil, fmt.Errorf("cursor not initialized")
+	}
+
 	if len(rc.lines) == 0 {
 		return nil, nil, nil
 	}
