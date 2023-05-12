@@ -54,7 +54,7 @@ func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProg
 		}
 
 		syncStage := string(k)
-		syncProgress, unmarshalError := ss.unmarshalToUint64(v)
+		syncProgress, unmarshalError := ss.unmarshal(v)
 
 		if unmarshalError != nil {
 			return nil, fmt.Errorf("unable to unmarshal sync stage data: %v", unmarshalError)
@@ -69,7 +69,7 @@ func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProg
 	return syncStageProgress, nil
 }
 
-func (ss *SyncStages) unmarshalToUint64(data []byte) (uint64, error) {
+func (ss *SyncStages) unmarshal(data []byte) (uint64, error) {
 	if len(data) == 0 {
 		return 0, nil
 	}
