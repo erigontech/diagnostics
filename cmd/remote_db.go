@@ -12,14 +12,14 @@ type RemoteDbReader interface {
 }
 
 type RemoteCursor struct {
-	uih            UiHandleReader
+	uih            *UiHandler
 	requestChannel chan *NodeRequest
 	dbPath         string
 	table          string
 	lines          []string // Parsed response
 }
 
-func NewRemoteCursor(uih UiHandleReader, requestChannel chan *NodeRequest) *RemoteCursor {
+func NewRemoteCursor(uih *UiHandler, requestChannel chan *NodeRequest) *RemoteCursor {
 	rc := &RemoteCursor{uih: uih, requestChannel: requestChannel}
 
 	return rc
@@ -43,12 +43,12 @@ func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 }
 
 func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
-	success, dbListResponse := rc.uih.fetch("/db/list\n", rc.requestChannel)
+	success, dbListResponse := rc.uih.remoteApi.fetch("/db/list\n", rc.requestChannel)
 	if !success {
 		return "", fmt.Errorf("unable to fetch database list: %s", dbListResponse)
 	}
 
-	lines, err := rc.uih.extractMultilineResult(dbListResponse)
+	lines, err := rc.uih.remoteApi.extractMultilineResult(dbListResponse)
 	if err != nil {
 		return "", err
 	}
@@ -68,11 +68,11 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 }
 
 func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
-	success, result := rc.uih.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
+	success, result := rc.uih.remoteApi.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
 	if !success {
 		return fmt.Errorf("reading %s table: %s", rc.table, result)
 	}
-	lines, err := rc.uih.extractMultilineResult(result)
+	lines, err := rc.uih.remoteApi.extractMultilineResult(result)
 	if err != nil {
 		return err
 	}

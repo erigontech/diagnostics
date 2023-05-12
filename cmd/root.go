@@ -106,10 +106,12 @@ func webServer() error {
 		return fmt.Errorf("failed to create uiSessions: %v", err)
 	}
 
+	remoteApi := &RemoteApi{}
 	uih := &UiHandler{
 		nodeSessions: ns,
 		uiSessions:   uis,
 		uiTemplate:   uiTemplate,
+		remoteApi:    remoteApi,
 	}
 	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))
 	mux.Handle("/ui/", uih)
