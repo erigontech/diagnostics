@@ -54,12 +54,13 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return
 		}
-		lines := strings.Split(result, "\n")
-		if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
-			fmt.Fprintf(w, "incorrect response (first line needs to be SUCCESS)\n")
+
+		lines, resultExtractErr := uih.extractMultilineResult(result)
+		if resultExtractErr != nil {
+			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
 			return
 		}
-		lines = lines[1:]
+
 		var changesMode bool
 		var err error
 		changes := map[uint64]struct{}{}

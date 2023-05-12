@@ -13,7 +13,7 @@ type mockRemoteCursor struct {
 	mock.Mock
 }
 
-type depFields struct {
+type syncStagesDep struct {
 	rc *mockRemoteCursor
 }
 
@@ -50,29 +50,32 @@ func TestFetchSyncStageProgress(t *testing.T) {
 	tt := []struct {
 		name       string
 		ctx        context.Context
-		on         func(*depFields)
-		exp        SyncStageProgress
+		on         func(*syncStagesDep)
+		assert     func(ssp SyncStageProgress)
 		wantErrMsg string
 	}{
 		{
 			name: "should successfully fetch and return sync stages with progress",
 			ctx:  context.Background(),
-			on: func(df *depFields) {
+			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return(firstStageName, encodeBigEndian(firstStageProgress), nil).Once()
 				df.rc.On("Next").Return(secondStageName, encodeBigEndian(secondStageProgress), nil).Once()
 				df.rc.On("Next").Return([]byte(nil), []byte(nil), nil).Once()
 			},
-			wantErrMsg: "",
-			exp: SyncStageProgress{
-				string(firstStageName):  fmt.Sprintf("%d", firstStageProgress),
-				string(secondStageName): fmt.Sprintf("%d", secondStageProgress),
+			assert: func(ssp SyncStageProgress) {
+				exp := SyncStageProgress{
+					string(firstStageName):  fmt.Sprintf("%d", firstStageProgress),
+					string(secondStageName): fmt.Sprintf("%d", secondStageProgress),
+				}
+
+				assert.Equal(t, exp, ssp)
 			},
 		},
 		{
 			name: "should return could not initialize remote cursor error",
 			ctx:  context.Background(),
-			on: func(df *depFields) {
+			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(depError)
 			},
 			wantErrMsg: fmt.Sprintf("could not initialize remote cursor: %v", depError),
@@ -84,7 +87,7 @@ func TestFetchSyncStageProgress(t *testing.T) {
 				cancel()
 				return ctx
 			}(),
-			on: func(df *depFields) {
+			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return(firstStageName, encodeBigEndian(firstStageProgress), nil).Once()
 			},
@@ -93,7 +96,7 @@ func TestFetchSyncStageProgress(t *testing.T) {
 		{
 			name: "should return unable to unmarshal sync stage data error",
 			ctx:  context.Background(),
-			on: func(df *depFields) {
+			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return(firstStageName, []byte{1}, nil).Once()
 			},
@@ -102,7 +105,7 @@ func TestFetchSyncStageProgress(t *testing.T) {
 		{
 			name: "should return unable to process remote cursor line error",
 			ctx:  context.Background(),
-			on: func(df *depFields) {
+			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return([]byte{}, []byte{}, depError).Once()
 			},
@@ -115,7 +118,7 @@ func TestFetchSyncStageProgress(t *testing.T) {
 			rc := &mockRemoteCursor{}
 			syncStages := SyncStages{rc: rc}
 			if tc.on != nil {
-				df := &depFields{
+				df := &syncStagesDep{
 					rc: rc,
 				}
 
@@ -128,7 +131,8 @@ func TestFetchSyncStageProgress(t *testing.T) {
 				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
 				return
 			}
-			assert.Equal(t, tc.exp, syncStageProgress)
+
+			tc.assert(syncStageProgress)
 		})
 	}
 }

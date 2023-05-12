@@ -210,6 +210,11 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *UiSession) chan 
 	return nil
 }
 
+type UiHandleReader interface {
+	fetch(url string, requestChannel chan *NodeRequest) (bool, string)
+	extractMultilineResult(result string) ([]string, error)
+}
+
 type UiHandler struct {
 	nodeSessions *lru.ARCCache[uint64, *NodeSession]
 	uiSessions   *lru.ARCCache[string, *UiSession]
@@ -304,6 +309,15 @@ func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool,
 		}
 	}
 	return success, sb.String()
+}
+
+func (uih *UiHandler) extractMultilineResult(result string) ([]string, error) {
+	lines := strings.Split(result, "\n")
+	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
+		return nil, fmt.Errorf("incorrect response (first line needs to be SUCCESS): %v", lines)
+	}
+
+	return lines[1:], nil
 }
 
 func generatePIN() (uint64, error) {
