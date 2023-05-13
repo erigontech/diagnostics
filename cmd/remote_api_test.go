@@ -14,7 +14,7 @@ func TestGetResultLines(t *testing.T) {
 		wantErrMsg string
 	}{
 		{
-			name:   "should successfully get data lines from multi line result",
+			name:   "should successfully get data lines from multi-line result",
 			result: "SUCCESS\nfirst_line",
 			assert: func(lines []string) {
 				assert.Equal(t, []string{"first_line"}, lines)

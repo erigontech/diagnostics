@@ -31,8 +31,8 @@ func TestInit(t *testing.T) {
 		table                  = "testTable"
 		initialKey      []byte = nil
 		dbPath                 = fmt.Sprintf("/full/path/%s", db)
-		lineKey                = "4163636f756e74486973746f7279496e646578"
-		lineValue              = "000000000034f9b2"
+		lineKey                = "lineKey"
+		lineValue              = "lineValue"
 		dependencyError        = fmt.Errorf("error")
 	)
 
@@ -67,7 +67,6 @@ func TestInit(t *testing.T) {
 
 				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{"notFoundDb"}, nil)
-
 			},
 			wantErrMsg: fmt.Sprintf("database %s not found: %s", db, fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")),
 		},
