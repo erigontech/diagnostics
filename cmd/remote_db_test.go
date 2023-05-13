@@ -79,7 +79,7 @@ func TestInit(t *testing.T) {
 			wantErrMsg: fmt.Sprintf("unable to fetch database list: %s", dependencyError.Error()),
 		},
 		{
-			name: "should return error when db list multiline result can not be parsed",
+			name: "should return error when db list result can not be parsed",
 			on: func(df *remoteCursorDependencies) {
 				dbPathResult := fmt.Sprintf("FAILURE\n/full/path/%s", db)
 
@@ -100,7 +100,7 @@ func TestInit(t *testing.T) {
 			wantErrMsg: fmt.Sprintf("reading %s table: %s", table, ""),
 		},
 		{
-			name: "should return error when table read multiline result can not be parsed",
+			name: "should return error when table result can not be parsed",
 			on: func(df *remoteCursorDependencies) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 				tableLinesResult := fmt.Sprintf("FAILURE\n%s", "")
@@ -117,12 +117,9 @@ func TestInit(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			remoteApi := &mockRemoteApiReader{}
-			uih := &UiHandler{
-				remoteApi: remoteApi,
-			}
 			requestChannel := make(chan *NodeRequest)
+			rc := NewRemoteCursor(remoteApi, requestChannel)
 
-			rc := NewRemoteCursor(uih, requestChannel)
 			if tc.on != nil {
 				df := &remoteCursorDependencies{
 					remoteApi:      remoteApi,

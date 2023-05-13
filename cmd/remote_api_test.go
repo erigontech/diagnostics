@@ -21,7 +21,14 @@ func TestGetResultLines(t *testing.T) {
 			},
 		},
 		{
-			name:       "should return first line needs to be SUCCESS error when first line is not SUCCESS",
+			name:   "should remove the last empty line from the result",
+			result: "SUCCESS\nfirst_line\n",
+			assert: func(lines []string) {
+				assert.Equal(t, []string{"first_line"}, lines)
+			},
+		},
+		{
+			name:       "should return first line needs to be SUCCESS error",
 			result:     "FAILURE\nfirst_line",
 			wantErrMsg: fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %s", "FAILURE\nfirst_line"),
 		},

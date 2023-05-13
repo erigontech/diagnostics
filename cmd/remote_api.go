@@ -33,7 +33,7 @@ func (ra *RemoteApi) fetch(url string, requestChannel chan *NodeRequest) (bool, 
 			} else {
 				success = false
 				fmt.Fprintf(&sb, "ERROR: %s\n", nodeRequest.err)
-				if nodeRequest.retries < 16 {
+				if nodeRequest.retries < MaxRequestRetries {
 					clear = false
 				}
 			}
@@ -52,6 +52,10 @@ func (ra *RemoteApi) getResultLines(result string) ([]string, error) {
 	lines := strings.Split(result, "\n")
 	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
 		return nil, fmt.Errorf("incorrect response (first line needs to be SUCCESS): %s", result)
+	}
+
+	if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
+		lines = lines[:len(lines)-1]
 	}
 
 	return lines[1:], nil

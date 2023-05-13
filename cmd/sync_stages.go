@@ -22,7 +22,7 @@ const syncStageTable = "SyncStage"
 const syncProgressBase = 10
 
 func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
-	rc := NewRemoteCursor(uih, requestChannel)
+	rc := NewRemoteCursor(uih.remoteApi, requestChannel)
 	syncStages := &SyncStages{rc: rc}
 
 	syncStageProgress, err := syncStages.fetchSyncStageProgress(ctx)
@@ -57,13 +57,13 @@ func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProg
 		syncProgress, unmarshalError := ss.unmarshal(v)
 
 		if unmarshalError != nil {
-			return nil, fmt.Errorf("unable to unmarshal sync stage data: %v", unmarshalError)
+			return nil, fmt.Errorf("could not unmarshal sync stage data: %v", unmarshalError)
 		}
 
 		syncStageProgress[syncStage] = strconv.FormatUint(syncProgress, syncProgressBase)
 	}
 	if e != nil {
-		return nil, fmt.Errorf("unable to process remote cursor line: %v", e)
+		return nil, fmt.Errorf("could not process remote cursor line: %v", e)
 	}
 
 	return syncStageProgress, nil

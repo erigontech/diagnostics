@@ -94,22 +94,22 @@ func TestFetchSyncStageProgress(t *testing.T) {
 			wantErrMsg: "context channel interrupted",
 		},
 		{
-			name: "should return unable to unmarshal sync stage data error",
+			name: "should return could not unmarshal sync stage data error",
 			ctx:  context.Background(),
 			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return(firstStageName, []byte{1}, nil).Once()
 			},
-			wantErrMsg: "unable to unmarshal sync stage data: value must be at least 8 bytes, got 1",
+			wantErrMsg: "could not unmarshal sync stage data: value must be at least 8 bytes, got 1",
 		},
 		{
-			name: "should return unable to process remote cursor line error",
+			name: "should return could not process remote cursor line error",
 			ctx:  context.Background(),
 			on: func(df *syncStagesDep) {
 				df.rc.On("Init", db, table, []byte(nil)).Return(nil)
 				df.rc.On("Next").Return([]byte{}, []byte{}, depError).Once()
 			},
-			wantErrMsg: fmt.Sprintf("unable to process remote cursor line: %v", depError),
+			wantErrMsg: fmt.Sprintf("could not process remote cursor line: %v", depError),
 		},
 	}
 

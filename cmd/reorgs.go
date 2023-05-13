@@ -18,7 +18,7 @@ const headersTable = "Header"
 func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
 	start := time.Now()
 
-	rc := NewRemoteCursor(uih, requestChannel)
+	rc := NewRemoteCursor(uih.remoteApi, requestChannel)
 
 	if err := rc.Init(headersDb, headersTable, nil); err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
