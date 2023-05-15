@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"html/template"
 	"log"
 	"net"
 	"net/http"
@@ -13,12 +12,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/ledgerwatch/diagnostics/assets"
-	"github.com/ledgerwatch/diagnostics/pkg/session"
+	"github.com/ledgerwatch/diagnostics/pkg/handler"
 )
 
 var (
@@ -89,45 +88,37 @@ func initConfig() {
 const successLine = "SUCCESS"
 
 func webServer() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
+	uih, err := handler.NewUIHandler(handler.UIHandlerConf{
+		MaxNodeSessions: maxNodeSessions,
+		MaxUISessions:   maxUISessions,
+		UITmplPath:      "template/*.html",
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed providing UIHandler")
+	}
+	bh := handler.NewBridgeHandler(uih)
+
 	mux := http.NewServeMux()
-	uiTemplate, err := template.ParseFS(assets.Templates, "template/*.html")
-	if err != nil {
-		return fmt.Errorf("parsing session.html template: %v", err)
-	}
-
-	ns, err := lru.NewARC[uint64, *session.Node](maxNodeSessions)
-	if err != nil {
-		return fmt.Errorf("failed to create nodeSessions: %v", err)
-	}
-
-	uis, err := lru.NewARC[string, *session.UI](maxUISessions)
-	if err != nil {
-		return fmt.Errorf("failed to create uiSessions: %v", err)
-	}
-
-	uih := &UiHandler{
-		nodeSessions: ns,
-		uiSessions:   uis,
-		uiTemplate:   uiTemplate,
-	}
 	mux.Handle("/script/", http.FileServer(http.FS(assets.Scripts)))
 	mux.Handle("/ui/", uih)
-	bh := &BridgeHandler{uih: uih}
 	mux.Handle("/support/", bh)
+
 	certPool := x509.NewCertPool()
-	for _, caCertFile := range caCertFiles {
-		caCert, err := os.ReadFile(caCertFile)
+	for _, f := range caCertFiles {
+		caCert, err := os.ReadFile(f)
 		if err != nil {
-			return fmt.Errorf("reading server certificate: %v", err)
+			return errors.Wrap(err, "failed reading server certificate")
 		}
 		certPool.AppendCertsFromPEM(caCert)
 	}
 	tlsConfig := &tls.Config{
 		RootCAs: certPool,
 	}
-	s := &http.Server{
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	srv := &http.Server{
 		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
 		Handler:        mux,
 		MaxHeaderBytes: 1 << 20,
@@ -141,18 +132,18 @@ func webServer() error {
 	go func() {
 		<-sigs
 		cancel()
-		err := s.Shutdown(ctx)
-		if err != nil {
+		if err := srv.Shutdown(ctx); err != nil {
 			log.Printf("Failed to shutdown server due to error:%s", err.Error())
 		}
 	}()
+
 	log.Printf("Starting diagnostics Server listening at %s:%d", listenAddr, listenPort)
-	if err = s.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
+	if err = srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != nil {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			return fmt.Errorf("running server: %v", err)
+			return errors.Wrap(err, "failed running server")
 		}
 	}
 	return nil

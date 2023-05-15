@@ -1,6 +1,8 @@
 package session
 
-import "sync"
+import (
+	"sync"
+)
 
 // Node corresponds to one Erigon node connected via "erigon support" bridge to an operator
 type Node struct {
@@ -8,16 +10,16 @@ type Node struct {
 	Connected      bool
 	RemoteAddr     string
 	SupportVersion uint64        // Version of the erigon support command.
-	requests       chan *Request // Incoming metric requests.
+	Requests       chan *Request // Incoming metric requests.
 }
 
 func NewNode(len int) *Node {
 	return &Node{
-		requests: make(chan *Request, len),
+		Requests: make(chan *Request, len),
 	}
 }
 
-func (n *Node) connect(remoteAddr string) {
+func (n *Node) Connect(remoteAddr string) {
 	n.mx.Lock()
 	defer n.mx.Unlock()
 
@@ -25,7 +27,7 @@ func (n *Node) connect(remoteAddr string) {
 	n.RemoteAddr = remoteAddr
 }
 
-func (n *Node) disconnect() {
+func (n *Node) Disconnect() {
 	n.mx.Lock()
 	defer n.mx.Unlock()
 
@@ -33,14 +35,16 @@ func (n *Node) disconnect() {
 }
 
 type Request struct {
-	lock     sync.Mutex
-	url      string
-	served   bool
-	response []byte
-	err      string
-	retries  int
+	Mx      sync.Mutex
+	URL     string
+	Served  bool
+	Resp    []byte
+	Err     string
+	Retries int
 }
 
-func NewRequest() *Request {
-	return &Request{}
+func NewRequest(url string) *Request {
+	return &Request{
+		URL: url,
+	}
 }

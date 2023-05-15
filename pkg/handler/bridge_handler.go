@@ -1,4 +1,4 @@
-package cmd
+package handler
 
 import (
 	"bytes"
@@ -11,10 +11,12 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+
+	"github.com/ledgerwatch/diagnostics/pkg/session"
 )
 
 type NodeRequest struct {
-	lock     sync.Mutex
+	mx       sync.Mutex
 	url      string
 	served   bool
 	response []byte
@@ -26,10 +28,14 @@ const MaxRequestRetries = 16 // How many time to retry a request to the support
 
 type BridgeHandler struct {
 	//cancel context.CancelFunc
-	uih *UiHandler
+	uih *UIHandler
 }
 
-var supportUrlRegex = regexp.MustCompile("^/support/([0-9]+)$")
+func NewBridgeHandler(uih *UIHandler) *BridgeHandler {
+	return &BridgeHandler{uih}
+}
+
+var supportURLRegex = regexp.MustCompile("^/support/([0-9]+)$")
 
 var ErrHTTP2NotSupported = "HTTP2 not supported"
 
@@ -43,7 +49,8 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, ErrHTTP2NotSupported, http.StatusHTTPVersionNotSupported)
 		return
 	}
-	m := supportUrlRegex.FindStringSubmatch(r.URL.Path)
+
+	m := supportURLRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
 		return
@@ -51,7 +58,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pin, err := strconv.ParseUint(m[1], 10, 64)
 	if err != nil {
 		http.Error(w, "Error parsing session PIN", http.StatusBadRequest)
-		log.Printf("Errir parsing session pin %s: %v\n", m[1], err)
+		log.Printf("Error parsing session pin %s: %v\n", m[1], err)
 		return
 	}
 	nodeSession, ok := bh.uih.findNodeSession(pin)
@@ -60,13 +67,14 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Session with specified PIN %d not found\n", pin)
 		return
 	}
+
 	fmt.Fprintf(w, "SUCCESS\n")
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	defer r.Body.Close()
 
-	nodeSession.connect(r.RemoteAddr)
-	defer nodeSession.disconnect()
+	nodeSession.Connect(r.RemoteAddr)
+	defer nodeSession.Disconnect()
 
 	// Update the request context with the connection context.
 	// If the connection is closed by the server, it will also notify everything that waits on the request context.
@@ -84,69 +92,77 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	nodeSession.SupportVersion = binary.BigEndian.Uint64(versionBytes[:])
 
 	var writeBuf bytes.Buffer
-	for request := range nodeSession.requestCh {
-		request.lock.Lock()
-		url := request.url
-		request.lock.Unlock()
+	processNodeRequests(*nodeSession, writeBuf, flusher, w, r)
+}
+
+func processNodeRequests(n session.Node, writeBuf bytes.Buffer, flusher http.Flusher, w http.ResponseWriter, r *http.Request) {
+	for req := range n.Requests {
+		req.Mx.Lock()
+		url := req.URL
+		req.Mx.Unlock()
+
 		log.Printf("Sending request %s\n", url)
 		writeBuf.Reset()
 		fmt.Fprint(&writeBuf, url)
 		if _, err := w.Write(writeBuf.Bytes()); err != nil {
 			log.Printf("Writing metrics request: %v\n", err)
-			request.lock.Lock()
-			request.served = true
-			request.response = nil
-			request.err = fmt.Sprintf("writing metrics request: %v", err)
-			request.retries++
-			if request.retries < 16 {
+			req.Mx.Lock()
+			req.Served = true
+			req.Resp = nil
+			req.Err = fmt.Sprintf("writing metrics request: %v", err)
+			req.Retries++
+			if req.Retries < 16 {
 				select {
-				case nodeSession.requestCh <- request:
+				case n.Requests <- req:
 				default:
 				}
 			}
-			request.lock.Unlock()
+			req.Mx.Unlock()
 			return
 		}
+
 		flusher.Flush()
 		// Read the response
 		var sizeBuf [4]byte
 		if _, err := io.ReadFull(r.Body, sizeBuf[:]); err != nil {
 			log.Printf("Reading size of metrics response: %v\n", err)
-			request.lock.Lock()
-			request.served = true
-			request.response = nil
-			request.err = fmt.Sprintf("reading size of metrics response: %v", err)
-			request.retries++
-			if request.retries < 16 {
+			req.Mx.Lock()
+			req.Served = true
+			req.Resp = nil
+			req.Err = fmt.Sprintf("reading size of metrics response: %v", err)
+			req.Retries++
+			if req.Retries < 16 {
 				select {
-				case nodeSession.requestCh <- request:
+				case n.Requests <- req:
 				default:
 				}
 			}
-			request.lock.Unlock()
+			req.Mx.Unlock()
 			return
 		}
+
 		metricsBuf := make([]byte, binary.BigEndian.Uint32(sizeBuf[:]))
 		if _, err := io.ReadFull(r.Body, metricsBuf); err != nil {
 			log.Printf("Reading metrics response: %v\n", err)
-			request.lock.Lock()
-			request.served = true
-			request.response = nil
-			request.err = fmt.Sprintf("reading metrics response: %v", err)
-			request.retries++
-			if request.retries < 16 {
+			req.Mx.Lock()
+			req.Served = true
+			req.Resp = nil
+			req.Err = fmt.Sprintf("reading metrics response: %v", err)
+			req.Retries++
+			if req.Retries < 16 {
 				select {
-				case nodeSession.requestCh <- request:
+				case n.Requests <- req:
 				default:
 				}
 			}
-			request.lock.Unlock()
+			req.Mx.Unlock()
 			return
 		}
-		request.lock.Lock()
-		request.served = true
-		request.response = metricsBuf
-		request.err = ""
-		request.lock.Unlock()
+
+		req.Mx.Lock()
+		req.Served = true
+		req.Resp = metricsBuf
+		req.Err = ""
+		req.Mx.Unlock()
 	}
 }

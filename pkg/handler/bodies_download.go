@@ -1,4 +1,4 @@
-package cmd
+package handler
 
 import (
 	"context"
@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics/pkg/session"
 	"golang.org/x/exp/maps"
 )
 
+const successLine = "SUCCESS"
 const VisLimit = 1000
 
 type BodyDownload struct {
@@ -34,7 +36,7 @@ type SnapshotItem struct {
 	State byte
 }
 
-func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (uih *UIHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requests chan *session.Request) {
 	snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
 		return a.Id < b.Id
 	})
@@ -49,7 +51,7 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 		default:
 		}
 		// First, fetch list of DB paths
-		success, result := uih.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
+		success, result := uih.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requests)
 		if !success {
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return

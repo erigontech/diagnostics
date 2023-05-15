@@ -1,4 +1,4 @@
-package cmd
+package handler
 
 import (
 	"crypto/rand"
@@ -7,7 +7,7 @@ import (
 	"html/template"
 	"io"
 	"math/big"
-	weakrand "math/rand"
+	mathrand "math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -16,21 +16,57 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/ledgerwatch/diagnostics/assets"
 	"github.com/ledgerwatch/diagnostics/pkg/session"
+	"github.com/pkg/errors"
 )
 
-const sessionIdCookieName = "sessionId"
+const sessionIDCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
 var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
 
-func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+type UIHandler struct {
+	nodeSessions *lru.ARCCache[uint64, *session.Node]
+	uiSessions   *lru.ARCCache[string, *session.UI]
+	uiTemplate   *template.Template
+}
+
+type UIHandlerConf struct {
+	MaxNodeSessions int
+	MaxUISessions   int
+	UITmplPath      string
+}
+
+func NewUIHandler(cfg UIHandlerConf) (*UIHandler, error) {
+	uiTmpl, err := template.ParseFS(assets.Templates, cfg.UITmplPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing session.html template")
+	}
+	ns, err := lru.NewARC[uint64, *session.Node](cfg.MaxNodeSessions)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create nodeSessions")
+	}
+	uis, err := lru.NewARC[string, *session.UI](cfg.MaxUISessions)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create uiSessions")
+	}
+
+	return &UIHandler{
+		nodeSessions: ns,
+		uiSessions:   uis,
+		uiTemplate:   uiTmpl,
+	}, nil
+}
+
+func (uih *UIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
 	if m == nil {
 		http.NotFound(w, r)
 		return
 	}
-	cookie, err := r.Cookie(sessionIdCookieName)
+
+	cookie, err := r.Cookie(sessionIDCookieName)
 	var sessionId string
 	var uiSession *session.UI
 	var sessionFound bool
@@ -44,7 +80,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var e error
 		sessionId, uiSession, e = uih.newUiSession()
 		if e == nil {
-			cookie := http.Cookie{Name: sessionIdCookieName, Value: url.QueryEscape(sessionId), Path: "/", HttpOnly: true, MaxAge: sessionIdCookieDuration}
+			cookie := http.Cookie{Name: sessionIDCookieName, Value: url.QueryEscape(sessionId), Path: "/", HttpOnly: true, MaxAge: sessionIdCookieDuration}
 			http.SetCookie(w, &cookie)
 		} else {
 			uiSession.AppendError(fmt.Sprintf("Creating new UI session: %v", e))
@@ -58,32 +94,34 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Parsing form: %v", err)
 		return
 	}
-	requestChannel := uih.lookupSession(r, uiSession)
+	requests := uih.lookupSession(r, uiSession)
 	filename := r.Form.Get("file")
 	sizeStr := r.Form.Get("size")
 	sessionName := r.Form.Get("current_sessionname")
 	switch m[1] {
 	case "versions":
-		success, result := uih.fetch("/version\n", requestChannel)
-		processVersions(w, uih.uiTemplate, success, result)
+		result, ok := uih.fetch("/version\n", requests)
+		processVersions(w, uih.uiTemplate, ok, result)
 		return
 	case "cmd_line":
-		success, result := uih.fetch("/cmdline\n", requestChannel)
-		processCmdLineArgs(w, uih.uiTemplate, success, result)
+		result, ok := uih.fetch("/cmdline\n", requests)
+		processCmdLineArgs(w, uih.uiTemplate, ok, result)
 		return
 	case "flags":
-		versionCallSuccess, versionCallResult := uih.fetch("/version\n", requestChannel)
-		versions := processVersions(w, uih.uiTemplate, versionCallSuccess, versionCallResult, true)
-		success, result := uih.fetch("/flags\n", requestChannel)
-		processFlags(w, uih.uiTemplate, success, result, versions)
+		result, ok := uih.fetch("/version\n", requests)
+		// TODO: boolean should be configureable.
+		versions := processVersions(w, uih.uiTemplate, ok, result, true)
+		result, ok = uih.fetch("/flags\n", requests)
+		processFlags(w, uih.uiTemplate, ok, result, versions)
 		return
 	case "log_list":
-		success, result := uih.fetch("/logs/list\n", requestChannel)
-		processLogList(w, uih.uiTemplate, success, uiSession.SessionName, result)
+		success, result := uih.fetch("/logs/list\n", requests)
+		processLogList(w, uih.uiTemplate, result, uiSession.SessionName, success)
 		return
 	case "log_head":
-		success, result := uih.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
-		processLogPart(w, uih.uiTemplate, success, uiSession.SessionName, result)
+		path := fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename))
+		success, result := uih.fetch(path, requests)
+		processLogPart(w, uih.uiTemplate, result, uiSession.SessionName, success)
 		return
 	case "log_tail":
 		size, err := strconv.ParseUint(sizeStr, 10, 64)
@@ -95,8 +133,10 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if size > 16*1024 {
 			offset = size - 16*1024
 		}
-		success, result := uih.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
-		processLogPart(w, uih.uiTemplate, success, uiSession.SessionName, result)
+
+		path := fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset)
+		result, ok := uih.fetch(path, requests)
+		processLogPart(w, uih.uiTemplate, ok, uiSession.SessionName, result)
 		return
 	case "log_download":
 		size, err := strconv.ParseUint(sizeStr, 10, 64)
@@ -104,13 +144,13 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Parsing size %s: %v", sizeStr, err)
 			return
 		}
-		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
+		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requests)
 		return
 	case "reorgs":
-		uih.findReorgs(r.Context(), w, uih.uiTemplate, requestChannel)
+		uih.findReorgs(r.Context(), w, uih.uiTemplate, requests)
 		return
 	case "bodies_download":
-		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
+		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requests)
 		return
 	}
 	uiSession.Mx.Lock()
@@ -118,7 +158,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uiSession.Session = false
 		uiSession.Errors = nil
 		uiSession.Node = nil
-		uiSession.UiNodes = nil
+		uiSession.UINodes = nil
 		uiSession.Mx.Unlock()
 	}()
 	sessionName = r.FormValue("sessionname")
@@ -128,22 +168,28 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !uih.validSessionName(sessionName, uiSession) {
 			break
 		}
+
+		// TODO: set security somewhere above in config.
+		insecure := true
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
-		uiSession.SessionPin, uiSession.Node, err = uih.allocateNewNodeSession()
+		uiSession.SessionPin, uiSession.Node, err = uih.allocateNewNodeSession(insecure)
 		if err != nil {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Generating new node session PIN %v", err))
 			break
 		}
+
 		uiSession.UINodeTree.ReplaceOrInsert(session.UINodeSession{SessionName: sessionName, SessionPin: uiSession.SessionPin})
+
 	case r.FormValue("resume_session") != "":
-		// Resume (take over) node session using known PIN
+		// Resume (take over) node session using known PIN.
 		pinStr := r.FormValue("pin")
 		sessionPin, err := strconv.ParseUint(pinStr, 10, 64)
 		if err != nil {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Parsing session PIN %s: %v", pinStr, err))
 			break
 		}
+
 		var ok bool
 		if uiSession.Node, ok = uih.findNodeSession(sessionPin); !ok {
 			uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", sessionPin))
@@ -152,6 +198,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !uih.validSessionName(sessionName, uiSession) {
 			break
 		}
+
 		uiSession.Session = true
 		uiSession.SessionName = sessionName
 		uiSession.SessionPin = sessionPin
@@ -160,10 +207,10 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Make one of the previously known sessions active
 		for k, vs := range r.Form {
 			if len(vs) == 1 {
-				if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: vs[0]}); ok && fmt.Sprintf("pin%d", v.SessionPin) == k {
-					if uiSession.NodeS, ok = uih.findNodeSession(v.SessionPin); !ok {
+				if v, ok := uiSession.UINodeTree.Get(session.UINodeSession{SessionName: vs[0]}); ok && fmt.Sprintf("pin%d", v.SessionPin) == k {
+					if uiSession.Node, ok = uih.findNodeSession(v.SessionPin); !ok {
 						uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
-						uiSession.uiNodeTree.Delete(v)
+						uiSession.UINodeTree.Delete(v)
 						break
 					}
 					uiSession.Session = true
@@ -174,26 +221,27 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Populate transient field UiNodes to display the buttons (with the labels)
-	uiSession.UINodeTree.Ascend(func(uiNodeSession UiNodeSession) bool {
-		uiSession.UiNodes = append(uiSession.UiNodes, uiNodeSession)
+	uiSession.UINodeTree.Ascend(func(uiNodeSession session.UINodeSession) bool {
+		uiSession.UINodes = append(uiSession.UINodes, uiNodeSession)
 		return true
 	})
 	if err := uih.uiTemplate.ExecuteTemplate(w, "session.html", uiSession); err != nil {
-		fmt.Fprintf(w, "Executing template: %v", err)
+		fmt.Fprintf(w, "Failed executing template: %v", err)
 		return
 	}
 }
 
-func (uih *UiHandler) lookupSession(r *http.Request, uiSession *session.UI) chan *NodeRequest {
-	uiSession.lock.Lock()
-	defer uiSession.lock.Unlock()
-	uiSession.NodeS = nil
+func (uih *UIHandler) lookupSession(r *http.Request, uiSession *session.UI) chan *session.Request {
+	uiSession.Mx.Lock()
+	defer uiSession.Mx.Unlock()
+
+	uiSession.Node = nil
 	currentSessionName := r.FormValue("current_sessionname")
 	if currentSessionName != "" {
-		if v, ok := uiSession.uiNodeTree.Get(UiNodeSession{SessionName: currentSessionName}); ok {
-			if uiSession.NodeS, ok = uih.findNodeSession(v.SessionPin); !ok {
-				uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d is not found", v.SessionPin))
-				uiSession.uiNodeTree.Delete(v)
+		if v, ok := uiSession.UINodeTree.Get(session.UINodeSession{SessionName: currentSessionName}); ok {
+			if uiSession.Node, ok = uih.findNodeSession(v.SessionPin); !ok {
+				uiSession.Errors = append(uiSession.Errors, fmt.Sprintf("Session %d not found", v.SessionPin))
+				uiSession.UINodeTree.Delete(v)
 			} else {
 				uiSession.Session = true
 				uiSession.SessionName = currentSessionName
@@ -201,26 +249,20 @@ func (uih *UiHandler) lookupSession(r *http.Request, uiSession *session.UI) chan
 			}
 		}
 	}
-	if uiSession.NodeS != nil {
-		return uiSession.NodeS.requests
+	if uiSession.Node != nil {
+		return uiSession.Node.Requests
 	}
 	return nil
 }
 
-type UiHandler struct {
-	nodeSessions *lru.ARCCache[uint64, *session.Node]
-	uiSessions   *lru.ARCCache[string, *session.UI]
-	uiTemplate   *template.Template
-}
-
-func (uih *UiHandler) allocateNewNodeSession() (uint64, *session.Node, error) {
-	pin, err := generatePIN()
+func (uih *UIHandler) allocateNewNodeSession(insecure bool) (uint64, *session.Node, error) {
+	pin, err := generatePIN(insecure)
 	if err != nil {
 		return pin, nil, err
 	}
 
 	for uih.nodeSessions.Contains(pin) {
-		pin, err = generatePIN()
+		pin, err = generatePIN(insecure)
 		if err != nil {
 			return pin, nil, err
 		}
@@ -232,11 +274,11 @@ func (uih *UiHandler) allocateNewNodeSession() (uint64, *session.Node, error) {
 	return pin, nodeSession, nil
 }
 
-func (uih *UiHandler) findNodeSession(pin uint64) (*session.Node, bool) {
+func (uih *UIHandler) findNodeSession(pin uint64) (*session.Node, bool) {
 	return uih.nodeSessions.Get(pin)
 }
 
-func (uih *UiHandler) newUiSession() (string, *session.UI, error) {
+func (uih *UIHandler) newUiSession() (string, *session.UI, error) {
 	var b [32]byte
 	var sessionID string
 	_, err := io.ReadFull(rand.Reader, b[:])
@@ -253,11 +295,11 @@ func (uih *UiHandler) newUiSession() (string, *session.UI, error) {
 	return sessionID, uiSession, err
 }
 
-func (uih *UiHandler) findUiSession(sessionId string) (*session.UI, bool) {
+func (uih *UIHandler) findUiSession(sessionId string) (*session.UI, bool) {
 	return uih.uiSessions.Get(sessionId)
 }
 
-func (uih *UiHandler) validSessionName(sessionName string, uiSession *session.UI) bool {
+func (uih *UIHandler) validSessionName(sessionName string, uiSession *session.UI) bool {
 	if sessionName == "" {
 		uiSession.Errors = append(uiSession.Errors, "empty session name")
 		return false
@@ -269,49 +311,52 @@ func (uih *UiHandler) validSessionName(sessionName string, uiSession *session.UI
 	return true
 }
 
-func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
-	if requestChannel == nil {
-		return false, "ERROR: Node is not allocated\n"
+func (uih *UIHandler) fetch(url string, requests chan *session.Request) (string, bool) {
+	if requests == nil {
+		return "ERROR: Node is not allocated\n", false
 	}
 	// Request command line arguments
-	nodeRequest := &NodeRequest{url: url}
-	requestChannel <- nodeRequest
+	nodeReq := session.NewRequest(url)
+	requests <- nodeReq
 	var sb strings.Builder
 	var success bool
-	for nodeRequest != nil {
-		nodeRequest.lock.Lock()
-		clear := nodeRequest.served
-		if nodeRequest.served {
-			if nodeRequest.err == "" {
+	for nodeReq != nil {
+		nodeReq.Mx.Lock()
+		clear := nodeReq.Served
+		if nodeReq.Served {
+			// TODO: could be handled by a separate method
+			if nodeReq.Err == "" {
 				sb.Reset()
-				sb.Write(nodeRequest.response)
+				sb.Write(nodeReq.Resp)
 				success = true
 			} else {
 				success = false
-				fmt.Fprintf(&sb, "ERROR: %s\n", nodeRequest.err)
-				if nodeRequest.retries < 16 {
+				fmt.Fprintf(&sb, "ERROR: %s\n", nodeReq.Err)
+				if nodeReq.Retries < 16 {
 					clear = false
 				}
 			}
+			// till here
 		}
-		nodeRequest.lock.Unlock()
+		nodeReq.Mx.Unlock()
 		if clear {
-			nodeRequest = nil
+			nodeReq = nil
 		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-	return success, sb.String()
+	return sb.String(), success
 }
 
-func generatePIN() (uint64, error) {
+func generatePIN(insecure bool) (uint64, error) {
 	if insecure {
-		return uint64(weakrand.Int63n(100_000_000)), nil
+		return uint64(mathrand.Int63n(100_000_000)), nil
 	}
 	max := big.NewInt(100_000_000) // For an 8-digit PIN
 	randNum, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		return 0, err
 	}
+
 	return randNum.Uint64(), nil
 }

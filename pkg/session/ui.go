@@ -15,7 +15,7 @@ type UI struct {
 	Errors      []string // Transient field - only filled for the time of template execution
 	Node        *Node    // Transient field - only filled for the time of template execution
 	UINodeTree  *btree.BTreeG[UINodeSession]
-	UiNodes     []UINodeSession // Transient field - only filled for the time of template execution
+	UINodes     []UINodeSession // Transient field - only filled for the time of template execution
 }
 
 func NewUI(degree int) *UI {

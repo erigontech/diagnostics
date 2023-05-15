@@ -1,32 +1,36 @@
-package cmd
+package handler
 
 import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+
+	"github.com/ledgerwatch/diagnostics/pkg/session"
 )
 
 type RemoteCursor struct {
-	uih            *UiHandler
-	requestChannel chan *NodeRequest
-	dbPath         string
-	table          string
-	lines          []string // Parsed response
+	uih      *UIHandler
+	requests chan *session.Request
+	dbPath   string
+	table    string
+	lines    []string // Parsed response
 }
 
-func NewRemoteCursor(dbPath string, table string, requestChannel chan *NodeRequest, initialKey []byte) (*RemoteCursor, error) {
-	rc := &RemoteCursor{dbPath: dbPath, table: table, requestChannel: requestChannel}
+func NewRemoteCursor(dbPath string, table string, requests chan *session.Request, initialKey []byte) (*RemoteCursor, error) {
+	rc := &RemoteCursor{dbPath: dbPath, table: table, requests: requests}
 	if err := rc.nextTableChunk(initialKey); err != nil {
 		return nil, err
 	}
+
 	return rc, nil
 }
 
 func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
-	success, result := rc.uih.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
+	success, result := rc.uih.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requests)
 	if !success {
-		return fmt.Errorf("reading %s table: %s", rc.table, result)
+		return fmt.Errorf("Could not read table %s: %s", rc.table, result)
 	}
+
 	lines := strings.Split(result, "\n")
 	if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
 		return fmt.Errorf("incorrect response (first line needs to be SUCCESS): %v", lines)
