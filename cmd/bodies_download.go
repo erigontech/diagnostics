@@ -49,17 +49,18 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 		default:
 		}
 		// First, fetch list of DB paths
-		success, result := uih.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
+		success, result := uih.remoteApi.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
 		if !success {
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return
 		}
-		lines := strings.Split(result, "\n")
-		if len(lines) == 0 || !strings.HasPrefix(lines[0], successLine) {
-			fmt.Fprintf(w, "incorrect response (first line needs to be SUCCESS)\n")
+
+		lines, resultExtractErr := uih.remoteApi.getResultLines(result)
+		if resultExtractErr != nil {
+			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
 			return
 		}
-		lines = lines[1:]
+
 		var changesMode bool
 		var err error
 		changes := map[uint64]struct{}{}

@@ -98,7 +98,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.response = nil
 			request.err = fmt.Sprintf("writing metrics request: %v", err)
 			request.retries++
-			if request.retries < 16 {
+			if request.retries < MaxRequestRetries {
 				select {
 				case nodeSession.requestCh <- request:
 				default:
@@ -117,7 +117,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.response = nil
 			request.err = fmt.Sprintf("reading size of metrics response: %v", err)
 			request.retries++
-			if request.retries < 16 {
+			if request.retries < MaxRequestRetries {
 				select {
 				case nodeSession.requestCh <- request:
 				default:
@@ -134,7 +134,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			request.response = nil
 			request.err = fmt.Sprintf("reading metrics response: %v", err)
 			request.retries++
-			if request.retries < 16 {
+			if request.retries < MaxRequestRetries {
 				select {
 				case nodeSession.requestCh <- request:
 				default:

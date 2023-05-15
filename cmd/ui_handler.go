@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"github.com/google/btree"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"html/template"
 	"io"
 	"math/big"
@@ -13,16 +15,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/google/btree"
-	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|sync_stages|)$")
 
 func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -64,25 +62,25 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sessionName := r.Form.Get("current_sessionname")
 	switch m[1] {
 	case "versions":
-		success, result := uih.fetch("/version\n", requestChannel)
+		success, result := uih.remoteApi.fetch("/version\n", requestChannel)
 		processVersions(w, uih.uiTemplate, success, result)
 		return
 	case "cmd_line":
-		success, result := uih.fetch("/cmdline\n", requestChannel)
+		success, result := uih.remoteApi.fetch("/cmdline\n", requestChannel)
 		processCmdLineArgs(w, uih.uiTemplate, success, result)
 		return
 	case "flags":
-		versionCallSuccess, versionCallResult := uih.fetch("/version\n", requestChannel)
+		versionCallSuccess, versionCallResult := uih.remoteApi.fetch("/version\n", requestChannel)
 		versions := processVersions(w, uih.uiTemplate, versionCallSuccess, versionCallResult, true)
-		success, result := uih.fetch("/flags\n", requestChannel)
+		success, result := uih.remoteApi.fetch("/flags\n", requestChannel)
 		processFlags(w, uih.uiTemplate, success, result, versions)
 		return
 	case "log_list":
-		success, result := uih.fetch("/logs/list\n", requestChannel)
+		success, result := uih.remoteApi.fetch("/logs/list\n", requestChannel)
 		processLogList(w, uih.uiTemplate, success, uiSession.SessionName, result)
 		return
 	case "log_head":
-		success, result := uih.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
+		success, result := uih.remoteApi.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", url.QueryEscape(filename)), requestChannel)
 		processLogPart(w, uih.uiTemplate, success, uiSession.SessionName, result)
 		return
 	case "log_tail":
@@ -95,7 +93,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if size > 16*1024 {
 			offset = size - 16*1024
 		}
-		success, result := uih.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
+		success, result := uih.remoteApi.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
 		processLogPart(w, uih.uiTemplate, success, uiSession.SessionName, result)
 		return
 	case "log_download":
@@ -111,6 +109,9 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "bodies_download":
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
+		return
+	case "sync_stages":
+		uih.findSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
 		return
 	}
 	uiSession.lock.Lock()
@@ -211,6 +212,7 @@ type UiHandler struct {
 	nodeSessions *lru.ARCCache[uint64, *NodeSession]
 	uiSessions   *lru.ARCCache[string, *UiSession]
 	uiTemplate   *template.Template
+	remoteApi    RemoteApiReader
 }
 
 func (uih *UiHandler) allocateNewNodeSession() (uint64, *NodeSession, error) {
@@ -266,41 +268,6 @@ func (uih *UiHandler) validSessionName(sessionName string, uiSession *UiSession)
 		return false
 	}
 	return true
-}
-
-func (uih *UiHandler) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
-	if requestChannel == nil {
-		return false, "ERROR: Node is not allocated\n"
-	}
-	// Request command line arguments
-	nodeRequest := &NodeRequest{url: url}
-	requestChannel <- nodeRequest
-	var sb strings.Builder
-	var success bool
-	for nodeRequest != nil {
-		nodeRequest.lock.Lock()
-		clear := nodeRequest.served
-		if nodeRequest.served {
-			if nodeRequest.err == "" {
-				sb.Reset()
-				sb.Write(nodeRequest.response)
-				success = true
-			} else {
-				success = false
-				fmt.Fprintf(&sb, "ERROR: %s\n", nodeRequest.err)
-				if nodeRequest.retries < 16 {
-					clear = false
-				}
-			}
-		}
-		nodeRequest.lock.Unlock()
-		if clear {
-			nodeRequest = nil
-		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-	return success, sb.String()
 }
 
 func generatePIN() (uint64, error) {
