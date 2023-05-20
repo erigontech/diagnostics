@@ -166,7 +166,7 @@ Caplin works on Sepolia in `devel` branch of Erigon, but this wll be included in
 and run this command:
 
 ```
-erigon --datadir <data_directory> --chain sepolia --internalcl
+erigon --datadir <data_directory> --chain sepolia --internalcl --metrics
 ```
 
 The flag `--internalcl` enables Caplin, which means that you won't need to install a Consensus Layer separately, and this will make your work simpler.
@@ -189,11 +189,11 @@ After new session is created, it will be allocated a unique 8-digit PIN number. 
 Currently, generation of PIN numbers is not secure and always follows the same sequence, which makes testing easier. For example, the first
 allocated session PIN is always `47779410`.
 
-Next, in a console window, run the following command, specifying the session PIN at the end of the `--diagnostics.url` command line flag.
+Next, while making sure that erigon node is already running in the system, start a new console window, run the following command, specifying the session PIN at the end of the `--diagnostics.url` command line flag.
 Since the website is using self-signed certificate without properly allocated CName, one needs to use `--insecure` flag to be able to connect.
 
 ```
-./build/bin/erigon support --metrics.urls http://metrics.addr:metrics.port/debug/metrics --diagnostics.url https://localhost:8080/support/47779410 --insecure
+./build/bin/erigon support --metrics.urls http://<metrics.addr>:<metrics.port>/debug/metrics --diagnostics.url https://localhost:8080/support/47779410 --insecure
 ```
 
 # Architecture of diagnostics system
