@@ -6,11 +6,11 @@
     </head>
     <body>
         <form action="" method="post" id="session_form">
-            <input type="hidden" id="current_sessionname" name="current_sessionname" value="{{.SessionName}}"/>
+            <input type="hidden" id="current_session_name" name="current_session_name" value="{{.SessionName}}"/>
             <div class="solid">
                 <div>
-                    <label for="sessionname">Session Name (1 to 64 characters):</label>
-                    <input type="text" id="sessionname" name="sessionname" minlength="1" maxlength="64">
+                    <label for="session_name">Session Name (1 to 64 characters):</label>
+                    <input type="text" id="session_name" name="session_name" minlength="1" maxlength="64">
                     <input id="newsession" type="submit" name="new_session" value="New operator session"/>
                     <label for="pin">Session PIN (up to 8 digits)</label>
                     <input id="pin" type="number" name="pin" min="0" max="99999999"/>
@@ -19,8 +19,8 @@
             </div>
             <div class="solid">
                 <label>Switch to existing session: </label>
-                {{range .UiNodes}}
-                    <button id="pin{{.SessionPin}}" name="pin{{.SessionPin}}"  type="button" onclick="fetchSession('{{.SessionName}}', 'switch', 'pin{{.SessionPin}}')">{{.SessionName}}</button>
+                {{ range $key, $value := .UiNodes}}
+                    <button id="pin{{$key}}" name="pin{{$key.SessionPin}}"  type="button" onclick="fetchSession('{{$key.SessionName}}', 'switch', 'pin{{$key.SessionPin}}')">{{$key.SessionName}}</button>
                 {{end}}
             </div>
             <div>

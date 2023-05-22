@@ -5,10 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/api"
 	"github.com/ledgerwatch/diagnostics/assets"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/ledgerwatch/diagnostics/rest"
 	"html/template"
 	"log"
 	"net/http"
@@ -52,8 +52,8 @@ func main() {
 	}
 
 	// Passing in the services to REST layer
-	handlers := rest.NewHandler(
-		rest.APIServices{
+	handlers := api.NewHandler(
+		api.APIServices{
 			UISessions:    uiSessions,
 			ErigonNode:    ErigonNodeClient,
 			StoreSession:  &cache,
