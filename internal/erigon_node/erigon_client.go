@@ -177,7 +177,7 @@ type Client interface {
 	Version(ctx context.Context, requestChannel chan *internal.NodeRequest) (Versions, error)
 	// Flags given version has been retrieved, provides the flags
 	Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error)
-	//CMDLineArgs retrieves the command line arguments provided to run the erigon node
+	// CMDLineArgs retrieves the command line arguments provided to run the erigon node
 	CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs
 	// fetch requests the data from the specified end point
 	fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string)
@@ -188,7 +188,6 @@ type Client interface {
 	BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest)
-
 	LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart
 	LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart
 }
