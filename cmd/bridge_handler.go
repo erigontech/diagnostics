@@ -51,7 +51,7 @@ func (bh *BridgeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pin, err := strconv.ParseUint(m[1], 10, 64)
 	if err != nil {
 		http.Error(w, "Error parsing session PIN", http.StatusBadRequest)
-		log.Printf("Errir parsing session pin %s: %v\n", m[1], err)
+		log.Printf("Error parsing session pin %s: %v\n", m[1], err)
 		return
 	}
 	nodeSession, ok := bh.uih.findNodeSession(pin)

@@ -1,0 +1,37 @@
+{{- if index .Legends 0 -}}
+<div><div class="state_0"></div>Invalidated</div>
+{{- end -}}
+{{- if index .Legends 1 -}}
+<div><div class="state_1"></div>Requested</div>
+{{- end -}}
+{{- if index .Legends 2 -}}
+<div><div class="state_2"></div>RetryNotReady</div>
+{{- end -}}
+<p>{{.HeaderNum}}</p>
+{{- range .Pre10_000_000 -}}
+    <div class="pre10_000_000"></div>
+{{- end -}}
+{{- range .Pre1_000_000 -}}
+    <div class="pre1_000_000"></div>
+{{- end -}}
+{{- range .Pre100_000 -}}
+    <div class="pre100_000"></div>
+{{- end -}}
+{{- range .Pre10_000 -}}
+    <div class="pre10_000"></div>
+{{- end -}}
+{{- range .Pre1_000 -}}
+    <div class="pre1_000"></div>
+{{- end -}}
+{{- range .Pre100 -}}
+    <div class="pre100"></div>
+{{- end -}}
+{{- range .Pre10 -}}
+    <div class="pre10"></div>
+{{- end -}}
+{{- range .Pre1 -}}
+    <div class="pre1"></div>
+{{- end -}}
+{{- range .States -}}
+    <div class="state_{{.State}}"></div>
+{{- end}}

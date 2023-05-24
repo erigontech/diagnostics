@@ -4,8 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/google/btree"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"html/template"
 	"io"
 	"math/big"
@@ -15,12 +13,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/google/btree"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 const sessionIdCookieName = "sessionId"
 const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
 
-var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|sync_stages|)$")
+var uiRegex = regexp.MustCompile("^/ui/(cmd_line|flags|log_list|log_head|log_tail|log_download|versions|reorgs|bodies_download|sync_stages|headers_download|)$")
 
 func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := uiRegex.FindStringSubmatch(r.URL.Path)
@@ -112,6 +113,10 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "sync_stages":
 		uih.findSyncStages(r.Context(), w, uih.uiTemplate, requestChannel)
+		return
+	case "headers_download":
+		uih.headersDownload(r.Context(), w, uih.uiTemplate, requestChannel)
+		fmt.Println("ui handler received headers_download")
 		return
 	}
 	uiSession.lock.Lock()

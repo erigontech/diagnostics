@@ -34,6 +34,7 @@ func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 
 	rc.dbPath = dbPath
 	rc.table = table
+	fmt.Println("Remote Cursor", rc.dbPath, rc.table)
 
 	if err := rc.nextTableChunk(initialKey); err != nil {
 		return err
@@ -52,6 +53,7 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// fmt.Println("lines: ", lines)
 
 	var dbPath string
 	for _, line := range lines {
