@@ -42,22 +42,18 @@ func (uih *UiHandler) headersDownload(ctx context.Context, w http.ResponseWriter
 			return
 		default:
 		}
-		// fmt.Println("Header Download received request")
 		// First, fetch list of DB paths
 		success, result := uih.remoteApi.fetch(fmt.Sprintf("/headers_download?sincetick=%d\n", tick), requestChannel)
 		if !success {
-			fmt.Println("Fetching list of changes: ", result)
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return
 		}
 
 		lines, resultExtractErr := uih.remoteApi.getResultLines(result)
 		if resultExtractErr != nil {
-			fmt.Println("incorrect response: ", resultExtractErr)
 			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
 			return
 		}
-		// fmt.Println("Result: ", lines)
 
 		var changesMode bool
 		var err error
@@ -67,7 +63,6 @@ func (uih *UiHandler) headersDownload(ctx context.Context, w http.ResponseWriter
 			case len(line) == 0:
 				// Skip empty lines
 			case strings.HasPrefix(line, "snapshot "):
-				fmt.Println("[Header Download] snapshot line found: ", line)
 				tick, err = strconv.ParseInt(line[len("snapshot "):], 10, 64)
 				if err != nil {
 					fmt.Fprintf(w, "parsing snapshot tick [%s]: %v\n", line, err)
@@ -76,7 +71,6 @@ func (uih *UiHandler) headersDownload(ctx context.Context, w http.ResponseWriter
 				changesMode = false
 				snapshot.Clear(true)
 			case strings.HasPrefix(line, "changes "):
-				fmt.Println("[Header Download] changes line found: ", line)
 				tick, err = strconv.ParseInt(line[len("changes "):], 10, 64)
 				if err != nil {
 					fmt.Fprintf(w, "parsing changes tick [%s]: %v\n", line, err)
