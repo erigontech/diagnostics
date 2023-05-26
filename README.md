@@ -308,6 +308,10 @@ Each state is represented by a distinct colour, with the colour legend is also d
 
 ![body download](/images/body_download.png)
 
+## Header Download
+This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`. 
+The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon. 
+
 # Ideas for possible improvements
 
 If you are looking at this because you would like to apply to be a part of Erigon development team, the best you can do is to try to first run the
