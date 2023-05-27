@@ -33,7 +33,11 @@ func (h *UIHandler) UI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UIHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	h.uiSessions.Add(r.FormValue(sessionName))
+	err := h.uiSessions.Add(r.FormValue(sessionName))
+	if err != nil {
+		fmt.Fprintf(w, "Unable to create session: %v", err)
+		internal.EncodeError(w, r, err)
+	}
 
 	if err := h.uiTemplate.ExecuteTemplate(w, "session.html", h.uiSessions); err != nil {
 		fmt.Fprintf(w, "Executing template: %v", err)
