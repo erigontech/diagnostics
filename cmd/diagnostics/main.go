@@ -34,7 +34,7 @@ func main() {
 	uiSessions := sessions.NewUISession(cache)
 	htmlTemplates, err := template.ParseFS(assets.Templates, "template/*.html")
 	if err != nil {
-		fmt.Errorf("parsing session.html template: %v", err)
+		log.Fatalf("parsing session.html template: %v", err)
 	}
 
 	// Initializes and adds the provided certificate to the pool, to be used in TLS config
@@ -42,7 +42,7 @@ func main() {
 	for _, caCertFile := range caCertFiles {
 		caCert, err := os.ReadFile(caCertFile)
 		if err != nil {
-			fmt.Errorf("reading server certificate: %v", err)
+			log.Fatalf("reading server certificate: %v", err)
 		}
 		certPool.AppendCertsFromPEM(caCert)
 	}
