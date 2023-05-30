@@ -76,7 +76,7 @@ async function processReader(d, reader) {
 async function findReorgs(sessionName) {
     const d = document.getElementById('reorgs');
     d.innerHTML = "Looking for reorgs...";
-    var formData = new FormData();
+    let formData = new FormData();
     formData.append('current_sessionname', sessionName);
     const request =  createRequest("/ui/reorgs", "POST", formData) 
     fetch(request)

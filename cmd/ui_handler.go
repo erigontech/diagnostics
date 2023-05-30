@@ -105,7 +105,7 @@ func (uih *UiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		transmitLogFile(r.Context(), r, w, sessionName, filename, size, requestChannel)
 		return
 	case "reorgs":
-		uih.findReorgs(r.Context(), w, uih.uiTemplate, requestChannel)
+		uih.findReorgs(r.Context(), w, requestChannel)
 		return
 	case "bodies_download":
 		uih.bodiesDownload(r.Context(), w, uih.uiTemplate, requestChannel)
