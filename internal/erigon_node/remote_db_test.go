@@ -1,28 +1,77 @@
-package cmd
+package erigon_node
 
 import (
+	"context"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"html/template"
+	"net/http"
 	"testing"
 )
 
-type mockRemoteApiReader struct {
+type mockNodeClientReader struct {
 	mock.Mock
 }
 
-func (ra *mockRemoteApiReader) fetch(url string, requestChannel chan *NodeRequest) (bool, string) {
+func (ra *mockNodeClientReader) LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) Version(ctx context.Context, requestChannel chan *internal.NodeRequest) (Versions, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
 	args := ra.Called(url, requestChannel)
 	return args.Bool(0), args.String(1)
 }
-func (ra *mockRemoteApiReader) getResultLines(result string) ([]string, error) {
+func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
 }
 
 type remoteCursorDependencies struct {
-	remoteApi      *mockRemoteApiReader
-	requestChannel chan *NodeRequest
+	remoteApi      *mockNodeClientReader
+	requestChannel chan *internal.NodeRequest
 }
 
 func TestInit(t *testing.T) {
@@ -115,13 +164,13 @@ func TestInit(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			remoteApi := &mockRemoteApiReader{}
-			requestChannel := make(chan *NodeRequest)
-			rc := NewRemoteCursor(remoteApi, requestChannel)
+			nodeClient := &mockNodeClientReader{}
+			requestChannel := make(chan *internal.NodeRequest)
+			rc := NewRemoteCursor(nodeClient, requestChannel)
 
 			if tc.on != nil {
 				df := &remoteCursorDependencies{
-					remoteApi:      remoteApi,
+					remoteApi:      nodeClient,
 					requestChannel: requestChannel,
 				}
 

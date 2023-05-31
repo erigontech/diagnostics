@@ -1,4 +1,4 @@
-package cmd
+package erigon_node
 
 import (
 	"context"

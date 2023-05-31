@@ -1,43 +1,49 @@
-
 async function fetchContent(sessionName, description, url, divId) {
-    const d = document.getElementById(divId);
-    d.innerHTML = "Fetching " + description + " ...";
-    var formData = new FormData();
-    formData.append('current_sessionname', sessionName);
-    const request =  createRequest(url, "POST", formData) 
     try {
+        const d = document.getElementById(divId);
+        d.innerHTML = `Fetching ${description} ...`;
+
+        const formData = new FormData();
+        formData.append('current_session_name', sessionName);
+
+        const request = createRequest(url, "POST", formData);
         const response = await fetch(request);
+
         if (!response.ok) {
             d.innerHTML = "ERROR: Network response was not OK";
-            return
+            return;
         }
-        const result = await response.text();
-        d.innerHTML = result
+
+        d.innerHTML = await response.text();
     } catch (error) {
-        d.innerHTML = "ERROR: " + error.message
+        const d = document.getElementById(divId);
+        d.innerHTML = `ERROR: ${error.message}`;
     }
 }
 
 async function fetchLogPart(logPartId, sessionName, description, url, filename, size) {
-    const d = document.getElementById(logPartId);
-    d.innerHTML = "Fetch " +description + " ...";
-    let formData = new FormData();
-    formData = createForm({
-        'current_sessionname': sessionName,
-        'file': filename,
-        'size': size,
-    })
-    const request =  createRequest(url, "POST", formData) 
     try {
+        const d = document.getElementById(logPartId);
+        d.innerHTML = `Fetching ${description} ...`;
+
+        const formData = createForm({
+            'current_session_name': sessionName,
+            'file': filename,
+            'size': size,
+        });
+
+        const request = createRequest(url, "POST", formData);
         const response = await fetch(request);
+
         if (!response.ok) {
             d.innerHTML = "ERROR: Network response was not OK";
-            return
+            return;
         }
-        const result = await response.text();
-        d.innerHTML = result
+
+        d.innerHTML = await response.text();
     } catch (error) {
-        d.innerHTML = "ERROR: " + error.message
+        const d = document.getElementById(logPartId);
+        d.innerHTML = `ERROR: ${error.message}`;
     }
 }
 
@@ -47,15 +53,15 @@ async function clearLog(logPartId) {
 }
 
 async function processReader(d, reader) {
-    var first = true
+    let first = true
     const utf8Decoder = new TextDecoder("utf-8");
-    var buffer = ''
+    let buffer = ''
     for (let chunk = await reader.read();!chunk.done;chunk = await reader.read()) {
         if (!chunk.done) {
             buffer += utf8Decoder.decode(chunk.value, { stream: false });
         }
-        var lastLineBreak = buffer.lastIndexOf('\n')
-        if (lastLineBreak != -1) {
+        const lastLineBreak = buffer.lastIndexOf('\n');
+        if (lastLineBreak !== -1) {
             if (first) {
                 d.innerHTML = buffer.substring(0, lastLineBreak);
                 first = false
@@ -76,9 +82,9 @@ async function processReader(d, reader) {
 async function findReorgs(sessionName) {
     const d = document.getElementById('reorgs');
     d.innerHTML = "Looking for reorgs...";
-    var formData = new FormData();
-    formData.append('current_sessionname', sessionName);
-    const request =  createRequest("/ui/reorgs", "POST", formData) 
+    let formData = new FormData();
+    formData.append('current_session_name', sessionName);
+    const request =  createRequest("/ui/reorgs", "POST", formData)
     fetch(request)
         .then((response) => response.body)
         .then((body) => body.getReader())
@@ -89,13 +95,14 @@ async function findReorgs(sessionName) {
 
 async function processReaderReplace(d, reader) {
     const utf8Decoder = new TextDecoder("utf-8");
-    var buffer = ''
-    for (let chunk = await reader.read();!chunk.done;chunk = await reader.read()) {
+    let buffer = ''
+    let lines;
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
         if (!chunk.done) {
-            buffer += utf8Decoder.decode(chunk.value, { stream: false });
+            buffer += utf8Decoder.decode(chunk.value, {stream: false});
         }
-        var lastLineBreak = buffer.lastIndexOf('\n')
-        if (lastLineBreak != -1) {
+        let lastLineBreak = buffer.lastIndexOf('\n')
+        if (lastLineBreak !== -1) {
             lines = buffer.substring(0, lastLineBreak).split('\n')
             buffer = buffer.substring(lastLineBreak + 1)
             d.innerHTML = buffer.substring(0, lastLineBreak);
@@ -110,9 +117,9 @@ async function processReaderReplace(d, reader) {
 async function bodiesDownload(sessionName) {
     const d = document.getElementById('bodies_download');
     d.innerHTML = "Tracking bodies download...";
-    var formData = new FormData();
-    formData.append('current_sessionname', sessionName);
-    const request =  createRequest("/ui/bodies_download", "POST", formData) 
+    let formData = new FormData();
+    formData.append('current_session_name', sessionName);
+    const request =  createRequest("/ui/bodies_download", "POST", formData)
     fetch(request)
         .then((response) => response.body)
         .then((body) => body.getReader())
@@ -121,37 +128,41 @@ async function bodiesDownload(sessionName) {
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
 
+
 async function fetchSession(sessionName, description, sessionPin) {
-    var formData = null
-    if(description == 'switch'){
-        var current_session_name = document.getElementById("current_sessionname").value
+    let formData = null
+    let url
+    if(description === 'switch'){
+        let current_session_name = document.getElementById("current_session_name").value
         formData = createForm({
-            "current_sessionname": current_session_name,
-            "sessionname": "",
+            "current_session_name": current_session_name,
+            "session_name": sessionName,
             "pin": "",
             [sessionPin]: sessionName
         })
+        url = "/ui/switch"
     }
-    else if(description == 'resume'){
-        var newSessionName = document.getElementById("sessionname").value
-        var newPin = document.getElementById("pin").value
+    else if(description === 'resume'){
+        let newSessionName = document.getElementById("session_name").value
+        let newPin = document.getElementById("pin").value
         formData = createForm({
-            "current_sessionname": sessionName,
-            "sessionname": newSessionName,
+            "current_session_name": sessionName,
+            "session_name": newSessionName,
             "resume_session": "Resume or take over operator session",
             "pin": newPin
         })
+        url = "/ui/resume"
     }
-    const request =  createRequest('/ui/', "POST", formData) 
+    const request =  createRequest(url, "POST", formData)
     fetch(request)
-    .then(response => response.text())
-    .then(html => {
-        document.body.innerHTML = html;
-    })
+        .then(response => response.text())
+        .then(html => {
+            document.body.innerHTML = html;
+        })
 }
 
 function createForm(jsonData) {
-    var formData = new FormData();
+    let formData = new FormData();
     for (const [key, value] of Object.entries(jsonData)) {
         formData.append(key, value)
     }
@@ -159,11 +170,10 @@ function createForm(jsonData) {
 }
 
 function createRequest(url, method, formData) {
-    const request = new Request(url, {
+    return  new Request(url, {
         method: method,
         mode: "cors",
         cache: "default",
-        body: new URLSearchParams(formData),
-    });
-    return  request
+        body: formData,
+    })
 }

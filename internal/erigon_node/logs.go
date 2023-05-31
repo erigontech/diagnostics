@@ -1,12 +1,12 @@
-package cmd
+package erigon_node
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -57,11 +57,12 @@ func ByteCount(b uint64) string {
 }
 
 // Produces (into the writer w) the list of available lots inside the div element, using log_list.html template and LogList object
-func processLogList(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
+func (c *NodeClient) ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest) {
+	success, result := c.fetch("/logs/list\n", requestChannel)
 	var list = LogList{SessionName: sessionName}
 	if success {
 		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
+		if len(lines) > 0 && strings.HasPrefix(lines[0], SuccessLine) {
 			list.Success = true
 			for _, line := range lines[1:] {
 				if len(line) == 0 {
@@ -88,18 +89,28 @@ func processLogList(w http.ResponseWriter, templ *template.Template, success boo
 	} else {
 		list.Error = result
 	}
-	if err := templ.ExecuteTemplate(w, "log_list.html", list); err != nil {
+	if err := template.ExecuteTemplate(w, "log_list.html", list); err != nil {
 		fmt.Fprintf(w, "Executing log_list template: %v", err)
 		return
 	}
 }
 
+func (c *NodeClient) LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart {
+	success, result := c.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", filename), requestChannel)
+	return processLogPart(success, result)
+}
+
+func (c *NodeClient) LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart {
+	success, result := c.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
+	return processLogPart(success, result)
+}
+
 // Produces (into writer w) log part (head or tail) inside the div HTML element, using log_read.html template and LogPart object
-func processLogPart(w http.ResponseWriter, templ *template.Template, success bool, sessionName string, result string) {
+func processLogPart(success bool, result string) LogPart {
 	var part LogPart
 	if success {
 		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], successLine) {
+		if len(lines) > 0 && strings.HasPrefix(lines[0], SuccessLine) {
 			part.Lines = lines[1:]
 		} else {
 			part.Lines = lines
@@ -109,10 +120,8 @@ func processLogPart(w http.ResponseWriter, templ *template.Template, success boo
 		part.Success = false
 		part.Error = result
 	}
-	if err := templ.ExecuteTemplate(w, "log_read.html", part); err != nil {
-		fmt.Fprintf(w, "Executing log_read template: %v", err)
-		return
-	}
+
+	return part
 }
 
 var logReadFirstLine = regexp.MustCompile("^SUCCESS: ([0-9]+)-([0-9]+)/([0-9]+)$")
@@ -120,23 +129,23 @@ var logReadFirstLine = regexp.MustCompile("^SUCCESS: ([0-9]+)-([0-9]+)/([0-9]+)$
 // Parses the response from the erigon node, which contains a part of a log file.
 // It should start with a line of format: SUCCESS from_offset/to_offset/total_size,
 // followed by the actual log chunk
-func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64, []byte, string) {
-	nodeRequest.lock.Lock()
-	defer nodeRequest.lock.Unlock()
-	if !nodeRequest.served {
+func parseLogPart(nodeRequest *internal.NodeRequest, offset uint64) (bool, uint64, uint64, []byte, string) {
+	nodeRequest.Lock.Lock()
+	defer nodeRequest.Lock.Unlock()
+	if !nodeRequest.Served {
 		return false, 0, 0, nil, ""
 	}
-	clear := nodeRequest.retries >= 16
-	if nodeRequest.err != "" {
-		return clear, 0, 0, nil, nodeRequest.err
+	clear := nodeRequest.Retries >= 16
+	if nodeRequest.Err != "" {
+		return clear, 0, 0, nil, nodeRequest.Err
 	}
-	firstLineEnd := bytes.IndexByte(nodeRequest.response, '\n')
+	firstLineEnd := bytes.IndexByte(nodeRequest.Response, '\n')
 	if firstLineEnd == -1 {
 		return clear, 0, 0, nil, "could not find first line in log part response"
 	}
-	m := logReadFirstLine.FindSubmatch(nodeRequest.response[:firstLineEnd])
+	m := logReadFirstLine.FindSubmatch(nodeRequest.Response[:firstLineEnd])
 	if m == nil {
-		return clear, 0, 0, nil, fmt.Sprintf("first line needs to have format SUCCESS: from-to/total, was [%sn", nodeRequest.response[:firstLineEnd])
+		return clear, 0, 0, nil, fmt.Sprintf("first line needs to have format SUCCESS: from-to/total, was [%sn", nodeRequest.Response[:firstLineEnd])
 	}
 	from, err := strconv.ParseUint(string(m[1]), 10, 64)
 	if err != nil {
@@ -153,33 +162,33 @@ func parseLogPart(nodeRequest *NodeRequest, offset uint64) (bool, uint64, uint64
 	if err != nil {
 		return clear, 0, 0, nil, fmt.Sprintf("parsing total: %v", err)
 	}
-	return true, to, total, nodeRequest.response[firstLineEnd+1:], ""
+	return true, to, total, nodeRequest.Response[firstLineEnd+1:], ""
 }
 
 // Implements io.ReaderSeeker to be used as parameter to http.ServeContent
 type LogReader struct {
-	filename       string // Name of the log files to download
-	requestChannel chan *NodeRequest
-	total          uint64 // Size of the log file to be downloaded. Needs to be known before download
-	offset         uint64 // Current offset set either by the Seek() or Read() functions
-	ctx            context.Context
+	Filename       string // Name of the log files to download
+	RequestChannel chan *internal.NodeRequest
+	Total          uint64 // Size of the log file to be downloaded. Needs to be known before download
+	Offset         uint64 // Current Offset set either by the Seek() or Read() functions
+	Ctx            context.Context
 }
 
 // Part of the io.Reader interface - emulates reading from the remote logs as if it was from the web server itself
 func (lr *LogReader) Read(p []byte) (n int, err error) {
-	nodeRequest := &NodeRequest{url: fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(lr.filename), lr.offset)}
-	lr.requestChannel <- nodeRequest
+	nodeRequest := &internal.NodeRequest{Url: fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(lr.Filename), lr.Offset)}
+	lr.RequestChannel <- nodeRequest
 	var total uint64
 	var clear bool
 	var part []byte
 	var errStr string
 	for nodeRequest != nil {
 		select {
-		case <-lr.ctx.Done():
+		case <-lr.Ctx.Done():
 			return 0, fmt.Errorf("interrupted")
 		default:
 		}
-		clear, _, total, part, errStr = parseLogPart(nodeRequest, lr.offset)
+		clear, _, total, part, errStr = parseLogPart(nodeRequest, lr.Offset)
 		if clear {
 			nodeRequest = nil
 		} else {
@@ -189,10 +198,10 @@ func (lr *LogReader) Read(p []byte) (n int, err error) {
 	if errStr != "" {
 		return 0, fmt.Errorf(errStr)
 	}
-	lr.total = total
+	lr.Total = total
 	copied := copy(p, part)
-	lr.offset += uint64(copied)
-	if lr.offset == total {
+	lr.Offset += uint64(copied)
+	if lr.Offset == total {
 		return copied, io.EOF
 	}
 	return copied, nil
@@ -202,29 +211,15 @@ func (lr *LogReader) Read(p []byte) (n int, err error) {
 func (lr *LogReader) Seek(offset int64, whence int) (int64, error) {
 	switch whence {
 	case io.SeekStart:
-		lr.offset = uint64(offset)
+		lr.Offset = uint64(offset)
 	case io.SeekCurrent:
-		lr.offset = uint64(int64(lr.offset) + offset)
+		lr.Offset = uint64(int64(lr.Offset) + offset)
 	case io.SeekEnd:
-		if lr.total > 0 {
-			lr.offset = uint64(int64(lr.total) + offset)
+		if lr.Total > 0 {
+			lr.Offset = uint64(int64(lr.Total) + offset)
 		} else {
-			lr.offset = 0
+			lr.Offset = 0
 		}
 	}
-	return int64(lr.offset), nil
-}
-
-// Handles the use case when operator clicks on the link with the log file name, and this initiates the download of this file
-// to the operator's computer (via browser). See LogReader above which is used in http.ServeContent
-func transmitLogFile(ctx context.Context, r *http.Request, w http.ResponseWriter, sessionName string, filename string, size uint64, requestChannel chan *NodeRequest) {
-	if requestChannel == nil {
-		fmt.Fprintf(w, "ERROR: Node is not allocated\n")
-		return
-	}
-	cd := mime.FormatMediaType("attachment", map[string]string{"filename": sessionName + "_" + filename})
-	w.Header().Set("Content-Disposition", cd)
-	w.Header().Set("Content-Type", "application/octet-stream")
-	logReader := &LogReader{filename: filename, requestChannel: requestChannel, offset: 0, total: size, ctx: ctx}
-	http.ServeContent(w, r, filename, time.Now(), logReader)
+	return int64(lr.Offset), nil
 }

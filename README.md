@@ -183,7 +183,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 First, in the browser window, create a new operator session. Choose an arbitrary name. In real operations, one would choose the name
 that can be easily correlate to the node being supported, for example, name or pseudonym of the person or the company operating the node.
 
-![create new operation session](/images/create_new_session.png)
+![create new operation session](/_images/create_new_session.png)
 
 After new session is created, it will be allocated a unique 8-digit PIN number. The pin is then displayed together with the session number on the screen.
 Currently, generation of PIN numbers is not secure and always follows the same sequence, which makes testing easier. For example, the first
@@ -212,7 +212,7 @@ diagnostics system, start with `/support/` prefix, followed by the PIN of the se
 Operators (those who are trying to assist the Erigon node users) also access Diagnostics system, but in the form of User Interface, built using HTML
 and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `UiHandler` type.
 
-![diagnostics system architecture](/images/diagnostics.drawio.png)
+![diagnostics system architecture](/_images/diagnostics.drawio.png)
 
 # Currently implemented diagnostics
 
@@ -224,7 +224,7 @@ The code on the side of the diagnostics system is spread across files `cmd/ui_ha
 the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/versions.html` (html template
 for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
-![versions](/images/versions.png)
+![versions](/_images/versions.png)
 
 ## Command line arguments
 
@@ -234,14 +234,14 @@ The code on the side of the diagnostics system is spread across files `cmd/ui_ha
 the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/cmd_line.html` (html template
 for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
-![cmd line](/images/cmd_line.png)
+![cmd line](/_images/cmd_line.png)
 
 ## Flags
 Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `diagnostics/flags.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
 
 The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processFlags` function), `cmd/flags.go`, `assets/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
-![flags](/images/flags.png)
+![flags](/_images/flags.png)
 
 
 ## Logs
@@ -257,7 +257,7 @@ for the content fetched by the `fetchContent` javascript function and inserted i
 for the buttons `Head`, `Tail` and `Clear` with the invocations of `fetchLogPart` and `clearLog` javascript functions, as well as construction of the
 HTML link that activates the download of a log file). The download of a log file is implemented by the `transmitLogFile` function inside `cmd/logs.go`.
 
-![logs](/images/logs.png)
+![logs](/_images/logs.png)
 
 ## Reorg scanner
 
@@ -277,7 +277,7 @@ in file `assets/script/session.js`, which appends them to `innerHTML` field of t
 progress of the scanning for reorgs (with spacer html pieces, one for each 1000 blocks), and showing intermediate results of the scan (with block html pieces,
 one for each reorged block found).
 
-![scan reorgs](/images/scan_reorgs.png)
+![scan reorgs](/_images/scan_reorgs.png)
 
 ## Sync stages
 
@@ -289,7 +289,7 @@ The code on the side of the diagnostics system is spread across files `cmd/ui_ha
 (HTML template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
 (HTML template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
 
-![sync_stage](/images/sync_stages.png)
+![sync_stage](/_images/sync_stages.png)
 
 ## Block Body Download
 
@@ -306,7 +306,7 @@ consumed by the javascript function `bodiesDownload` in the `assets/script/sessi
 whenever the new HTML piece is available.
 Each state is represented by a distinct colour, with the colour legend is also defined in the template file.
 
-![body download](/images/body_download.png)
+![body download](/_images/body_download.png)
 
 # Ideas for possible improvements
 
