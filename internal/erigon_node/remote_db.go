@@ -1,8 +1,9 @@
-package cmd
+package erigon_node
 
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"strings"
 )
 
@@ -12,15 +13,15 @@ type RemoteDbReader interface {
 }
 
 type RemoteCursor struct {
-	remoteApi      RemoteApiReader
-	requestChannel chan *NodeRequest
+	nodeClient     Client
+	requestChannel chan *internal.NodeRequest
 	dbPath         string
 	table          string
 	lines          []string // Parsed response
 }
 
-func NewRemoteCursor(remoteApi RemoteApiReader, requestChannel chan *NodeRequest) *RemoteCursor {
-	rc := &RemoteCursor{remoteApi: remoteApi, requestChannel: requestChannel}
+func NewRemoteCursor(nodeClient Client, requestChannel chan *internal.NodeRequest) *RemoteCursor {
+	rc := &RemoteCursor{nodeClient: nodeClient, requestChannel: requestChannel}
 
 	return rc
 }
@@ -44,12 +45,12 @@ func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 }
 
 func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
-	success, dbListResponse := rc.remoteApi.fetch("/db/list\n", rc.requestChannel)
+	success, dbListResponse := rc.nodeClient.fetch("/db/list\n", rc.requestChannel)
 	if !success {
 		return "", fmt.Errorf("unable to fetch database list: %s", dbListResponse)
 	}
 
-	lines, err := rc.remoteApi.getResultLines(dbListResponse)
+	lines, err := rc.nodeClient.getResultLines(dbListResponse)
 	if err != nil {
 		return "", err
 	}
@@ -70,11 +71,11 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 }
 
 func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
-	success, result := rc.remoteApi.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
+	success, result := rc.nodeClient.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
 	if !success {
 		return fmt.Errorf("reading %s table: %s", rc.table, result)
 	}
-	lines, err := rc.remoteApi.getResultLines(result)
+	lines, err := rc.nodeClient.getResultLines(result)
 	if err != nil {
 		return err
 	}

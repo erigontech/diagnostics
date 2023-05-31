@@ -1,40 +1,19 @@
-package cmd
+package erigon_node
 
 import (
 	"context"
 	"fmt"
+	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics/internal"
+	"golang.org/x/exp/maps"
 	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/btree"
-	"golang.org/x/exp/maps"
 )
 
-const VisLimit = 1000
-
-type BodyDownload struct {
-	Legends       [9]bool
-	BlockNum      uint64
-	Pre1          []struct{}
-	Pre10         []struct{}
-	Pre100        []struct{}
-	Pre1_000      []struct{}
-	Pre10_000     []struct{}
-	Pre100_000    []struct{}
-	Pre1_000_000  []struct{}
-	Pre10_000_000 []struct{}
-	States        []SnapshotItem
-}
-
-type SnapshotItem struct {
-	Id    uint64
-	State byte
-}
-
-func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
 	snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
 		return a.Id < b.Id
 	})
@@ -48,14 +27,15 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 			return
 		default:
 		}
+
 		// First, fetch list of DB paths
-		success, result := uih.remoteApi.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
+		success, result := c.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
 		if !success {
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return
 		}
 
-		lines, resultExtractErr := uih.remoteApi.getResultLines(result)
+		lines, resultExtractErr := c.getResultLines(result)
 		if resultExtractErr != nil {
 			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
 			return
@@ -104,7 +84,7 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 						if _, ok := changes[id]; ok {
 							if firstItem, firstOk := snapshot.Min(); firstOk {
 								if id < firstItem.Id + VisLimit {
-									sendSnapshot(snapshot, w, templ, sendEvery)
+									sendSnapshot(snapshot, w, template, sendEvery)
 									maps.Clear(changes)
 								}
 							}
@@ -120,13 +100,13 @@ func (uih *UiHandler) bodiesDownload(ctx context.Context, w http.ResponseWriter,
 				}
 			}
 		}
-		sendSnapshot(snapshot, w, templ, sendEvery)
+		sendSnapshot(snapshot, w, template)
 		maps.Clear(changes)
 		<-sendEvery.C
 	}
 }
 
-func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template, sendEvery *time.Ticker) {
+func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template) {
 	//<- sendEvery.C
 	var bd BodyDownload
 	first := true
@@ -160,3 +140,5 @@ func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, t
 		return
 	}
 }
+
+const VisLimit = 1000

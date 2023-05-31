@@ -1,10 +1,11 @@
-package cmd
+package erigon_node
 
 import (
 	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"net/http"
 	"time"
@@ -15,10 +16,10 @@ import (
 const headersDb = "chaindata"
 const headersTable = "Header"
 
-func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
+func (c *NodeClient) FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
 	start := time.Now()
 
-	rc := NewRemoteCursor(uih.remoteApi, requestChannel)
+	rc := NewRemoteCursor(c, requestChannel)
 
 	if err := rc.Init(headersDb, headersTable, nil); err != nil {
 		fmt.Fprintf(w, "Create remote cursor: %v", err)
@@ -40,7 +41,7 @@ func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, tem
 		}
 		if len(k) >= 8 && len(prevK) >= 8 && bytes.Equal(k[:8], prevK[:8]) {
 			bn := binary.BigEndian.Uint64(k[:8])
-			if err := templ.ExecuteTemplate(w, "reorg_block.html", bn); err != nil {
+			if err := template.ExecuteTemplate(w, "reorg_block.html", bn); err != nil {
 				fmt.Fprintf(w, "Executing reorg_block template: %v\n", err)
 			}
 			if f, ok := w.(http.Flusher); ok {
@@ -51,7 +52,7 @@ func (uih *UiHandler) findReorgs(ctx context.Context, w http.ResponseWriter, tem
 		prevK = k
 		count++
 		if count%1000 == 0 {
-			if err := templ.ExecuteTemplate(w, "reorg_spacer.html", nil); err != nil {
+			if err := template.ExecuteTemplate(w, "reorg_spacer.html", nil); err != nil {
 				fmt.Fprintf(w, "Executing reorg_spacer template: %v\n", err)
 			}
 			if f, ok := w.(http.Flusher); ok {

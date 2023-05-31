@@ -1,4 +1,4 @@
-package cmd
+package erigon_node
 
 import (
 	"fmt"
@@ -41,9 +41,9 @@ func TestGetResultLines(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			remoteApi := &RemoteApi{}
+			erigonClient := NodeClient{}
 
-			syncStageProgress, err := remoteApi.getResultLines(tc.result)
+			syncStageProgress, err := erigonClient.getResultLines(tc.result)
 
 			if tc.wantErrMsg != "" {
 				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
