@@ -1,9 +1,10 @@
-package cmd
+package erigon_node
 
 import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -21,8 +22,8 @@ const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
 const syncProgressBase = 10
 
-func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *NodeRequest) {
-	rc := NewRemoteCursor(uih.remoteApi, requestChannel)
+func (c *NodeClient) FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+	rc := NewRemoteCursor(c, requestChannel)
 	syncStages := &SyncStages{rc: rc}
 
 	syncStageProgress, err := syncStages.fetchSyncStageProgress(ctx)
@@ -31,7 +32,7 @@ func (uih *UiHandler) findSyncStages(ctx context.Context, w http.ResponseWriter,
 		return
 	}
 
-	if templateErr := templ.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {
+	if templateErr := template.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {
 		fmt.Fprintf(w, "Executing Sync stages template: %v\n", templateErr)
 		return
 	}

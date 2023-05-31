@@ -1,9 +1,11 @@
-package cmd
+package erigon_node
 
 import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
+	"html/template"
 	"io"
 	"net/http"
 	"time"
@@ -17,20 +19,21 @@ const (
 	maxCount     = 1000
 )
 
-// Go through "Header" table and look for entries with the same block number but different hashes
-func (uih *UiHandler) findReorgs(ctx context.Context,
+// FindReorgs - Go through "Header" table and look for entries with the same block number but different hashes
+func (c *NodeClient) FindReorgs(ctx context.Context,
 	writer http.ResponseWriter,
-	requestChannel chan *NodeRequest) {
+	template *template.Template,
+	requestChannel chan *internal.NodeRequest) {
 	start := time.Now()
 	var err error
 
-	rc := NewRemoteCursor(uih.remoteApi, requestChannel)
+	rc := NewRemoteCursor(c, requestChannel)
 	if err = rc.Init(headersDb, headersTable, nil); err != nil {
 		fmt.Fprintf(writer, "Create remote cursor: %v", err)
 		return
 	}
 
-	total, wrongBlocks, errors := uih.findReorgsInternally(ctx, rc)
+	total, wrongBlocks, errors := c.findReorgsInternally(ctx, template, rc)
 	for _, err := range errors {
 		if err != nil {
 			fmt.Fprintf(writer, "%v\n", err)
@@ -41,8 +44,10 @@ func (uih *UiHandler) findReorgs(ctx context.Context,
 	fmt.Fprintf(writer, "Reorg iterator: %d, wrong blocks\n", len(wrongBlocks))
 }
 
-func (uih *UiHandler) executeFlush(writer io.Writer, name string, data any) error {
-	if err := uih.uiTemplate.ExecuteTemplate(writer, name, data); err != nil {
+func (c *NodeClient) executeFlush(writer io.Writer,
+	template *template.Template,
+	name string, data any) error {
+	if err := template.ExecuteTemplate(writer, name, data); err != nil {
 		return err
 	}
 	if f, ok := writer.(http.Flusher); ok {
@@ -55,7 +60,8 @@ func (uih *UiHandler) executeFlush(writer io.Writer, name string, data any) erro
 // return back total blocks set and wrong blocks
 // if there are errors in the middle of processing will return back
 // slice of errors
-func (uih *UiHandler) findReorgsInternally(ctx context.Context,
+func (c *NodeClient) findReorgsInternally(ctx context.Context,
+	template *template.Template,
 	rc *RemoteCursor,
 ) (map[uint64][]byte, []uint64, []error) {
 	var errors []error
@@ -80,8 +86,10 @@ func (uih *UiHandler) findReorgsInternally(ctx context.Context,
 		bn := binary.BigEndian.Uint64(k[:8])
 		_, found := set[bn]
 		if found {
-			if err := uih.executeFlush(nil, "reorg_block.html", bn); err != nil {
-				errors = append(errors, fmt.Errorf("Executing reorg_block template: %v\n", err))
+			if template != nil {
+				if err := c.executeFlush(nil, template, "reorg_block.html", bn); err != nil {
+					errors = append(errors, fmt.Errorf("Executing reorg_block template: %v\n", err))
+				}
 			}
 			wrongBlocks = append(wrongBlocks, bn)
 		}
@@ -89,8 +97,10 @@ func (uih *UiHandler) findReorgsInternally(ctx context.Context,
 
 		iterator++
 		if iterator%maxCount == 0 {
-			if err := uih.executeFlush(nil, "reorg_block.html", bn); err != nil {
-				errors = append(errors, fmt.Errorf("Executing reorg_spacer template: %v\n", err))
+			if template != nil {
+				if err := c.executeFlush(nil, template, "reorg_block.html", bn); err != nil {
+					errors = append(errors, fmt.Errorf("Executing reorg_spacer template: %v\n", err))
+				}
 			}
 		}
 	}

@@ -1,9 +1,10 @@
-package cmd
+package erigon_node
 
 import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/ledgerwatch/diagnostics/internal"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -57,8 +58,8 @@ func TestReorgs(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			remoteApi := &mockRemoteApiReader{}
-			requestChannel := make(chan *NodeRequest)
+			remoteApi := &mockNodeClientReader{}
+			requestChannel := make(chan *internal.NodeRequest)
 			rc := NewRemoteCursor(remoteApi, requestChannel)
 
 			if tc.on != nil {
@@ -77,8 +78,8 @@ func TestReorgs(t *testing.T) {
 				return
 			}
 
-			handler := UiHandler{}
-			tc.assert(handler.findReorgsInternally(context.Background(), rc))
+			handler := NodeClient{}
+			tc.assert(handler.findReorgsInternally(context.Background(), nil, rc))
 		})
 	}
 }
