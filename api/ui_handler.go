@@ -2,18 +2,19 @@ package api
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/ledgerwatch/diagnostics"
-	"github.com/ledgerwatch/diagnostics/api/internal"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/pkg/errors"
 	"html/template"
 	"log"
 	"mime"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/ledgerwatch/diagnostics"
+	"github.com/ledgerwatch/diagnostics/api/internal"
+	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
+	"github.com/ledgerwatch/diagnostics/internal/sessions"
+	"github.com/pkg/errors"
 )
 
 var _ http.Handler = &UIHandler{}
@@ -167,6 +168,11 @@ func (h *UIHandler) ReOrg(w http.ResponseWriter, r *http.Request) {
 func (h *UIHandler) BodiesDownload(w http.ResponseWriter, r *http.Request) {
 	requestChannel := h.uiSessions.LookUpSession(r.FormValue(currentSessionName))
 	h.erigonNode.BodiesDownload(r.Context(), w, h.uiTemplate, requestChannel)
+}
+
+func (h *UIHandler) HeadersDownload(w http.ResponseWriter, r *http.Request) {
+	requestChannel := h.uiSessions.LookUpSession(r.FormValue(currentSessionName))
+	h.erigonNode.HeadersDownload(r.Context(), w, h.uiTemplate, requestChannel)
 }
 
 func (h *UIHandler) SyncStages(w http.ResponseWriter, r *http.Request) {

@@ -3,12 +3,13 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 var _ Client = &NodeClient{}
@@ -186,6 +187,7 @@ type Client interface {
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
+	HeadersDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest)
 	LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart

@@ -117,7 +117,7 @@ go build .
 
 Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
@@ -139,7 +139,7 @@ This will create `diagnostics` executable in the same directory.
 To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
 
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
 # How to access from the browser
