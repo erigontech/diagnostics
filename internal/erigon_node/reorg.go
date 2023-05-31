@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 // Demonstration of the working with the Erigon database remotely on the example of getting information

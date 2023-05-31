@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"testing"
+
 	"github.com/ledgerwatch/diagnostics/internal"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestReorgs(t *testing.T) {
