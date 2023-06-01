@@ -128,6 +128,19 @@ async function bodiesDownload(sessionName) {
         .catch((err) => d.innerHTML = "ERROR: " + err.message);
 }
 
+async function headersDownload(sessionName) {
+    const d = document.getElementById('headers_download');
+    d.innerHTML = "Tracking headers download...";
+    var formData = new FormData();
+    formData.append('current_sessionname', sessionName);
+    const request =  createRequest("/ui/headers_download", "POST", formData) 
+    fetch(request)
+        .then((response) => response.body)
+        .then((body) => body.getReader())
+        .then((reader) => processReaderReplace(d, reader))
+        .then(() => console.log('completed'))
+        .catch((err) => d.innerHTML = "ERROR: " + err.message);
+}
 
 async function fetchSession(sessionName, description, sessionPin) {
     let formData = null

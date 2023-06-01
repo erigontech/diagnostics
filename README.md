@@ -117,7 +117,7 @@ go build .
 
 Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
@@ -139,7 +139,7 @@ This will create `diagnostics` executable in the same directory.
 To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
 
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
 # How to access from the browser
@@ -307,6 +307,10 @@ whenever the new HTML piece is available.
 Each state is represented by a distinct colour, with the colour legend is also defined in the template file.
 
 ![body download](/_images/body_download.png)
+
+## Header Download
+This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`. 
+The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon. 
 
 # Ideas for possible improvements
 

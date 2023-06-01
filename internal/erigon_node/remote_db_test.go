@@ -3,12 +3,13 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"html/template"
 	"net/http"
 	"testing"
+
+	"github.com/ledgerwatch/diagnostics/internal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type mockNodeClientReader struct {
@@ -46,6 +47,11 @@ func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context, w http.Respo
 }
 
 func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
 	//TODO implement me
 	panic("implement me")
 }

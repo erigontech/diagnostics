@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 var (
@@ -34,7 +35,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
 	rootCmd.Flags().StringVar(&listenAddr, "addr", "localhost", "network interface to listen on")
-	rootCmd.Flags().IntVar(&listenPort, "port", 8081, "port to listen on")
+	rootCmd.Flags().IntVar(&listenPort, "port", 8080, "port to listen on")
 	rootCmd.Flags().StringVar(&serverKeyFile, "tls.key", "", "path to server TLS key")
 	_ = rootCmd.MarkFlagRequired("tls.key")
 	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")
