@@ -157,7 +157,7 @@ Running the tests including integration and end to end can be done using the Mak
 make test
 ```
 
-Linting with :
+Linting with golangci:
 ```
   make lint
 ```
@@ -311,6 +311,10 @@ The code on the side of the diagnostics system is spread across files `api/ui_ha
 (HTML template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
 
 ![sync_stage](/_images/sync_stages.png)
+
+## Header Download
+This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`.
+The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon.
 
 ## Block Body Download
 
