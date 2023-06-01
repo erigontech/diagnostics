@@ -1,22 +1,22 @@
 # DIAGNOSTICS SYSTEM WEB APPLICATION FOR ERIGON
 
-- [Overview](#overview) 
-    - [Statement of the problem](#statement-of-the-problem)
-    - [Idea of a possible solution](#idea-of-a-possible-solution)
-    - [Role for recruiting and onboarding](#role-for-recruiting-and-on-boarding)
+- [Overview](#overview)
+  - [Statement of the problem](#statement-of-the-problem)
+  - [Idea of a possible solution](#idea-of-a-possible-solution)
+  - [Role for recruiting and onboarding](#role-for-recruiting-and-on-boarding)
 - [Development Environment Setup](#development-environment-setup)
-    - [Pre-requisites](#pre-requisites)
-    - [Erigon Node Setup](#erigon-node-set-up)
-    - [Diagnostics Setup](#diagnostics-set-up)
-    - [Connect Erigon The Diagnostics System](#connect-the-erigon-node-to-the-diagnostics-system-setup)
+  - [Pre-requisites](#pre-requisites)
+  - [Erigon Node Setup](#erigon-node-set-up)
+  - [Diagnostics Setup](#diagnostics-set-up)
+  - [Connect Erigon The Diagnostics System](#connect-the-erigon-node-to-the-diagnostics-system-setup)
 - [Architecture of diagnostics system](#architecture-of-diagnostics-system)
 - [Currently implemented diagnostics](#currently-implemented-diagnostics)
-    - [Code version](#code-version)
-    - [Command line arguments](#command-line-arguments)
-    - [Logs](#logs)
-    - [Reorg scanner](#reorg-scanner)
-    - [Sync stages](#sync-stages)
-    - [Block body download](#block-body-download)
+  - [Code version](#code-version)
+  - [Command line arguments](#command-line-arguments)
+  - [Logs](#logs)
+  - [Reorg scanner](#reorg-scanner)
+  - [Sync stages](#sync-stages)
+  - [Block body download](#block-body-download)
 - [Ideas for Possible improvements](#ideas-for-possible-improvements)
 
 # Overview
@@ -86,7 +86,7 @@ Build the repo
 make erigon
 ```
 
-Run the Node. To make sure that it connects to the diagnostics system, add the --metrics flag. 
+Run the Node. To make sure that it connects to the diagnostics system, add the --metrics flag.
 The `<data_directory>` field will be the directory path to your database. The sepolia chain and the --internalcl options will allow for quicker setup for testing
 
 ```
@@ -97,7 +97,7 @@ Check the prometheus logs by navigating to the url below
 ```
 http://localhost:6060/debug/metrics/prometheus
 ```
-To set and use a custom address and port, here a 
+To set and use a custom address and port, here a
 [link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
 
 ## Diagnostics Set Up
@@ -117,7 +117,7 @@ go build .
 
 Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
 ```
-./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
+./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
@@ -133,14 +133,35 @@ To build, perform `git clone`, change to the directory with the source code and 
 ```
 go build .
 ```
+The above command can also be run with **Make**:
+```
+  make build
+```
 
 This will create `diagnostics` executable in the same directory.
 
 To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
 
 ```
-./diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
+./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
+The above command can also be run with **Make**:
+```
+  make run-self-sign
+```
+
+# Testing & Linting
+
+Running the tests including integration and end to end can be done using the Makefile:
+```
+make test
+```
+
+Linting with golangci:
+```
+  make lint
+```
+
 
 # How to access from the browser
 
@@ -218,9 +239,9 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 ## Code version
 
-Operator can look at the code version that Erigon node has been built with. The corresponding code in Erigon is in the file `diagnostics/versions.go`.
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processVersions` function), 
-`cmd/versions.go`, `assets/template/session.html` (template in the format of `html/template` package, the part where the button `Fetch Versions` is defined with
+Operator can look at the code version that Erigon node has been built with. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`.
+The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `Version` method),
+`internal/erigon_node/erigon_client.go`, `assets/template/session.html` (template in the format of `html/template` package, the part where the button `Fetch Versions` is defined with
 the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/versions.html` (html template
 for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
@@ -228,18 +249,18 @@ for the content fetched by the `fetchContent` javascript function and inserted i
 
 ## Command line arguments
 
-Operator can look at the command line arguments that were used to launch Erigon node. The corresponding code in Erigon is in the file `diagnostics/cmd_line.go`.
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processCmdLineArgs` function), 
-`cmd/cmd_line.go`, `assets/template/session.html` (html template, the part where the button `Fetch Cmd Line` is defined with
+Operator can look at the command line arguments that were used to launch Erigon node. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`.
+The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `CMDLineArgs` method),
+`internal/erigon_node/erigon_client.go`, `assets/template/session.html` (html template, the part where the button `Fetch Cmd Line` is defined with
 the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/cmd_line.html` (html template
 for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
 ![cmd line](/_images/cmd_line.png)
 
 ## Flags
-Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `diagnostics/flags.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
+Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
 
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processFlags` function), `cmd/flags.go`, `assets/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
+The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `Flags` method), `internal/erigon_client.go`, `assets/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
 ![flags](/_images/flags.png)
 
@@ -248,14 +269,14 @@ The code on the side of the diagnostics system is spread across files `cmd/ui_ha
 
 Since version 2.43.0, Erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log rotation. Using diagnostics system,
 these logs can be looked at and downloaded to the operator's computer. Viewing the logs is one of the most frequent requests of the operator to the user,
-and it makes sense to make this process much more convenient and efficient. The corresponding code in Erigon is in the file `diagnostics/log_access.go`.
+and it makes sense to make this process much more convenient and efficient. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`.
 Note that the codes does not give access to any other files in the file system, only to the directory dedicated to the logs.
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `processLogPart` and `transmitLogFile` functions), 
-`cmd/logs.go`, `assets/template/session.html` (html template, the part where the button `Fetch Logs` is defined with
+The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `LogTail`, `LogHead`, `LogList` and `LogDownload` methods),
+`internal/erigon_node/erigon_client.go`, `assets/template/session.html` (html template, the part where the button `Fetch Logs` is defined with
 the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/log_list.html` (html template
 for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element), `assets/template/log_read.html` (html template
 for the buttons `Head`, `Tail` and `Clear` with the invocations of `fetchLogPart` and `clearLog` javascript functions, as well as construction of the
-HTML link that activates the download of a log file). The download of a log file is implemented by the `transmitLogFile` function inside `cmd/logs.go`.
+HTML link that activates the download of a log file). The download of a log file is implemented by the `transmitLogFile` function inside `internal/erigon_client.go`.
 
 ![logs](/_images/logs.png)
 
@@ -267,11 +288,11 @@ the presence of multiple block headers with the same block height but different 
 One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against
 Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
 
-The corresponding code in Erigon is in the file `diagnostics/db_access.go`, and it relies on a feature recently added to the Erigon's code, which is
+The corresponding code in Erigon is in the file `internal/sessions/cache.go`, and it relies on a feature recently added to the Erigon's code, which is
 `mdbx.PathDbMap()`, the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem.
-This allows `db_access.go` to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
+This allows `cache.go` to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
 
-The code on the side of the diagnostics system is `cmd/reorgs.go`. The function `findReorgs` generates HTML piece by piece, executing two different html templates
+The code on the side of the diagnostics system is `internal/erigon_node/reorgs.go`. The function `findReorgs` generates HTML piece by piece, executing two different html templates
 (`assets/template/reorg_spacer.html` and `assets/template/reorg_block.html`). These continuously generated HTML lines are picked up by javascript function `findReorgs`
 in file `assets/script/session.js`, which appends them to `innerHTML` field of the div element. This creates an effect of animation, notifying the operator of the
 progress of the scanning for reorgs (with spacer html pieces, one for each 1000 blocks), and showing intermediate results of the scan (with block html pieces,
@@ -285,11 +306,15 @@ This is another example of how the diagnostics system can access the Erigon node
 This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
 
 
-The code on the side of the diagnostics system is spread across files `cmd/ui_handler.go` (invocation of `findSyncStages` function), `cmd/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html`
+The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `SyncStages` method), `internal/erigon_node/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html`
 (HTML template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
 (HTML template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
 
 ![sync_stage](/_images/sync_stages.png)
+
+## Header Download
+This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`.
+The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon.
 
 ## Block Body Download
 
@@ -308,10 +333,6 @@ Each state is represented by a distinct colour, with the colour legend is also d
 
 ![body download](/_images/body_download.png)
 
-## Header Download
-This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`. 
-The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon. 
-
 # Ideas for possible improvements
 
 If you are looking at this because you would like to apply to be a part of Erigon development team, the best you can do is to try to first run the
@@ -323,14 +344,14 @@ Therefore, there should be a lot of things that can be improved in terms of best
 There are some functional improvements that could be quite useful, for example:
 
 * Reorg scanner is very basic and it does not have a concept of a "deep" reorg (deeper than 1 block). For such situations, it will just show the consecutive
-block numbers as all having a reorg. It would be better to aggregate these into deep reorgs, and also perhaps show if there are more than 1 branch at each
-reorg point.
+  block numbers as all having a reorg. It would be better to aggregate these into deep reorgs, and also perhaps show if there are more than 1 branch at each
+  reorg point.
 * For the reorg scanner, add the ability to click on the block numbers and get more information about that particular reorg, for example, block producers
-for each of the block participating in the reorg, or difference in terms of transactions.
+  for each of the block participating in the reorg, or difference in terms of transactions.
 * Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
 * Adding a monitoring for header downloader as well as for body downloader.
 * Perhaps embedding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics system?
 * Ability to extract and analyse go-routine stack traces from Erigon node. To start with, extract something like `debug/pprof/goroutine?debug=2`, but for Erigon
-this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
-stack traces and show them as aggregates.
+  this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
+  stack traces and show them as aggregates.
 * Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).
