@@ -211,6 +211,7 @@ func NewUIHandler(
 
 	r.Post("/reorgs", r.ReOrg)
 	r.Post("/bodies_download", r.BodiesDownload)
+	r.Post("/headers_download", r.HeadersDownload)
 	r.Post("/sync_stages", r.SyncStages)
 
 	return r
