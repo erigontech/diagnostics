@@ -3,14 +3,19 @@ BUILD_DIR := ./_bin
 DOCKER_IMAGE_NAME := diagnostics
 DOCKER_CONTAINER_NAME := diagnostics_container
 
+all: lint build test
+
 build:
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/diagnostics
 
 test:
-	go test ./...
+	go test -tags integration,endtoend  ./...
 
 run:
 	go run ./cmd/diagnostics/main.go
+
+run-self-signed:
+	go run ./cmd/diagnostics/main.go  --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 
 clean:
 	rm -rf $(BUILD_DIR)
