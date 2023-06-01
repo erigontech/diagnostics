@@ -21,4 +21,18 @@ build-docker:
 run-docker:
 	docker run -p 8080:8080 --name $(DOCKER_CONTAINER_NAME) $(DOCKER_IMAGE_NAME)
 
+## lint:                              run golangci-lint with .golangci.yml config file
+lint:
+	@./build/bin/golangci-lint run --config ./.golangci.yml
+
+## lintci:                            run golangci-lint (additionally outputs message before run)
+lintci:
+	@echo "--> Running linter for code"
+	@./build/bin/golangci-lint run --config ./.golangci.yml
+
+## lintci-deps:                       (re)installs golangci-lint to build/bin/golangci-lint
+lintci-deps:
+	rm -f ./build/bin/golangci-lint
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./build/bin v1.52.2
+
 .PHONY: build test run clean
