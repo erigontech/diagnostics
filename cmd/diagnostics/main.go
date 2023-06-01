@@ -5,16 +5,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/api"
-	"github.com/ledgerwatch/diagnostics/assets"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/ledgerwatch/diagnostics/api"
+	"github.com/ledgerwatch/diagnostics/assets"
+	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
+	"github.com/ledgerwatch/diagnostics/internal/sessions"
 )
 
 func main() {
@@ -48,7 +50,8 @@ func main() {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs: certPool,
+		RootCAs:    certPool,
+		MinVersion: tls.VersionTLS12,
 	}
 
 	// Passing in the services to REST layer
@@ -61,10 +64,11 @@ func main() {
 		})
 
 	srv := &http.Server{
-		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler:        handlers,
-		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      tlsConfig,
+		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler:           handlers,
+		MaxHeaderBytes:    1 << 20,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 1 * time.Minute,
 	}
 	go func() {
 		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {

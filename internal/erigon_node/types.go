@@ -35,6 +35,20 @@ type BodyDownload struct {
 	States        []SnapshotItem
 }
 
+type HeaderDownload struct {
+	Legends       [9]bool
+	HeaderNum     uint64
+	Pre1          []struct{}
+	Pre10         []struct{}
+	Pre100        []struct{}
+	Pre1_000      []struct{}
+	Pre10_000     []struct{}
+	Pre100_000    []struct{}
+	Pre1_000_000  []struct{}
+	Pre10_000_000 []struct{}
+	States        []SnapshotItem
+}
+
 type SnapshotItem struct {
 	Id    uint64
 	State byte

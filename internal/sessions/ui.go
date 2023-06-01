@@ -75,7 +75,7 @@ func (s *UiSession) Add(sessionName string) error {
 
 	s.Session = true
 	s.SessionName = sessionName
-	err := *new(error)
+	var err error
 	s.SessionPin, s.NodeS, err = s.Store.AllocateNewNodeSession()
 	if err != nil {
 		s.Errors = append(s.Errors, fmt.Sprintf("Generating new node session PIN %v", err))

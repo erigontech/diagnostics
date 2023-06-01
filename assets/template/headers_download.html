@@ -1,0 +1,52 @@
+{{- if index .Legends 0 -}}
+<div><div class="state_0"></div>Invalidated</div>
+{{- end -}}
+{{- if index .Legends 1 -}}
+<div><div class="state_1"></div>Requested</div>
+{{- end -}}
+{{- if index .Legends 2 -}}
+<div><div class="state_2"></div>SkeletonRequested</div>
+{{- end -}}
+{{- if index .Legends 3 -}}
+<div><div class="state_3"></div>RetryNotReady</div>
+{{- end -}}
+{{- if index .Legends 4 -}}
+<div><div class="state_4"></div>Empty</div>
+{{- end -}}
+{{- if index .Legends 5 -}}
+<div><div class="state_5"></div>Bad</div>
+{{- end -}}
+{{- if index .Legends 6 -}}
+<div><div class="state_6"></div>Evicted</div>
+{{- end -}}
+{{- if index .Legends 7 -}}
+<div><div class="state_7"></div>Inserted</div>
+{{- end -}}
+<p>{{.HeaderNum}}</p>
+{{- range .Pre10_000_000 -}}
+    <div class="pre10_000_000"></div>
+{{- end -}}
+{{- range .Pre1_000_000 -}}
+    <div class="pre1_000_000"></div>
+{{- end -}}
+{{- range .Pre100_000 -}}
+    <div class="pre100_000"></div>
+{{- end -}}
+{{- range .Pre10_000 -}}
+    <div class="pre10_000"></div>
+{{- end -}}
+{{- range .Pre1_000 -}}
+    <div class="pre1_000"></div>
+{{- end -}}
+{{- range .Pre100 -}}
+    <div class="pre100"></div>
+{{- end -}}
+{{- range .Pre10 -}}
+    <div class="pre10"></div>
+{{- end -}}
+{{- range .Pre1 -}}
+    <div class="pre1"></div>
+{{- end -}}
+{{- range .States -}}
+    <div class="state_{{.State}}"></div>
+{{- end}}
