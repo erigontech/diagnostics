@@ -11,6 +11,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20230420155640-133eef4313cb
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
