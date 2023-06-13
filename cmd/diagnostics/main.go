@@ -16,6 +16,7 @@ import (
 	"github.com/ledgerwatch/diagnostics/api"
 	"github.com/ledgerwatch/diagnostics/assets"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
+	"github.com/ledgerwatch/diagnostics/internal/logging"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
 )
 
@@ -25,6 +26,9 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	//set up logger to implement log rotation
+	logging.SetupLogger(logDirPath, logFileName, logFileSizeMax, logFilesAgeMax, logFilesMax, logCompress)
 
 	// Use of system calls SIGINT and SIGTERM signals that cause a gracefully  stop.
 	signalCh := make(chan os.Signal, 1)
