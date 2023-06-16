@@ -42,6 +42,13 @@ func (c *NodeClient) FindDeepReorgs(ctx context.Context,
 			fmt.Fprintf(writer, "%v\n", err)
 		}
 	}
+
+	for height, reorgLengthMap := range wrongBlocks {
+		for length, count := range reorgLengthMap {
+			fmt.Fprintf(writer, "Block height: %d, length of reorg: %d, count of deep reorgs: %d \n", height, length, count)
+		}
+	}
+
 	fmt.Fprintf(writer, "Reorg iterator: %d, total scanned %s\n", total, time.Since(start))
 	fmt.Fprintf(writer, "Reorg iterator: %d, wrong blocks\n", len(wrongBlocks))
 }
@@ -142,7 +149,14 @@ func (c *NodeClient) findDeepReorgsInternally(ctx context.Context,
 			}
 		}
 	}
-	return countBlocks, allReorgs, nil
+
+	var errors []error
+	/* for height, reorgLengthMap := range allReorgs {
+		for length, count := range reorgLengthMap {
+			// flush your data from here to your respective template, A blank template has been added named deep_reorg.html
+		}
+	} */
+	return countBlocks, allReorgs, errors
 }
 
 // function to be called upon finding reorgs to store number of reorgs on that height corresponding to that reorg height
