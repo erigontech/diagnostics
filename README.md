@@ -122,7 +122,7 @@ To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use
 ./_bin/diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
-This may take a while. Expect to see a TLS Handshake error in the terminal
+This may take a while (and currently there is no way to tell if it's ready in terminal, just try to open browser UI). There could be TLS Handshake error in the terminal. Also, your browser may tell you it is "unsafe". Proceed anyway, it cannot be unsafe in the way browser means because it's running on your machine.
 
 The above command can also be run with **Make**:
 
