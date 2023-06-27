@@ -1,26 +1,26 @@
 package diagnostics
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type badRequest struct {
-	error
+	err error
 }
 
-func BadRequest() error {
-	return badRequest{error: errors.New("bad request")}
+func BadRequest(err error) error {
+	return badRequest{err: err}
 }
 
-func (err badRequest) IsBadRequestErr() bool {
-	return true
+func (e badRequest) Error() string {
+	return fmt.Sprintf("bad request: %v", e.err)
 }
 
-func AsBadRequestErr(err error) error {
-	return badRequest{error: err}
+func (e badRequest) Unwrap() error {
+	return e.err
 }
 
 func IsBadRequestErr(err error) bool {
-	var target interface {
-		IsBadRequestErr() bool
-	}
-	return errors.As(err, &target) && target.IsBadRequestErr()
+	return errors.Is(err, badRequest{})
 }

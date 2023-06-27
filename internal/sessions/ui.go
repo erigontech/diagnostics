@@ -4,12 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"io"
 	"strings"
 	"sync"
+
+	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics"
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 type UiSession struct {
@@ -70,7 +71,7 @@ func (s *UiSession) Add(sessionName string) error {
 	defer s.lock.Unlock()
 
 	if !s.ValidSessionName(sessionName, s) {
-		return diagnostics.BadRequest()
+		return diagnostics.BadRequest(fmt.Errorf("invalid session name %s", sessionName))
 	}
 
 	s.Session = true
@@ -79,7 +80,7 @@ func (s *UiSession) Add(sessionName string) error {
 	s.SessionPin, s.NodeS, err = s.Store.AllocateNewNodeSession()
 	if err != nil {
 		s.Errors = append(s.Errors, fmt.Sprintf("Generating new node session PIN %v", err))
-		return diagnostics.BadRequest()
+		return diagnostics.BadRequest(err)
 	}
 
 	s.uiNodeTree.ReplaceOrInsert(UINodeSession{SessionName: sessionName, SessionPin: s.SessionPin})
@@ -151,11 +152,11 @@ func (s *UiSession) Resume(pin uint64, sessionName string) (*UiSession, error) {
 	var ok bool
 	if s.NodeS, ok = s.Store.FindNodeSession(pin); !ok {
 		s.Errors = append(s.Errors, fmt.Sprintf("Session %d is not found", pin))
-		return nil, diagnostics.NotFound()
+		return nil, diagnostics.NotFound(fmt.Errorf("session %d is not found", pin))
 	}
 
 	if !s.ValidSessionName(sessionName, s) {
-		return nil, diagnostics.BadRequest()
+		return nil, diagnostics.BadRequest(fmt.Errorf("invalid session name %s", sessionName))
 	}
 
 	s.Session = true

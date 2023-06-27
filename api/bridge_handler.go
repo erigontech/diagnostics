@@ -31,7 +31,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 	nodeSession, ok := h.cache.FindNodeSession(pin)
 	if !ok {
 		log.Printf("Session with specified PIN %d not found\n", pin)
-		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Session with specified PIN %d not found", pin)))
+		internal.EncodeError(w, r, diagnostics.BadRequest(errors.Errorf("Session with specified PIN %d not found", pin)))
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 	var versionBytes [8]byte
 	if _, err := io.ReadFull(r.Body, versionBytes[:]); err != nil {
 		log.Printf("Error reading version bytes: %v\n", err)
-		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error reading version bytes: %v", err)))
+		internal.EncodeError(w, r, diagnostics.BadRequest(errors.Errorf("Error reading version bytes: %v", err)))
 		return
 	}
 

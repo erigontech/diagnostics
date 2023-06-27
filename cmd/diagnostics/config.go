@@ -52,7 +52,7 @@ func init() {
 	rootCmd.Flags().IntVar(&maxUISessions, "ui.sessions", 5000, "maximum number of UI sessions to allow")
 	rootCmd.Flags().StringVar(&logDirPath, "log.dir.path", "./logs", "directory path to store logs data")
 	rootCmd.Flags().StringVar(&logFileName, "log.file.name", "diagnostics.log", "directory path to store logs data")
-	rootCmd.Flags().IntVar(&logFileSizeMax, "log.file.size.max", 100, "maximum size of log file in mega bytes to allow")
+	rootCmd.Flags().IntVar(&logFileSizeMax, "log.file.size.max", 100, "maximum size of log file in megabytes to allow")
 	rootCmd.Flags().IntVar(&logFilesAgeMax, "log.file.age.max", 28, "maximum age in days a log file can persist in system")
 	rootCmd.Flags().IntVar(&logFilesMax, "log.max.backup", 5, "maximum number of log files that can persist")
 	rootCmd.Flags().BoolVar(&logCompress, "log.compress", false, "whether to compress historical log files or not")

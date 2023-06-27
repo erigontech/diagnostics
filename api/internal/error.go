@@ -23,7 +23,6 @@ func marshalError(r *http.Request, err error) Error {
 		code = http.StatusUnauthorized
 	} else if diagnostics.IsBadRequestErr(err) {
 		code = http.StatusBadRequest
-
 	} else {
 		code = http.StatusInternalServerError
 		message = "internal server error"

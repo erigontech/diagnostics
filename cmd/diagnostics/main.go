@@ -28,10 +28,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	//set up logger to implement log rotation
+	// Set up logger to implement log rotation
 	logging.SetupLogger(logDirPath, logFileName, logFileSizeMax, logFilesAgeMax, logFilesMax, logCompress)
 
-	// Use of system calls SIGINT and SIGTERM signals that cause a gracefully  stop.
+	// Use of system calls SIGINT and SIGTERM signals for graceful stop
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT)
 

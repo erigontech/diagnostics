@@ -1,26 +1,26 @@
 package diagnostics
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type notFoundErr struct {
-	error
+	err error
 }
 
-func NotFound() error {
-	return notFoundErr{error: errors.New("not found")}
+func NotFound(err error) error {
+	return notFoundErr{err: err}
 }
 
-func AsNotFound(err error) error {
-	return notFoundErr{error: err}
+func (e notFoundErr) Error() string {
+	return fmt.Sprintf("not found: %v", e.err)
 }
 
-func (err notFoundErr) IsNotFoundErr() bool {
-	return true
+func (e notFoundErr) Unwrap() error {
+	return e.err
 }
 
 func IsNotFoundErr(err error) bool {
-	var target interface {
-		IsNotFoundErr() bool
-	}
-	return errors.As(err, &target) && target.IsNotFoundErr()
+	return errors.Is(err, notFoundErr{})
 }

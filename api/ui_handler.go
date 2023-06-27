@@ -148,7 +148,7 @@ func (h *UIHandler) LogDownload(w http.ResponseWriter, r *http.Request) {
 	}
 	filename := r.Form.Get("file")
 	if requestChannel == nil {
-		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("ERROR: Node is not allocated\n")))
+		internal.EncodeError(w, r, diagnostics.BadRequest(errors.Errorf("ERROR: Node is not allocated\n")))
 	}
 
 	cd := mime.FormatMediaType("attachment", map[string]string{"filename": sessionName + "_" + filename})
