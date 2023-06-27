@@ -3,8 +3,9 @@ package erigon_node
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"strings"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 type RemoteDbReader interface {
@@ -121,10 +122,10 @@ func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
 	var k, v []byte
 	var e error
 	if k, e = hex.DecodeString(line[:sepIndex]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the key [%s]: %v", line[:sepIndex], e)
+		return nil, nil, fmt.Errorf("could not parse the key [%s]: %w", line[:sepIndex], e)
 	}
 	if v, e = hex.DecodeString(line[sepIndex+3:]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the value [%s]: %v", line[sepIndex+3:], e)
+		return nil, nil, fmt.Errorf("could not parse the value [%s]: %w", line[sepIndex+3:], e)
 	}
 	rc.lines = rc.lines[1:]
 

@@ -89,7 +89,7 @@ func (c *NodeClient) findReorgsInternally(ctx context.Context,
 		if found {
 			if template != nil {
 				if err := c.executeFlush(nil, template, "reorg_block.html", bn); err != nil {
-					errors = append(errors, fmt.Errorf("Executing reorg_block template: %v\n", err))
+					errors = append(errors, fmt.Errorf("Executing reorg_block template: %w\n", err))
 				}
 			}
 			wrongBlocks = append(wrongBlocks, bn)
@@ -100,7 +100,7 @@ func (c *NodeClient) findReorgsInternally(ctx context.Context,
 		if iterator%maxCount == 0 {
 			if template != nil {
 				if err := c.executeFlush(nil, template, "reorg_block.html", bn); err != nil {
-					errors = append(errors, fmt.Errorf("Executing reorg_spacer template: %v\n", err))
+					errors = append(errors, fmt.Errorf("Executing reorg_spacer template: %w\n", err))
 				}
 			}
 		}

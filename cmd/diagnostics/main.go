@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -84,7 +85,8 @@ func main() {
 	switch s := <-signalCh; s {
 	case syscall.SIGTERM:
 		log.Println("Terminating gracefully.")
-		if err := srv.Shutdown(context.Background()); err != http.ErrServerClosed {
+		err := srv.Shutdown(context.Background())
+		if errors.Is(err, http.ErrServerClosed) {
 			log.Println("Failed to shutdown server:", err)
 		}
 	case syscall.SIGINT:
