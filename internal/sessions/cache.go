@@ -1,9 +1,10 @@
 package sessions
 
 import (
-	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"log"
+
+	lru "github.com/hashicorp/golang-lru/arc/v2"
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 var _ CacheService = &Cache{}
