@@ -12,10 +12,10 @@ test:
 	go test -tags integration,endtoend  ./...
 
 run:
-	go run ./cmd/diagnostics/main.go
+	go run ./cmd/diagnostics
 
 run-self-signed:
-	go run ./cmd/diagnostics/main.go  --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
+	go run ./cmd/diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 
 clean:
 	rm -rf $(BUILD_DIR)

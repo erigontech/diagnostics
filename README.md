@@ -119,7 +119,7 @@ This will create `diagnostics` executable in `./_bin` directory.
 To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
 
 ```
-./_bin/diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./_bin/diagnostics --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
 ```
 
 This may take a while. Expect to see a TLS Handshake error in the terminal
@@ -149,7 +149,7 @@ make test
 Linting with golangci:
 
 ```
-  make lint
+make lint
 ```
 
 # How to access from the browser
