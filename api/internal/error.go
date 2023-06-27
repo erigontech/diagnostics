@@ -2,8 +2,10 @@ package internal
 
 import (
 	"encoding/json"
-	"github.com/ledgerwatch/diagnostics"
+	"log"
 	"net/http"
+
+	"github.com/ledgerwatch/diagnostics"
 )
 
 type Error struct {
@@ -41,5 +43,10 @@ func EncodeError(w http.ResponseWriter, r *http.Request, err error) {
 	w.WriteHeader(encodedError.Code)
 	v := encodedError
 
-	_ = json.NewEncoder(w).Encode(v)
+	jsonErr := json.NewEncoder(w).Encode(v)
+	if jsonErr != nil {
+		log.Printf("Tried to encode the following error into JSON: %v", err)
+		log.Printf("But got another error while encoding: %v", jsonErr)
+		return
+	}
 }

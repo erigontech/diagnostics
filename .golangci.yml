@@ -14,14 +14,12 @@ linters:
     - wrapcheck
     - goerr113
     - unparam
-    - errchkjson #TODO: enable me
-    - unused #TODO: enable me
     - gocheckcompilerdirectives
   enable:
     - unconvert
-    #    - predeclared #TODO: enable me
-    #    - thelper #TODO: enable me
-    #    - wastedassign
+    - predeclared
+    - thelper
+    - wastedassign
     - gofmt
     - gocritic
 #    - revive
