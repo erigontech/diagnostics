@@ -25,6 +25,7 @@
 
 According to our estimations, Erigon is used by hundreds of people. Some users are individuals, others - companies that use it for internal purposes, and there are also companies that "sell" access to their Erigon nodes to other individuals and companies.
 Very often, users encounter issues when working with Erigon. We can classify them roughly in the following categories by their cause:
+
 1. Caused by the mismatching expectation. User expects Erigon to do something that it cannot do.
 2. Caused by accidental user errors (typos in the command line, for example).
 3. Caused by underlying software or hardware issues on user’s system (for example, running out of disk space, faulty memory, bug in operating system).
@@ -63,25 +64,28 @@ necessarily want people to work for free.
 
 # Development Environment Setup
 
-
 ## Pre-requisites
+
 - Golang installed locally
 - Erigon Node running locally (if needed, please review the Erigon Node quick setup guide below)
 
-
 ## Erigon Node Set Up
+
 Clone the Erigon repository
+
 ```
 git clone --recurse-submodules -j8 https://github.com/ledgerwatch/erigon.git
 ```
 
-Change into the repo, and make sure you are on the ```devel``` branch
+Change into the repo, and make sure you are on the `devel` branch
+
 ```
 cd erigon
 git checkout devel
 ```
 
 Build the repo
+
 ```
 make erigon
 ```
@@ -94,30 +98,36 @@ The `<data_directory>` field will be the directory path to your database. The se
 ```
 
 Check the prometheus logs by navigating to the url below
+
 ```
 http://localhost:6060/debug/metrics/prometheus
 ```
+
 To set and use a custom address and port, here a
 [link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
 
-## Diagnostics Set Up
-Clone the diagnostics repository
+## How to Build and Run
+
 ```
 git clone https://github.com/ledgerwatch/diagnostics.git
-```
-Change into the folder
-```
 cd diagnostics
+make build
 ```
 
-Build the project
+This will create `diagnostics` executable in `./_bin` directory.
+
+To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
+
 ```
-go build .
+./_bin/diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
 
-Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
+This may take a while. Expect to see a TLS Handshake error in the terminal
+
+The above command can also be run with **Make**:
+
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+make run-self-signed
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
@@ -125,43 +135,22 @@ To view the application in your browser, go to the URL `https://localhost:8080/u
 [Link to more information on this step](#how-to-build-and-run)
 
 ## Connect the Erigon Node to the Diagnostics System setup
+
 [Link to more information on this step](#how-to-connect-erigon-node-to-the-diagnostics-system)
-
-## How to build and run
-To build, perform `git clone`, change to the directory with the source code and run:
-
-```
-go build .
-```
-The above command can also be run with **Make**:
-```
-  make build
-```
-
-This will create `diagnostics` executable in the same directory.
-
-To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
-
-```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
-```
-The above command can also be run with **Make**:
-```
-  make run-self-sign
-```
 
 # Testing & Linting
 
 Running the tests including integration and end to end can be done using the Makefile:
+
 ```
 make test
 ```
 
 Linting with golangci:
+
 ```
   make lint
 ```
-
 
 # How to access from the browser
 
@@ -193,6 +182,7 @@ erigon --datadir <data_directory> --chain sepolia --internalcl --metrics
 The flag `--internalcl` enables Caplin, which means that you won't need to install a Consensus Layer separately, and this will make your work simpler.
 
 In order to check is the metrics are exposed on given interface or port, you can check it in the browser by going to
+
 ```
 http://<metrics.addr>:<metrics.port>/debug/metrics/prometheus
 ```
@@ -258,12 +248,12 @@ for the content fetched by the `fetchContent` javascript function and inserted i
 ![cmd line](/_images/cmd_line.png)
 
 ## Flags
+
 Operator can look at the flags that are set in cli context by the user to launch Erigon node. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`. This is particularly useful when user launches Erigon using a config file with `--config` and [Command line arguments](#command-line-arguments) cannot fully capture the true state of the 'launch setting'. The returned flags are the result after parsing command line argument and config file by Erigon.
 
 The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `Flags` method), `internal/erigon_client.go`, `assets/template/session.html` (html template the part where the button `Fetch Flags` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/flags.html` (html template for the content fetched by the `fetchContent` javascript function and inserted into the HTML div element).
 
 ![flags](/_images/flags.png)
-
 
 ## Logs
 
@@ -305,7 +295,6 @@ one for each reorged block found).
 This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
 This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
 
-
 The code on the side of the diagnostics system is spread across files `api/ui_handler.go` (invocation of `SyncStages` method), `internal/erigon_node/sync_stages.go`, `cmd/remote_db.org` (using the same remote database access logic as [Reorg Scanner](#reorg-scanner)), `assets/template/session.html`
 (HTML template the part where the button `Fetch Sync Stages` is defined with the javascript handler), `assets/script/session.js` (function `fetchContent`), `assets/template/sync_stages.html`
 (HTML template for the content fetched by the `fetchContent` javascript function and inserted into the HTML table).
@@ -313,6 +302,7 @@ The code on the side of the diagnostics system is spread across files `api/ui_ha
 ![sync_stage](/_images/sync_stages.png)
 
 ## Header Download
+
 This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`.
 The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon.
 
@@ -343,15 +333,15 @@ Therefore, there should be a lot of things that can be improved in terms of best
 
 There are some functional improvements that could be quite useful, for example:
 
-* Reorg scanner is very basic and it does not have a concept of a "deep" reorg (deeper than 1 block). For such situations, it will just show the consecutive
+- Reorg scanner is very basic and it does not have a concept of a "deep" reorg (deeper than 1 block). For such situations, it will just show the consecutive
   block numbers as all having a reorg. It would be better to aggregate these into deep reorgs, and also perhaps show if there are more than 1 branch at each
   reorg point.
-* For the reorg scanner, add the ability to click on the block numbers and get more information about that particular reorg, for example, block producers
+- For the reorg scanner, add the ability to click on the block numbers and get more information about that particular reorg, for example, block producers
   for each of the block participating in the reorg, or difference in terms of transactions.
-* Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
-* Adding a monitoring for header downloader as well as for body downloader.
-* Perhaps embedding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics system?
-* Ability to extract and analyse go-routine stack traces from Erigon node. To start with, extract something like `debug/pprof/goroutine?debug=2`, but for Erigon
+- Adding more "diagnostics scripts" that remotely read DB to check for the current progress of stages in the staged sync.
+- Adding a monitoring for header downloader as well as for body downloader.
+- Perhaps embedding some metrics visualisation (have no idea how to do it), since all "prometheus"-style metrics are also available to the diagnostics system?
+- Ability to extract and analyse go-routine stack traces from Erigon node. To start with, extract something like `debug/pprof/goroutine?debug=2`, but for Erigon
   this would likely result in a lot of go-routines (thousands) with similar traces related to peer management. Some analysis should group them into cluster of similar
   stack traces and show them as aggregates.
-* Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).
+- Add log rotation system similar to what has recently been done for Erigon (using lumberjack library).

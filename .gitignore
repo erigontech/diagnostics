@@ -17,3 +17,6 @@
 
 # IDE configuration
 .idea
+
+# Build dir
+_bin/
