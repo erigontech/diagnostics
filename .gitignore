@@ -20,5 +20,7 @@ go.work
 # IDE configuration
 .idea
 
-# Build dir
+# Dirs which may be created by make
 _bin/
+logs/
+build/
