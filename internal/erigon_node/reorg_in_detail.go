@@ -91,11 +91,8 @@ func (c *NodeClient) findReorgsInDetail(ctx context.Context,
 
 		bn := binary.BigEndian.Uint64(k[:8])
 
-		// fmt.Println("block number:", bn)
 		var header types.Header
 		rlp.DecodeBytes(v, &header);
-		// fmt.Println("Header:", header)
-		//fmt.Println("Header:", header.Coinbase.Hex())
 		var reorg = ReorgInDetail{
 			ParentHash: header.ParentHash.String(),
 			BlockNum  : bn,
@@ -119,7 +116,6 @@ func (c *NodeClient) findReorgsInDetail(ctx context.Context,
 
 		iterator++
 		if iterator%maxCountInDetail == 0 {
-			// fmt.Println("Header:", header)
 
 			if template != nil {
 				if err := c.executeFlushInDetail(writer, template, "reorg_block_in_detail.html", reorg); err != nil {
