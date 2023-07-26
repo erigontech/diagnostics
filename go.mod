@@ -6,6 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/google/btree v1.1.2
 	github.com/hashicorp/golang-lru/v2 v2.0.2
+ 	github.com/ledgerwatch/erigon v1.9.7-0.20221005052944-d0337242c6e5
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
