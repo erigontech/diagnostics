@@ -17,3 +17,7 @@
 
 # IDE configuration
 .idea
+
+# misc
+.DS_Store
+.vscode

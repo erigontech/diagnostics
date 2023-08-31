@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -19,6 +20,18 @@ import (
 
 var _ http.Handler = &UIHandler{}
 
+type UIResponseObj struct {
+	Session     bool   `json:"session"`
+	SessionName string `json:"session_name"`
+	SessionPin  uint64 `json:"session_pin"`
+	//Nodes sessions.NodeSession `json:"nodes"`
+	//UiNodes sessions.UINodeSession `json:"ui_nodes"`
+}
+
+type GetAllSessionsResponse struct {
+	SArr []UIResponseObj `json:"sessions"`
+}
+
 type UIHandler struct {
 	chi.Router
 	uiSessions sessions.UIService
@@ -34,7 +47,10 @@ func (h *UIHandler) UI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UIHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	err := h.uiSessions.Add(r.FormValue(sessionName))
+
+	value := r.FormValue(sessionName)
+
+	err := h.uiSessions.Add(value)
 	if err != nil {
 		fmt.Fprintf(w, "Unable to create session: %v", err)
 		internal.EncodeError(w, r, err)
@@ -43,6 +59,79 @@ func (h *UIHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	if err := h.uiTemplate.ExecuteTemplate(w, "session.html", h.uiSessions); err != nil {
 		fmt.Fprintf(w, "Executing template: %v", err)
 		internal.EncodeError(w, r, err)
+	}
+}
+
+func (h *UIHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
+
+	uisession, ok := h.uiSessions.(*sessions.UiSession)
+	if !ok {
+		return
+		//fmt.Fprintf(w, "Unable to create session: %v", err)
+		//internal.EncodeError(w, r, err)
+	}
+
+	var sees GetAllSessionsResponse
+
+	for key := range uisession.UiNodes {
+		sees.SArr = append(sees.SArr, UIResponseObj{
+			Session:     true,
+			SessionName: key.SessionName,
+			SessionPin:  key.SessionPin,
+		})
+	}
+
+	jsonData, err := json.Marshal(sees)
+	if err != nil {
+		fmt.Fprintf(w, "Unable to create session: %v", err)
+	}
+
+	fmt.Printf("json data: %s\n", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
+func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
+
+	/*switch uisession == h.uiSessions.(type) {
+	case sessions.UiSession:
+		fmt.Println("UiSession")*/
+
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		// in case of any error
+		return
+	}
+
+	value := r.FormValue(sessionName)
+
+	err = h.uiSessions.Add(value)
+	if err != nil {
+		fmt.Fprintf(w, "Unable to create session: %v", err)
+		internal.EncodeError(w, r, err)
+	}
+
+	uisession, ok := h.uiSessions.(*sessions.UiSession)
+	if !ok {
+		fmt.Fprintf(w, "Unable to create session: %v", err)
+		internal.EncodeError(w, r, err)
+	}
+
+	jsonData, err := json.Marshal(getUIResponseObjFromSession(uisession))
+	if err != nil {
+		fmt.Fprintf(w, "Unable to create session: %v", err)
+	}
+
+	fmt.Printf("json data: %s\n", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
+func getUIResponseObjFromSession(sessions *sessions.UiSession) UIResponseObj {
+	return UIResponseObj{
+		Session:     sessions.Session,
+		SessionName: sessions.SessionName,
+		SessionPin:  sessions.SessionPin,
 	}
 }
 
@@ -193,9 +282,11 @@ func NewUIHandler(
 	}
 
 	r.Get("/", r.UI)
+	r.Get("/sessions", r.GetAllSessions)
 
 	// Session Handlers
 	r.Post("/", r.CreateSession)
+	//r.Post("/", r.CreateSessionNew)
 	r.Post("/resume", r.ResumeSession)
 	r.Post("/switch", r.SwitchSession)
 

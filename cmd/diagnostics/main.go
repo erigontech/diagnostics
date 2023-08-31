@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"html/template"
@@ -53,10 +51,10 @@ func main() {
 		certPool.AppendCertsFromPEM(caCert)
 	}
 
-	tlsConfig := &tls.Config{
+	/*tlsConfig := &tls.Config{
 		RootCAs:    certPool,
 		MinVersion: tls.VersionTLS12,
-	}
+	}*/
 
 	// Passing in the services to REST layer
 	handlers := api.NewHandler(
@@ -68,25 +66,29 @@ func main() {
 		})
 
 	srv := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler:           handlers,
-		MaxHeaderBytes:    1 << 20,
-		TLSConfig:         tlsConfig,
+		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler:        handlers,
+		MaxHeaderBytes: 1 << 20,
+		//TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
 	go func() {
-		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
+
+		/*if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}*/
 	}()
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
 	case syscall.SIGTERM:
 		log.Println("Terminating gracefully.")
-		if err := srv.Shutdown(context.Background()); err != http.ErrServerClosed {
-			log.Println("Failed to shutdown server:", err)
-		}
+		//if err := srv.Shutdown(context.Background()); err != http.ErrServerClosed {
+		//	log.Println("Failed to shutdown server:", err)
+		//}
 	case syscall.SIGINT:
 		log.Println("Terminating eagerly.")
 		os.Exit(-int(syscall.SIGINT))

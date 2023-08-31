@@ -4,12 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"io"
 	"strings"
 	"sync"
+
+	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics"
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 type UiSession struct {
@@ -166,6 +167,10 @@ func (s *UiSession) Resume(pin uint64, sessionName string) (*UiSession, error) {
 	return s, nil
 }
 
+func (s *UiSession) GetSessionObj() *UiSession {
+	return s
+}
+
 func NewUISession(store CacheService) UIService {
 	return &UiSession{Store: store}
 }
@@ -185,6 +190,9 @@ type UIService interface {
 	Resume(pin uint64, sessionName string) (*UiSession, error)
 	// Switch looks up for requested session and updates the session details
 	Switch(sessionName string) *UiSession
+
+	//Test getting session object
+	GetSessionObj() *UiSession
 }
 
 type UINodeSession struct {
