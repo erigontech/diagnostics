@@ -21,3 +21,6 @@
 # misc
 .DS_Store
 .vscode
+
+*.log
+
