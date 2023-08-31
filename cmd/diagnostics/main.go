@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"html/template"
@@ -51,10 +52,10 @@ func main() {
 		certPool.AppendCertsFromPEM(caCert)
 	}
 
-	/*tlsConfig := &tls.Config{
+	tlsConfig := &tls.Config{
 		RootCAs:    certPool,
 		MinVersion: tls.VersionTLS12,
-	}*/
+	}
 
 	// Passing in the services to REST layer
 	handlers := api.NewHandler(
@@ -66,14 +67,15 @@ func main() {
 		})
 
 	srv := &http.Server{
-		Addr:           fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler:        handlers,
-		MaxHeaderBytes: 1 << 20,
-		//TLSConfig:         tlsConfig,
+		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler:           handlers,
+		MaxHeaderBytes:    1 << 20,
+		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
+
 	go func() {
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 
@@ -81,6 +83,22 @@ func main() {
 			log.Fatal(err)
 		}*/
 	}()
+
+	if restPort > 0 {
+		srv := &http.Server{
+			Addr:              fmt.Sprintf("%s:%d", listenAddr, restPort),
+			Handler:           handlers,
+			MaxHeaderBytes:    1 << 20,
+			ReadHeaderTimeout: 1 * time.Minute,
+		}
+
+		go func() {
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				log.Fatal(err)
+			}
+		}()
+
+	}
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
