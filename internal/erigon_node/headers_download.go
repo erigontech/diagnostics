@@ -29,8 +29,8 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter,
 			return
 		default:
 		}
-		// First, fetch list of DB paths
-		success, result := c.fetch(fmt.Sprintf("/headers_download?sincetick=%d\n", tick), requestChannel)
+		// First, Fetch list of DB paths
+		success, result := c.Fetch(fmt.Sprintf("/headers_download?sincetick=%d\n", tick), requestChannel)
 		if !success {
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return

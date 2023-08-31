@@ -66,7 +66,7 @@ func (ra *mockNodeClientReader) ProcessLogList(w http.ResponseWriter, template *
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
+func (ra *mockNodeClientReader) Fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
 	args := ra.Called(url, requestChannel)
 	return args.Bool(0), args.String(1)
 }
@@ -104,9 +104,9 @@ func TestInit(t *testing.T) {
 				tableLine := fmt.Sprintf("%s | %s", lineKey, lineValue)
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
+				df.remoteApi.On("Fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{tableLine}, nil)
 			},
 			assert: func(rc *RemoteCursor) {
@@ -120,24 +120,24 @@ func TestInit(t *testing.T) {
 			on: func(df *remoteCursorDependencies) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{"notFoundDb"}, nil)
 			},
 			wantErrMsg: fmt.Sprintf("database %s not found: %s", db, fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")),
 		},
 		{
-			name: "should return unable to fetch database list error",
+			name: "should return unable to Fetch database list error",
 			on: func(df *remoteCursorDependencies) {
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(false, dependencyError.Error())
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(false, dependencyError.Error())
 			},
-			wantErrMsg: fmt.Sprintf("unable to fetch database list: %s", dependencyError.Error()),
+			wantErrMsg: fmt.Sprintf("unable to Fetch database list: %s", dependencyError.Error()),
 		},
 		{
 			name: "should return error when db list result can not be parsed",
 			on: func(df *remoteCursorDependencies) {
 				dbPathResult := fmt.Sprintf("FAILURE\n/full/path/%s", db)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbPathResult)
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(true, dbPathResult)
 				df.remoteApi.On("getResultLines", dbPathResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),
@@ -147,9 +147,9 @@ func TestInit(t *testing.T) {
 			on: func(df *remoteCursorDependencies) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(false, "")
+				df.remoteApi.On("Fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(false, "")
 			},
 			wantErrMsg: fmt.Sprintf("reading %s table: %s", table, ""),
 		},
@@ -159,9 +159,9 @@ func TestInit(t *testing.T) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 				tableLinesResult := fmt.Sprintf("FAILURE\n%s", "")
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("Fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
+				df.remoteApi.On("Fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),

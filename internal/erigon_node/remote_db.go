@@ -3,8 +3,10 @@ package erigon_node
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
+	"path/filepath"
 	"strings"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 type RemoteDbReader interface {
@@ -45,9 +47,9 @@ func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 }
 
 func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
-	success, dbListResponse := rc.nodeClient.fetch("/db/list\n", rc.requestChannel)
+	success, dbListResponse := rc.nodeClient.Fetch("/db/list\n", rc.requestChannel)
 	if !success {
-		return "", fmt.Errorf("unable to fetch database list: %s", dbListResponse)
+		return "", fmt.Errorf("unable to Fetch database list: %s", dbListResponse)
 	}
 
 	lines, err := rc.nodeClient.getResultLines(dbListResponse)
@@ -58,8 +60,9 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 
 	var dbPath string
 	for _, line := range lines {
-		if strings.HasSuffix(line, fmt.Sprintf("/%s", db)) {
+		if filepath.Base(line) == db {
 			dbPath = line
+			break
 		}
 	}
 
@@ -71,7 +74,7 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 }
 
 func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
-	success, result := rc.nodeClient.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
+	success, result := rc.nodeClient.Fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
 	if !success {
 		return fmt.Errorf("reading %s table: %s", rc.table, result)
 	}

@@ -1,6 +1,9 @@
 package api
 
 import (
+	"html/template"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ledgerwatch/diagnostics/api/internal"
@@ -8,8 +11,6 @@ import (
 	"github.com/ledgerwatch/diagnostics/internal/bridge"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"html/template"
-	"net/http"
 )
 
 type APIServices struct {
@@ -33,6 +34,7 @@ func NewHandler(services APIServices) http.Handler {
 		session := sessions.Middleware{UIService: services.UISessions, CacheService: *services.StoreSession}
 		r.Use(session.Middleware)
 		r.Mount(internal.UIEndPoint, NewUIHandler(services.UISessions, services.ErigonNode, services.HtmlTemplates))
+		r.Mount(internal.RouterEndPoint, NewUIRouter(services.UISessions, services.ErigonNode))
 	})
 
 	return r

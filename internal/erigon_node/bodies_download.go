@@ -3,14 +3,15 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"golang.org/x/exp/maps"
 	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/btree"
+	"github.com/ledgerwatch/diagnostics/internal"
+	"golang.org/x/exp/maps"
 )
 
 func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
@@ -28,8 +29,8 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, 
 		default:
 		}
 
-		// First, fetch list of DB paths
-		success, result := c.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
+		// First, Fetch list of DB paths
+		success, result := c.Fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
 		if !success {
 			fmt.Fprintf(w, "Fetching list of changes: %s", result)
 			return

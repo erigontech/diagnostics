@@ -17,3 +17,7 @@
 
 # IDE configuration
 .idea
+.vscode/
+_bin
+
+

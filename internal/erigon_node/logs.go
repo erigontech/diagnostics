@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"html/template"
 	"io"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 type LogListItem struct {
@@ -58,7 +59,7 @@ func ByteCount(b uint64) string {
 
 // Produces (into the writer w) the list of available lots inside the div element, using log_list.html template and LogList object
 func (c *NodeClient) ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest) {
-	success, result := c.fetch("/logs/list\n", requestChannel)
+	success, result := c.Fetch("/logs/list\n", requestChannel)
 	var list = LogList{SessionName: sessionName}
 	if success {
 		lines := strings.Split(result, "\n")
@@ -96,12 +97,12 @@ func (c *NodeClient) ProcessLogList(w http.ResponseWriter, template *template.Te
 }
 
 func (c *NodeClient) LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart {
-	success, result := c.fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", filename), requestChannel)
+	success, result := c.Fetch(fmt.Sprintf("/logs/read?file=%s&offset=0\n", filename), requestChannel)
 	return processLogPart(success, result)
 }
 
 func (c *NodeClient) LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart {
-	success, result := c.fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
+	success, result := c.Fetch(fmt.Sprintf("/logs/read?file=%s&offset=%d\n", url.QueryEscape(filename), offset), requestChannel)
 	return processLogPart(success, result)
 }
 

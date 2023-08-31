@@ -19,7 +19,7 @@ type NodeClient struct {
 }
 
 func (c *NodeClient) Version(_ context.Context, requestChannel chan *internal.NodeRequest) (Versions, error) {
-	success, result := c.fetch("/version\n", requestChannel)
+	success, result := c.Fetch("/version\n", requestChannel)
 	var versions Versions
 
 	if success {
@@ -74,7 +74,7 @@ func (c *NodeClient) Flags(ctx context.Context, requestChannel chan *internal.No
 	}
 
 	// Retrieving the data from the node
-	success, result := c.fetch("/flags\n", requestChannel)
+	success, result := c.Fetch("/flags\n", requestChannel)
 
 	var flags Flags
 	flags.FlagPayload = make(map[string]string)
@@ -104,7 +104,7 @@ func (c *NodeClient) Flags(ctx context.Context, requestChannel chan *internal.No
 }
 
 func (c *NodeClient) CMDLineArgs(_ context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs {
-	success, result := c.fetch("/cmdline\n", requestChannel)
+	success, result := c.Fetch("/cmdline\n", requestChannel)
 	var args CmdLineArgs
 	if success {
 		if strings.HasPrefix(result, SuccessLine) {
@@ -121,7 +121,7 @@ func (c *NodeClient) CMDLineArgs(_ context.Context, requestChannel chan *interna
 	return args
 }
 
-func (c *NodeClient) fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
+func (c *NodeClient) Fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
 	if requestChannel == nil {
 		return false, "ERROR: Node is not allocated\n"
 	}
@@ -180,8 +180,8 @@ type Client interface {
 	Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error)
 	// CMDLineArgs retrieves the command line arguments provided to run the erigon node
 	CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs
-	// fetch requests the data from the specified end point
-	fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string)
+	// Fetch requests the data from the specified end point
+	Fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string)
 	getResultLines(result string) ([]string, error)
 
 	// TODO: refactor the following methods to follow above pattern where appropriate
