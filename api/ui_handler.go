@@ -20,16 +20,23 @@ import (
 
 var _ http.Handler = &UIHandler{}
 
-type UIResponseObj struct {
-	Session     bool   `json:"session"`
+type CreateSessionResponse struct {
+	IsActive    bool   `json:"is_active"`
 	SessionName string `json:"session_name"`
 	SessionPin  uint64 `json:"session_pin"`
+	SessionId   string `json:"session_id"`
 	//Nodes sessions.NodeSession `json:"nodes"`
 	//UiNodes sessions.UINodeSession `json:"ui_nodes"`
 }
 
 type GetAllSessionsResponse struct {
-	SArr []UIResponseObj `json:"sessions"`
+	Sessions []CreateSessionResponse `json:"sessions"`
+}
+
+type GetVersionResponse struct {
+	NodeVersion uint64 `json:"node_version"`
+	CodeVersion string `json:"code_version"`
+	GitCommit   string `json:"git_commit"`
 }
 
 type UIHandler struct {
@@ -62,6 +69,10 @@ func (h *UIHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isActive(activeSessionName, sessionName string) bool {
+	return activeSessionName == sessionName
+}
+
 func (h *UIHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 
 	uisession, ok := h.uiSessions.(*sessions.UiSession)
@@ -74,8 +85,8 @@ func (h *UIHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 	var sees GetAllSessionsResponse
 
 	for key := range uisession.UiNodes {
-		sees.SArr = append(sees.SArr, UIResponseObj{
-			Session:     true,
+		sees.Sessions = append(sees.Sessions, CreateSessionResponse{
+			IsActive:    isActive(uisession.SessionName, key.SessionName),
 			SessionName: key.SessionName,
 			SessionPin:  key.SessionPin,
 		})
@@ -97,6 +108,8 @@ func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
 	case sessions.UiSession:
 		fmt.Println("UiSession")*/
 
+	sesid := r.Header.Get("session-id")
+	fmt.Print("sesid: ", sesid, "\n")
 	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
 		// in case of any error
@@ -112,12 +125,13 @@ func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uisession, ok := h.uiSessions.(*sessions.UiSession)
+	fmt.Printf("uisession %p\n", uisession)
 	if !ok {
 		fmt.Fprintf(w, "Unable to create session: %v", err)
 		internal.EncodeError(w, r, err)
 	}
 
-	jsonData, err := json.Marshal(getUIResponseObjFromSession(uisession))
+	jsonData, err := json.Marshal(getCreateSessionResponseFromSession(uisession, sesid))
 	if err != nil {
 		fmt.Fprintf(w, "Unable to create session: %v", err)
 	}
@@ -127,11 +141,12 @@ func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func getUIResponseObjFromSession(sessions *sessions.UiSession) UIResponseObj {
-	return UIResponseObj{
-		Session:     sessions.Session,
+func getCreateSessionResponseFromSession(sessions *sessions.UiSession, sessionId string) CreateSessionResponse {
+	return CreateSessionResponse{
+		IsActive:    true,
 		SessionName: sessions.SessionName,
 		SessionPin:  sessions.SessionPin,
+		SessionId:   sessionId,
 	}
 }
 
@@ -162,7 +177,10 @@ func (h *UIHandler) ResumeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
-	requestChannel := h.uiSessions.LookUpSession(r.FormValue(currentSessionName))
+	csn := r.FormValue(currentSessionName)
+	requestChannel := h.uiSessions.LookUpSession(csn)
+	fmt.Printf("uisession1 %p\n", h.uiSessions.(*sessions.UiSession))
+
 	versions, err := h.erigonNode.Version(r.Context(), requestChannel)
 	if err != nil {
 		internal.EncodeError(w, r, err)
@@ -172,6 +190,32 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Executing versions template: %v", err)
 		internal.EncodeError(w, r, err)
 	}
+}
+
+func (h *UIHandler) V2Versions(w http.ResponseWriter, r *http.Request) {
+	csn := r.FormValue(currentSessionName)
+	requestChannel := h.uiSessions.LookUpSession(csn)
+	fmt.Printf("uisession1 %p\n", h.uiSessions.(*sessions.UiSession))
+
+	versions, err := h.erigonNode.Version(r.Context(), requestChannel)
+	if err != nil {
+		internal.EncodeError(w, r, err)
+	}
+
+	resp := GetVersionResponse{
+		NodeVersion: versions.NodeVersion,
+		CodeVersion: versions.CodeVersion,
+		GitCommit:   versions.GitCommit,
+	}
+
+	jsonData, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Fprintf(w, "Unable to get version: %v", err)
+	}
+
+	fmt.Printf("json data: %s\n", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 func (h *UIHandler) CMDLine(w http.ResponseWriter, r *http.Request) {
@@ -286,12 +330,13 @@ func NewUIHandler(
 
 	// Session Handlers
 	r.Post("/", r.CreateSession)
-	//r.Post("/", r.CreateSessionNew)
+	r.Post("/create", r.CreateSessionNew)
 	r.Post("/resume", r.ResumeSession)
 	r.Post("/switch", r.SwitchSession)
 
 	// Erigon Node data
 	r.Post("/versions", r.Versions)
+	r.Post("/v2/versions", r.V2Versions)
 	r.Post("/cmd_line", r.CMDLine)
 	r.Post("/flags", r.Flags)
 

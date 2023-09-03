@@ -74,12 +74,42 @@ func main() {
 		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
-	go func() {
-		/*if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatal(err)
-		}*/
 
+	go func() {
 		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	if restPort > 0 {
+		srv := &http.Server{
+			Addr:              fmt.Sprintf("%s:%d", listenAddr, restPort),
+			Handler:           handlers,
+			MaxHeaderBytes:    1 << 20,
+			ReadHeaderTimeout: 1 * time.Minute,
+		}
+
+		go func() {
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				log.Fatal(err)
+			}
+		}()
+
+	}
+
+	//d := http.Dir("./../../web/dist")
+
+	fileServer := http.FileServer(http.Dir("./../../web/dist"))
+	//fileMatcher := regexp.MustCompile(`\.[a-zA-Z]*$`)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		//if !fileMatcher.MatchString(r.URL.Path) {
+		//	http.ServeFile(w, r, "index.html")
+		//} else {
+		fileServer.ServeHTTP(w, r)
+		//}
+	})
+	go func() {
+		if err := http.ListenAndServe(":8000", nil); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()

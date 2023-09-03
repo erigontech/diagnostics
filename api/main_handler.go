@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/assets"
-	"github.com/ledgerwatch/diagnostics/internal/bridge"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
 )
@@ -25,12 +24,12 @@ func NewHandler(services APIServices) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(bridge.Middleware)
+	//r.Use(bridge.Middleware)
 	r.Use(middleware.RouteHeaders().
 		Route("Origin", "*", cors.Handler(cors.Options{
 			AllowedOrigins:   []string{"*"},
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowedHeaders:   []string{"Accept", "Content-Type"},
+			AllowedHeaders:   []string{"Accept", "Content-Type", "session-id"},
 			AllowCredentials: false, // <----------<<< do not allow credentials
 		})).
 		Handler)

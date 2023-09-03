@@ -33565,3 +33565,109 @@
 
 2023/08/31 13:53:03 Sending request /block_body_download?sincetick=1
 
+2023/08/31 14:21:41 listen tcp 127.0.0.1:8080: bind: address already in use
+2023/08/31 14:21:50 http: TLS handshake error from 127.0.0.1:59188: remote error: tls: unknown certificate
+2023/08/31 14:53:49 http: TLS handshake error from 127.0.0.1:60534: EOF
+2023/08/31 14:53:49 http: TLS handshake error from 127.0.0.1:60536: EOF
+2023/08/31 14:54:49 http: TLS handshake error from 127.0.0.1:62220: remote error: tls: unknown certificate
+2023/08/31 14:56:34 http: TLS handshake error from 127.0.0.1:65060: remote error: tls: unknown certificate
+2023/08/31 15:01:33 http: TLS handshake error from 127.0.0.1:56583: remote error: tls: unknown certificate
+2023/08/31 15:14:19 Error parsing session pin resume: strconv.ParseUint: parsing "resume": invalid syntax
+2023/08/31 15:14:19 Error parsing session pin resume: strconv.ParseUint: parsing "resume": invalid syntax
+2023/08/31 15:17:30 http: TLS handshake error from 127.0.0.1:65256: remote error: tls: unknown certificate
+2023/08/31 15:18:18 http: TLS handshake error from 127.0.0.1:50140: remote error: tls: unknown certificate
+2023/08/31 15:18:38 Sending request /version
+
+2023/08/31 15:18:41 Sending request /version
+
+2023/08/31 15:22:46 http: TLS handshake error from 127.0.0.1:57211: remote error: tls: unknown certificate
+2023/08/31 15:23:48 http: TLS handshake error from 127.0.0.1:58839: remote error: tls: unknown certificate
+2023/08/31 15:24:17 Sending request /version
+
+2023/08/31 15:28:23 http: TLS handshake error from 127.0.0.1:49771: remote error: tls: unknown certificate
+2023/08/31 21:35:58 http: TLS handshake error from 127.0.0.1:54225: remote error: tls: unknown certificate
+2023/08/31 21:36:57 Sending request /version
+
+2023/08/31 21:37:08 http: TLS handshake error from 127.0.0.1:56019: remote error: tls: unknown certificate
+2023/08/31 21:37:23 http: TLS handshake error from 127.0.0.1:56448: remote error: tls: unknown certificate
+2023/08/31 21:38:33 http: TLS handshake error from 127.0.0.1:58278: remote error: tls: unknown certificate
+2023/08/31 21:39:36 Sending request /version
+
+2023/08/31 21:40:00 http: TLS handshake error from 127.0.0.1:60552: remote error: tls: unknown certificate
+2023/08/31 21:41:07 http: TLS handshake error from 127.0.0.1:62370: remote error: tls: unknown certificate
+2023/08/31 21:54:51 http: TLS handshake error from 127.0.0.1:51716: remote error: tls: unknown certificate
+2023/08/31 21:56:03 Sending request /version
+
+2023/08/31 21:56:15 http: TLS handshake error from 127.0.0.1:53928: remote error: tls: unknown certificate
+2023/08/31 22:06:26 http: TLS handshake error from 127.0.0.1:54524: remote error: tls: unknown certificate
+2023/08/31 22:08:24 http: TLS handshake error from 127.0.0.1:57676: remote error: tls: unknown certificate
+2023/08/31 22:11:14 http: TLS handshake error from 127.0.0.1:62355: remote error: tls: unknown certificate
+2023/08/31 22:11:46 listen tcp 127.0.0.1:8080: bind: address already in use
+2023/08/31 22:11:50 http: TLS handshake error from 127.0.0.1:63403: remote error: tls: unknown certificate
+2023/08/31 22:21:33 http: TLS handshake error from 127.0.0.1:62738: remote error: tls: unknown certificate
+2023/08/31 22:22:23 Sending request /version
+
+2023/08/31 22:23:21 http: TLS handshake error from 127.0.0.1:49214: remote error: tls: unknown certificate
+2023/08/31 22:38:20 http: TLS handshake error from 127.0.0.1:56834: remote error: tls: unknown certificate
+2023/08/31 22:46:00 http: TLS handshake error from 127.0.0.1:52724: remote error: tls: unknown certificate
+2023/08/31 22:49:42 http: TLS handshake error from 127.0.0.1:58589: remote error: tls: unknown certificate
+2023/08/31 22:51:58 http: TLS handshake error from 127.0.0.1:62280: remote error: tls: unknown certificate
+2023/08/31 22:58:11 http: TLS handshake error from 127.0.0.1:55967: remote error: tls: unknown certificate
+2023/08/31 23:01:01 http: TLS handshake error from 127.0.0.1:60511: remote error: tls: unknown certificate
+2023/08/31 23:23:14 http: TLS handshake error from 127.0.0.1:62906: remote error: tls: unknown certificate
+2023/08/31 23:24:08 http: TLS handshake error from 127.0.0.1:64388: remote error: tls: unknown certificate
+2023/08/31 23:28:49 http: TLS handshake error from 127.0.0.1:55331: remote error: tls: unknown certificate
+2023/08/31 23:30:41 http: TLS handshake error from 127.0.0.1:58264: remote error: tls: unknown certificate
+2023/08/31 23:31:11 http: TLS handshake error from 127.0.0.1:59052: remote error: tls: unknown certificate
+2023/08/31 23:32:41 http: TLS handshake error from 127.0.0.1:61359: remote error: tls: unknown certificate
+2023/08/31 23:34:35 http: TLS handshake error from 127.0.0.1:64385: remote error: tls: unknown certificate
+2023/08/31 23:42:55 http: TLS handshake error from 127.0.0.1:61012: remote error: tls: unknown certificate
+2023/08/31 23:43:32 http: TLS handshake error from 127.0.0.1:61946: remote error: tls: unknown certificate
+2023/08/31 23:45:41 http2: received GOAWAY [FrameHeader GOAWAY len=20], starting graceful shutdown
+2023/08/31 23:45:44 http: TLS handshake error from 127.0.0.1:62723: write tcp 127.0.0.1:8080->127.0.0.1:62723: write: broken pipe
+2023/08/31 23:45:44 http: TLS handshake error from 127.0.0.1:62732: write tcp 127.0.0.1:8080->127.0.0.1:62732: write: broken pipe
+2023/08/31 23:45:46 http: TLS handshake error from 127.0.0.1:65457: remote error: tls: unknown certificate
+2023/08/31 23:47:01 http: TLS handshake error from 127.0.0.1:50995: remote error: tls: unknown certificate
+2023/08/31 23:47:18 http: TLS handshake error from 127.0.0.1:51359: remote error: tls: unknown certificate
+2023/08/31 23:51:03 http: TLS handshake error from 127.0.0.1:56340: remote error: tls: unknown certificate
+2023/08/31 23:55:10 http: TLS handshake error from 127.0.0.1:61832: remote error: tls: unknown certificate
+2023/09/01 00:07:51 http: TLS handshake error from 127.0.0.1:62234: remote error: tls: unknown certificate
+2023/09/01 00:11:07 http: TLS handshake error from 127.0.0.1:51035: remote error: tls: unknown certificate
+2023/09/01 00:19:34 http: TLS handshake error from 127.0.0.1:64216: remote error: tls: unknown certificate
+2023/09/01 00:21:13 http: TLS handshake error from 127.0.0.1:50413: remote error: tls: unknown certificate
+2023/09/01 00:22:07 http: TLS handshake error from 127.0.0.1:51896: remote error: tls: unknown certificate
+2023/09/01 00:22:27 Sending request /version
+
+2023/09/01 15:43:54 http: TLS handshake error from 127.0.0.1:64737: remote error: tls: unknown certificate
+2023/09/01 15:44:21 Sending request /version
+
+2023/09/01 16:08:17 http: TLS handshake error from 127.0.0.1:53355: remote error: tls: unknown certificate
+2023/09/01 18:24:22 http: TLS handshake error from 127.0.0.1:63018: remote error: tls: unknown certificate
+2023/09/02 00:51:52 http: TLS handshake error from 127.0.0.1:50802: remote error: tls: unknown certificate
+2023/09/02 11:41:59 http: TLS handshake error from 127.0.0.1:55165: remote error: tls: unknown certificate
+2023/09/02 12:20:05 http: TLS handshake error from 127.0.0.1:54094: remote error: tls: unknown certificate
+2023/09/02 12:51:07 http: TLS handshake error from 127.0.0.1:52379: remote error: tls: unknown certificate
+2023/09/02 12:54:09 http: TLS handshake error from 127.0.0.1:57257: remote error: tls: unknown certificate
+2023/09/02 12:54:29 Sending request /version
+
+2023/09/02 13:15:07 http: TLS handshake error from 127.0.0.1:57211: remote error: tls: unknown certificate
+2023/09/02 15:06:40 http: TLS handshake error from 127.0.0.1:63483: remote error: tls: unknown certificate
+2023/09/02 17:18:19 http: TLS handshake error from 127.0.0.1:55584: remote error: tls: unknown certificate
+2023/09/02 18:02:25 http: TLS handshake error from 127.0.0.1:63991: remote error: tls: unknown certificate
+2023/09/02 18:05:20 http2: received GOAWAY [FrameHeader GOAWAY len=20], starting graceful shutdown
+2023/09/02 18:05:23 http: TLS handshake error from 127.0.0.1:50379: EOF
+2023/09/02 18:05:23 http: TLS handshake error from 127.0.0.1:50392: EOF
+2023/09/02 18:05:33 http: TLS handshake error from 127.0.0.1:52493: remote error: tls: unknown certificate
+2023/09/02 18:24:23 http: TLS handshake error from 127.0.0.1:65389: remote error: tls: unknown certificate
+2023/09/02 18:26:48 http: TLS handshake error from 127.0.0.1:52854: remote error: tls: unknown certificate
+2023/09/02 18:27:17 Sending request /version
+
+2023/09/02 22:03:48 http: TLS handshake error from 127.0.0.1:62895: remote error: tls: unknown certificate
+2023/09/03 17:24:04 http: TLS handshake error from 127.0.0.1:55708: remote error: tls: unknown certificate
+2023/09/03 17:24:34 Sending request /version
+
+2023/09/03 17:24:58 Sending request /version
+
+2023/09/03 17:27:24 http: TLS handshake error from 127.0.0.1:56528: remote error: tls: unknown certificate
+2023/09/03 17:27:47 Sending request /version
+
