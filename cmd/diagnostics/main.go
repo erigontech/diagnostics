@@ -9,7 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -108,6 +110,9 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 		//}
 	})
+
+	open("http://localhost:8000")
+
 	go func() {
 		if err := http.ListenAndServe(":8000", nil); err != http.ErrServerClosed {
 			log.Fatal(err)
@@ -125,4 +130,22 @@ func main() {
 		log.Println("Terminating eagerly.")
 		os.Exit(-int(syscall.SIGINT))
 	}
+}
+
+// open opens the specified URL in the default browser of the user.
+func open(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+	}
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
 }
