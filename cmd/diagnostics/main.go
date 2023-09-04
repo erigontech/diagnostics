@@ -99,22 +99,20 @@ func main() {
 
 	}
 
-	//d := http.Dir("./../../web/dist")
-
 	fileServer := http.FileServer(http.Dir("./../../web/dist"))
-	//fileMatcher := regexp.MustCompile(`\.[a-zA-Z]*$`)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		//if !fileMatcher.MatchString(r.URL.Path) {
-		//	http.ServeFile(w, r, "index.html")
-		//} else {
 		fileServer.ServeHTTP(w, r)
-		//}
 	})
 
 	open("http://localhost:8000")
 
+	server := &http.Server{
+		Addr:              ":8000",
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+
 	go func() {
-		if err := http.ListenAndServe(":8000", nil); err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()
