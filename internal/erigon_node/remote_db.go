@@ -1,33 +1,33 @@
 package erigon_node
 
 import (
+	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
 	"strings"
 )
 
 type RemoteDbReader interface {
-	Init(db string, table string, initialKey []byte) error
-	Next() ([]byte, []byte, error)
+	Init(ctx context.Context, db string, table string, initialKey []byte) error
+	Next(ctx context.Context) ([]byte, []byte, error)
 }
 
 type RemoteCursor struct {
-	nodeClient     Client
-	requestChannel chan *internal.NodeRequest
-	dbPath         string
-	table          string
-	lines          []string // Parsed response
+	nodeClient Client
+	dbPath     string
+	table      string
+	lines      []string // Parsed response
 }
 
-func NewRemoteCursor(nodeClient Client, requestChannel chan *internal.NodeRequest) *RemoteCursor {
-	rc := &RemoteCursor{nodeClient: nodeClient, requestChannel: requestChannel}
+func NewRemoteCursor(nodeClient Client) *RemoteCursor {
+	rc := &RemoteCursor{nodeClient: nodeClient}
 
 	return rc
 }
 
-func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
-	dbPath, dbPathErr := rc.findFullDbPath(db)
+func (rc *RemoteCursor) Init(ctx context.Context, db string, table string, initialKey []byte) error {
+	dbPath, dbPathErr := rc.findFullDbPath(ctx, db)
 
 	if dbPathErr != nil {
 		return dbPathErr
@@ -37,26 +37,33 @@ func (rc *RemoteCursor) Init(db string, table string, initialKey []byte) error {
 	rc.table = table
 	fmt.Println("Remote Cursor", rc.dbPath, rc.table)
 
-	if err := rc.nextTableChunk(initialKey); err != nil {
+	if err := rc.nextTableChunk(ctx, initialKey); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
-	success, dbListResponse := rc.nodeClient.fetch("/db/list\n", rc.requestChannel)
-	if !success {
-		return "", fmt.Errorf("unable to fetch database list: %s", dbListResponse)
+func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, error) {
+	request, err := rc.nodeClient.fetch(ctx, "db_list", nil)
+
+	if err != nil {
+		return "", fmt.Errorf("unable to fetch database list: %s", err)
 	}
 
-	lines, err := rc.nodeClient.getResultLines(dbListResponse)
+	_, result, err := request.nextResult(ctx)
+
+	var lines []string
+
+	err = json.Unmarshal(result, lines)
+
 	if err != nil {
 		return "", err
 	}
 	// fmt.Println("lines: ", lines)
 
 	var dbPath string
+
 	for _, line := range lines {
 		if strings.HasSuffix(line, fmt.Sprintf("/%s", db)) {
 			dbPath = line
@@ -64,18 +71,31 @@ func (rc *RemoteCursor) findFullDbPath(db string) (string, error) {
 	}
 
 	if dbPath == "" {
-		return "", fmt.Errorf("database %s not found: %v", db, dbListResponse)
+		return "", fmt.Errorf("database %s not found in: %v", db, lines)
 	}
 
 	return dbPath, nil
 }
 
-func (rc *RemoteCursor) nextTableChunk(startKey []byte) error {
-	success, result := rc.nodeClient.fetch(fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", rc.dbPath, rc.table, startKey), rc.requestChannel)
-	if !success {
-		return fmt.Errorf("reading %s table: %s", rc.table, result)
+type DBParams struct {
+	Path  string `json:"path"`
+	Table string `json:"table"`
+	Key   []byte `json:"key"`
+}
+
+func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) error {
+	request, err := rc.nodeClient.fetch(ctx, "db_read", DBParams{rc.dbPath, rc.table, startKey})
+
+	if err != nil {
+		return fmt.Errorf("reading %s table: %w", rc.table, err)
 	}
-	lines, err := rc.nodeClient.getResultLines(result)
+
+	_, result, err := request.nextResult(ctx)
+
+	var lines []string
+
+	err = json.Unmarshal(result, lines)
+
 	if err != nil {
 		return err
 	}
@@ -105,7 +125,7 @@ func advance(key []byte) []byte {
 	return key1
 }
 
-func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
+func (rc *RemoteCursor) Next(ctx context.Context) ([]byte, []byte, error) {
 	if rc.dbPath == "" || rc.table == "" {
 		return nil, nil, fmt.Errorf("cursor not initialized")
 	}
@@ -129,7 +149,7 @@ func (rc *RemoteCursor) Next() ([]byte, []byte, error) {
 	rc.lines = rc.lines[1:]
 
 	if len(rc.lines) == 0 {
-		if e = rc.nextTableChunk(advance(k)); e != nil {
+		if e = rc.nextTableChunk(ctx, advance(k)); e != nil {
 			return k, v, e
 		}
 	}

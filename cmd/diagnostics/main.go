@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -16,10 +15,9 @@ import (
 	"time"
 
 	"github.com/ledgerwatch/diagnostics/api"
-	"github.com/ledgerwatch/diagnostics/assets"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/logging"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
+	"github.com/ledgerwatch/diagnostics/web"
 )
 
 func main() {
@@ -37,12 +35,10 @@ func main() {
 	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT)
 
 	// Initialize Services
-	cache := sessions.NewCache(5, 5)
-	ErigonNodeClient := erigon_node.NewErigonNodeClient()
-	uiSessions := sessions.NewUISession(cache)
-	htmlTemplates, err := template.ParseFS(assets.Templates, "template/*.html")
+	cache, err := sessions.NewCache(5, 5)
+
 	if err != nil {
-		log.Fatalf("parsing session.html template: %v", err)
+		log.Fatalf("session cache creation  failed: %v", err)
 	}
 
 	// Initializes and adds the provided certificate to the pool, to be used in TLS config
@@ -63,10 +59,7 @@ func main() {
 	// Passing in the services to REST layer
 	handlers := api.NewHandler(
 		api.APIServices{
-			UISessions:    uiSessions,
-			ErigonNode:    ErigonNodeClient,
-			StoreSession:  &cache,
-			HtmlTemplates: htmlTemplates,
+			StoreSession: cache,
 		})
 
 	srv := &http.Server{
@@ -83,9 +76,9 @@ func main() {
 		}
 	}()
 
-	if restPort > 0 {
+	if routerPort > 0 {
 		srv := &http.Server{
-			Addr:              fmt.Sprintf("%s:%d", listenAddr, restPort),
+			Addr:              fmt.Sprintf("%s:%d", listenAddr, routerPort),
 			Handler:           handlers,
 			MaxHeaderBytes:    1 << 20,
 			ReadHeaderTimeout: 1 * time.Minute,
@@ -99,12 +92,7 @@ func main() {
 
 	}
 
-	fileServer := http.FileServer(http.Dir("./../../web/dist"))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fileServer.ServeHTTP(w, r)
-	})
-
-	open("http://localhost:8000")
+	http.Handle("/", web.UI)
 
 	server := &http.Server{
 		Addr:              ":8000",
@@ -116,6 +104,8 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+
+	open("http://localhost:8000")
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {

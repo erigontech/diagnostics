@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ledgerwatch/diagnostics/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,15 +35,15 @@ func TestReorgs(t *testing.T) {
 				tableLine := fmt.Sprintf("%s | %s", lineKey, lineValue)
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).
+				df.remoteApi.On("fetch", "/db/list\n").
 					Return(true, dbListResult).Once()
 				df.remoteApi.On("getResultLines", dbListResult).
 					Return([]string{dbPath}, nil).Once()
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).
+				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey)).
 					Return(true, tableLinesResult).Once()
 				df.remoteApi.On("getResultLines", tableLinesResult).
 					Return([]string{tableLine}, nil).Once()
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%s\n", dbPath, table, "313131313131313132"), df.requestChannel).
+				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%s\n", dbPath, table, "313131313131313132")).
 					Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).
 					Return([]string{}, nil).Once()
@@ -60,19 +59,17 @@ func TestReorgs(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			remoteApi := &mockNodeClientReader{}
-			requestChannel := make(chan *internal.NodeRequest)
-			rc := NewRemoteCursor(remoteApi, requestChannel)
+			rc := NewRemoteCursor(remoteApi)
 
 			if tc.on != nil {
 				df := &remoteCursorDependencies{
-					remoteApi:      remoteApi,
-					requestChannel: requestChannel,
+					remoteApi: remoteApi,
 				}
 
 				tc.on(df)
 			}
 
-			err := rc.Init(db, table, initialKey)
+			err := rc.Init(context.Background(), db, table, initialKey)
 
 			if tc.wantErrMsg != "" {
 				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
@@ -80,7 +77,7 @@ func TestReorgs(t *testing.T) {
 			}
 
 			handler := NodeClient{}
-			tc.assert(handler.findReorgsInternally(context.Background(), nil, rc))
+			tc.assert(handler.findReorgsInternally(context.Background(), rc))
 		})
 	}
 }

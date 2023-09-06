@@ -1,12 +1,12 @@
 package erigon_node
 
 type Versions struct {
-	Success        bool
-	Error          string
-	NodeVersion    uint64
-	SupportVersion uint64
-	CodeVersion    string
-	GitCommit      string
+	Success        bool   `json:"-"`
+	Error          string `json:"-"`
+	NodeVersion    uint64 `json:"nodeVersion"`
+	SupportVersion uint64 `json:"supportVersion"`
+	CodeVersion    string `json:"codeVersion"`
+	GitCommit      string `json:"gitCommit"`
 }
 
 type Flags struct {

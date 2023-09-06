@@ -1,7 +1,6 @@
 package api
 
 import (
-	"html/template"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -14,10 +13,8 @@ import (
 )
 
 type APIServices struct {
-	UISessions    sessions.UIService
-	ErigonNode    erigon_node.Client
-	StoreSession  *sessions.CacheService
-	HtmlTemplates *template.Template
+	ErigonNode   erigon_node.Client
+	StoreSession sessions.CacheService
 }
 
 func NewHandler(services APIServices) http.Handler {
@@ -36,12 +33,12 @@ func NewHandler(services APIServices) http.Handler {
 
 	r.Mount(internal.HealthCheckEndPoint, HealthCheckHandler())
 	r.Mount(internal.ScriptEndPoint, http.FileServer(http.FS(assets.Scripts)))
-	r.Mount(internal.SupportEndPoint, NewBridgeHandler(*services.StoreSession))
+	r.Mount(internal.SupportEndPoint, NewBridgeHandler(services.StoreSession))
 
 	r.Group(func(r chi.Router) {
-		session := sessions.Middleware{UIService: services.UISessions, CacheService: *services.StoreSession}
+		session := sessions.Middleware{CacheService: services.StoreSession}
 		r.Use(session.Middleware)
-		r.Mount(internal.UIEndPoint, NewUIHandler(services.UISessions, services.ErigonNode, services.HtmlTemplates))
+		r.Mount("/", NewUIHandler(services.StoreSession, services.ErigonNode))
 	})
 
 	return r

@@ -4,26 +4,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"path"
 	"strconv"
+	"strings"
 )
 
-func retrievePinFromURL(r *http.Request) (uint64, error) {
-	parsedURL, err := url.Parse(r.URL.Path)
-	if err != nil {
-		log.Println("Error parsing URL:", err)
-		return 0, fmt.Errorf("Error parsing URL: %w", err)
+func retrievePinFromURL(r *http.Request) (pins []uint64, err error) {
+
+	for _, session := range strings.Split(r.URL.Query().Get("sessions"), ",") {
+		pin, err := strconv.ParseUint(session, 10, 64)
+
+		if err != nil {
+			log.Printf("Error parsing session pin %s: %v\n", session, err)
+			return pins, fmt.Errorf("Error parsing session pin %s: %w", session, err)
+		}
+
+		pins = append(pins, pin)
 	}
 
-	lastPathItem := path.Base(parsedURL.Path)
-	pin, err := strconv.ParseUint(lastPathItem, 10, 64)
-	if err != nil {
-		log.Printf("Error parsing session pin %s: %v\n", lastPathItem, err)
-		return 0, fmt.Errorf("Error parsing session pin %s: %w", lastPathItem, err)
+	if len(pins) == 0 {
+		err = fmt.Errorf("No sessions")
 	}
 
-	return pin, nil
+	return pins, err
 }
 
 func retrieveSizeStrFrom(r *http.Request) (uint64, error) {
