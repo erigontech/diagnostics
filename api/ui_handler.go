@@ -86,7 +86,7 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flags, err := h.erigonNode.Flags(r.Context(), requestChannel)
+	/*flags, err := h.erigonNode.Flags(r.Context(), requestChannel)
 	if err != nil {
 		internal.EncodeError(w, r, err)
 	}
@@ -96,13 +96,13 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 	syncStages, err := h.erigonNode.FindSyncStages(r.Context(), requestChannel)
 	if err != nil {
 		internal.EncodeError(w, r, err)
-	}
+	}*/
 
 	resp := internal.SessionDataJSON{
 		Version:     versions,
-		Flags:       flags,
-		CmdLineArgs: cmdLineArgs,
-		SyncStages:  syncStages,
+		Flags:       erigon_node.Flags{},
+		CmdLineArgs: erigon_node.CmdLineArgs{},
+		SyncStages:  map[string]string{},
 	}
 
 	jsonData, err := json.Marshal(resp)
