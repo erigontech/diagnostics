@@ -92,6 +92,7 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonData, err := json.Marshal(resp)
+
 	if err != nil {
 		fmt.Fprintf(w, "Unable to get version: %v", err)
 	}
@@ -109,16 +110,21 @@ func (h *UIHandler) CMDLine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ /*cmdLineArgs :*/, err = client.CMDLineArgs(r.Context())
+	cmdLineArgs, err := client.CMDLineArgs(r.Context())
 
 	if err != nil {
 		api_internal.EncodeError(w, r, err)
 	}
 
-	//if err := h.uiTemplate.ExecuteTemplate(w, "cmd_line.html", cmdLineArgs); err != nil {
-	//	fmt.Fprintf(w, "Executing cmd_line template: %v\n", err)
-	//	api_internal.EncodeError(w, r, err)
-	//}
+	jsonData, err := json.Marshal(cmdLineArgs)
+
+	if err != nil {
+		fmt.Fprintf(w, "Unable to get version: %v", err)
+	}
+
+	fmt.Printf("json data: %s\n", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 func (h *UIHandler) Flags(w http.ResponseWriter, r *http.Request) {
@@ -129,15 +135,21 @@ func (h *UIHandler) Flags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ /*flags*/, err = client.Flags(r.Context())
+	flags, err := client.Flags(r.Context())
+
 	if err != nil {
 		api_internal.EncodeError(w, r, err)
 	}
 
-	//if err := h.uiTemplate.ExecuteTemplate(w, "flags.html", flags); err != nil {
-	//	fmt.Fprintf(w, "Executing flags template: %v", err)
-	//	internal.EncodeError(w, r, err)
-	//}
+	jsonData, err := json.Marshal(flags)
+
+	if err != nil {
+		fmt.Fprintf(w, "Unable to get version: %v", err)
+	}
+
+	fmt.Printf("json data: %s\n", jsonData)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 func (h *UIHandler) LogList(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +316,7 @@ func NewUIHandler(
 
 	// Erigon Node data
 	r.Get("/session/{sessionId}/node/{nodeId}/versions", r.Versions)
-	r.Get("/session/{sessionId}/node/{nodeId}/cmd_line", r.CMDLine)
+	r.Get("/session/{sessionId}/node/{nodeId}/cmdline", r.CMDLine)
 	r.Get("/session/{sessionId}/node/{nodeId}/flags", r.Flags)
 
 	r.Get("/session/{sessionId}/node/{nodeId}/log_list", r.LogList)

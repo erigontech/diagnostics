@@ -56,21 +56,21 @@ func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
 		_, err := c.Version(ctx)
 		if err != nil {
 			//fmt.Fprintf(w, "Unable to process flag due to inability to get node version: %s", versions.Error)
-			return Flags{}, err
+			return nil, err
 		}
 	}
 
 	if c.versions.NodeVersion < 2 {
 		//fmt.Fprintf(w, "Flags only support version >= 2. Node version: %d", versions.NodeVersion)
 		// TODO semeantic error propagate
-		return Flags{}, nil
+		return nil, nil
 	}
 
 	// Retrieving the data from the node
 	request, err := c.fetch(ctx, "flags", nil)
 
 	if err != nil {
-		return Flags{}, err
+		return nil, err
 	}
 
 	var flags Flags
@@ -78,11 +78,11 @@ func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
 	_, result, err := request.nextResult(ctx)
 
 	if err != nil {
-		if err := json.Unmarshal(result, &flags.FlagPayload); err != nil {
-			flags.Error = err.Error()
-		}
-	} else {
-		flags.Error = err.Error()
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &flags); err != nil {
+		return nil, err
 	}
 
 	return flags, nil
@@ -99,18 +99,12 @@ func (c *NodeClient) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
 
 	_, result, err := request.nextResult(ctx)
 
-	if err == nil {
-		var cargs []string
-		if err := json.Unmarshal(result, &cargs); err != nil {
-			args.Success = false
-			args.Error = err.Error()
-		} else {
-			args.Success = true
-			args.Args = strings.Join(cargs, " ")
-		}
-	} else {
-		args.Success = false
-		args.Error = err.Error()
+	if err != nil {
+		return "", err
+	}
+
+	if err := json.Unmarshal(result, &args); err != nil {
+		return "", err
 	}
 
 	return args, nil

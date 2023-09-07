@@ -9,17 +9,9 @@ type Versions struct {
 	GitCommit      string `json:"gitCommit"`
 }
 
-type Flags struct {
-	Success     bool
-	Error       string
-	FlagPayload map[string]string
-}
+type Flags map[string]interface{}
 
-type CmdLineArgs struct {
-	Success bool
-	Error   string
-	Args    string
-}
+type CmdLineArgs string
 
 type BodyDownload struct {
 	Legends       [9]bool
