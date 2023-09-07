@@ -26,8 +26,8 @@ func (c *NodeClient) FindSyncStages(ctx context.Context, w http.ResponseWriter) 
 
 	_ /*syncStageProgress*/, err := syncStages.fetchSyncStageProgress(ctx)
 	if err != nil {
-		fmt.Fprintf(w, "Unable to fetch sync stage progress: %v\n", err)
-		return
+		fmt.Printf("Unable to fetch sync stage progress: %v\n", err)
+		//	return nil, err
 	}
 
 	//if templateErr := template.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {

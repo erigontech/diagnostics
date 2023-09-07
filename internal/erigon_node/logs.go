@@ -14,15 +14,15 @@ import (
 )
 
 type LogListItem struct {
-	Filename    string
-	Size        int64
-	PrintedSize string
+	Filename    string `json:"filename"`
+	Size        int64  `json:"size"`
+	PrintedSize string `json:"printed_size"`
 }
 type LogList struct {
-	Success     bool
-	Error       string
-	SessionName string
-	List        []LogListItem
+	Success     bool          `json:"success"`
+	Error       string        `json:"error"`
+	SessionName string        `json:"session_name"`
+	List        []LogListItem `json:"list"`
 }
 type LogPart struct {
 	Success bool
