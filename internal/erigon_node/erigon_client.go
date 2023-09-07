@@ -182,10 +182,12 @@ type Client interface {
 	CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs
 	// fetch requests the data from the specified end point
 	fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string)
+
 	getResultLines(result string) ([]string, error)
 
+	FindSyncStages(ctx context.Context, requestChannel chan *internal.NodeRequest) (SyncStageProgress, error)
+
 	// TODO: refactor the following methods to follow above pattern where appropriate
-	FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
 	FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)

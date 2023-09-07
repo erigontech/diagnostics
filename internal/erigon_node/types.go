@@ -1,24 +1,24 @@
 package erigon_node
 
 type Versions struct {
-	Success        bool
-	Error          string
-	NodeVersion    uint64
-	SupportVersion uint64
-	CodeVersion    string
-	GitCommit      string
+	Success        bool   `json:"success"`
+	Error          string `json:"error"`
+	NodeVersion    uint64 `json:"node_version"`
+	SupportVersion uint64 `json:"support_version"`
+	CodeVersion    string `json:"code_version"`
+	GitCommit      string `json:"git_commit"`
 }
 
 type Flags struct {
-	Success     bool
-	Error       string
-	FlagPayload map[string]string
+	Success     bool              `json:"success"`
+	Error       string            `json:"error"`
+	FlagPayload map[string]string `json:"flag_payload"`
 }
 
 type CmdLineArgs struct {
-	Success bool
-	Error   string
-	Args    string
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
+	Args    string `json:"args"`
 }
 
 type BodyDownload struct {

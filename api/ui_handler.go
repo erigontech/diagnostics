@@ -20,25 +20,6 @@ import (
 
 var _ http.Handler = &UIHandler{}
 
-type CreateSessionResponse struct {
-	IsActive    bool   `json:"is_active"`
-	SessionName string `json:"session_name"`
-	SessionPin  uint64 `json:"session_pin"`
-	SessionId   string `json:"session_id"`
-	//Nodes sessions.NodeSession `json:"nodes"`
-	//UiNodes sessions.UINodeSession `json:"ui_nodes"`
-}
-
-type GetAllSessionsResponse struct {
-	Sessions []CreateSessionResponse `json:"sessions"`
-}
-
-type GetVersionResponse struct {
-	NodeVersion uint64 `json:"node_version"`
-	CodeVersion string `json:"code_version"`
-	GitCommit   string `json:"git_commit"`
-}
-
 type UIHandler struct {
 	chi.Router
 	uiSessions sessions.UIService
@@ -82,10 +63,10 @@ func (h *UIHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 		//internal.EncodeError(w, r, err)
 	}
 
-	var sees GetAllSessionsResponse
+	var sees internal.AllSessionsJSON
 
 	for key := range uisession.UiNodes {
-		sees.Sessions = append(sees.Sessions, CreateSessionResponse{
+		sees.Sessions = append(sees.Sessions, internal.SessionJSON{
 			IsActive:    isActive(uisession.SessionName, key.SessionName),
 			SessionName: key.SessionName,
 			SessionPin:  key.SessionPin,
@@ -103,13 +84,7 @@ func (h *UIHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
-
-	/*switch uisession == h.uiSessions.(type) {
-	case sessions.UiSession:
-		fmt.Println("UiSession")*/
-
 	sesid := r.Header.Get("session-id")
-	fmt.Print("sesid: ", sesid, "\n")
 	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
 		// in case of any error
@@ -141,8 +116,8 @@ func (h *UIHandler) CreateSessionNew(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func getCreateSessionResponseFromSession(sessions *sessions.UiSession, sessionId string) CreateSessionResponse {
-	return CreateSessionResponse{
+func getCreateSessionResponseFromSession(sessions *sessions.UiSession, sessionId string) internal.SessionJSON {
+	return internal.SessionJSON{
 		IsActive:    true,
 		SessionName: sessions.SessionName,
 		SessionPin:  sessions.SessionPin,
@@ -193,8 +168,7 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UIHandler) V2Versions(w http.ResponseWriter, r *http.Request) {
-	csn := r.FormValue(currentSessionName)
-	requestChannel := h.uiSessions.LookUpSession(csn)
+	requestChannel := h.uiSessions.LookUpSession(r.FormValue(currentSessionName))
 	fmt.Printf("uisession1 %p\n", h.uiSessions.(*sessions.UiSession))
 
 	versions, err := h.erigonNode.Version(r.Context(), requestChannel)
@@ -202,10 +176,23 @@ func (h *UIHandler) V2Versions(w http.ResponseWriter, r *http.Request) {
 		internal.EncodeError(w, r, err)
 	}
 
-	resp := GetVersionResponse{
-		NodeVersion: versions.NodeVersion,
-		CodeVersion: versions.CodeVersion,
-		GitCommit:   versions.GitCommit,
+	flags, err := h.erigonNode.Flags(r.Context(), requestChannel)
+	if err != nil {
+		internal.EncodeError(w, r, err)
+	}
+
+	cmdLineArgs := h.erigonNode.CMDLineArgs(r.Context(), requestChannel)
+
+	syncStages, err := h.erigonNode.FindSyncStages(r.Context(), requestChannel)
+	if err != nil {
+		internal.EncodeError(w, r, err)
+	}
+
+	resp := internal.SessionDataJSON{
+		Version:     versions,
+		Flags:       flags,
+		CmdLineArgs: cmdLineArgs,
+		SyncStages:  syncStages,
 	}
 
 	jsonData, err := json.Marshal(resp)
@@ -310,7 +297,15 @@ func (h *UIHandler) HeadersDownload(w http.ResponseWriter, r *http.Request) {
 
 func (h *UIHandler) SyncStages(w http.ResponseWriter, r *http.Request) {
 	requestChannel := h.uiSessions.LookUpSession(r.FormValue(currentSessionName))
-	h.erigonNode.FindSyncStages(r.Context(), w, h.uiTemplate, requestChannel)
+	syncStages, err := h.erigonNode.FindSyncStages(r.Context(), requestChannel)
+	if err != nil {
+		internal.EncodeError(w, r, err)
+	}
+
+	if err := h.uiTemplate.ExecuteTemplate(w, "sync_stages.html", syncStages); err != nil {
+		fmt.Fprintf(w, "Executing sync_stages template: %v", err)
+		return
+	}
 }
 
 func NewUIHandler(

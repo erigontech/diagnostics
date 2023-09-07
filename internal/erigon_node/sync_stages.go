@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"html/template"
-	"net/http"
 	"strconv"
+
+	"github.com/ledgerwatch/diagnostics/internal"
 )
 
 // Demonstration of the working with the Erigon database remotely on the example of getting information
@@ -22,20 +21,17 @@ const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
 const syncProgressBase = 10
 
-func (c *NodeClient) FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+func (c *NodeClient) FindSyncStages(ctx context.Context, requestChannel chan *internal.NodeRequest) (SyncStageProgress, error) {
 	rc := NewRemoteCursor(c, requestChannel)
 	syncStages := &SyncStages{rc: rc}
 
 	syncStageProgress, err := syncStages.fetchSyncStageProgress(ctx)
 	if err != nil {
-		fmt.Fprintf(w, "Unable to fetch sync stage progress: %v\n", err)
-		return
+		fmt.Printf("Unable to fetch sync stage progress: %v\n", err)
+		return nil, err
 	}
 
-	if templateErr := template.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {
-		fmt.Fprintf(w, "Executing Sync stages template: %v\n", templateErr)
-		return
-	}
+	return syncStageProgress, nil
 }
 
 func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProgress, error) {
