@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/ledgerwatch/diagnostics"
-	"github.com/ledgerwatch/diagnostics/api/internal"
 	api_internal "github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
@@ -86,26 +85,7 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*flags, err := h.erigonNode.Flags(r.Context(), requestChannel)
-	if err != nil {
-		internal.EncodeError(w, r, err)
-	}
-
-	cmdLineArgs := h.erigonNode.CMDLineArgs(r.Context(), requestChannel)
-
-	syncStages, err := h.erigonNode.FindSyncStages(r.Context(), requestChannel)
-	if err != nil {
-		internal.EncodeError(w, r, err)
-	}*/
-
-	resp := internal.SessionDataJSON{
-		Version:     versions,
-		Flags:       erigon_node.Flags{},
-		CmdLineArgs: erigon_node.CmdLineArgs{},
-		SyncStages:  map[string]string{},
-	}
-
-	jsonData, err := json.Marshal(resp)
+	jsonData, err := json.Marshal(versions)
 
 	if err != nil {
 		fmt.Fprintf(w, "Unable to get version: %v", err)
