@@ -3,11 +3,9 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"net/http"
 	"testing"
 
-	"github.com/ledgerwatch/diagnostics/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -16,68 +14,69 @@ type mockNodeClientReader struct {
 	mock.Mock
 }
 
-func (ra *mockNodeClientReader) LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart {
+func (ra *mockNodeClientReader) LogHead(ctx context.Context, filename string) (LogPart, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart {
+func (ra *mockNodeClientReader) LogTail(ctx context.Context, filename string, offset uint64) (LogPart, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) Version(ctx context.Context, requestChannel chan *internal.NodeRequest) (Versions, error) {
+func (ra *mockNodeClientReader) Version(ctx context.Context) (Versions, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error) {
+func (ra *mockNodeClientReader) Flags(ctx context.Context) (Flags, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs {
+func (ra *mockNodeClientReader) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context, w http.ResponseWriter) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
+func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest) {
+func (ra *mockNodeClientReader) ProcessLogList(ctx context.Context, w http.ResponseWriter, sessionName string) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ra *mockNodeClientReader) fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
-	args := ra.Called(url, requestChannel)
-	return args.Bool(0), args.String(1)
+func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, arg interface{}) (*NodeRequest, error) {
+	panic("implement me")
+	//args := ra.Called(url)
+	//return args.Bool(0), args.String(1)
 }
+
 func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
 }
 
 type remoteCursorDependencies struct {
-	remoteApi      *mockNodeClientReader
-	requestChannel chan *internal.NodeRequest
+	remoteApi *mockNodeClientReader
 }
 
 func TestInit(t *testing.T) {
@@ -104,9 +103,9 @@ func TestInit(t *testing.T) {
 				tableLine := fmt.Sprintf("%s | %s", lineKey, lineValue)
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
+				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey)).Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{tableLine}, nil)
 			},
 			assert: func(rc *RemoteCursor) {
@@ -120,7 +119,7 @@ func TestInit(t *testing.T) {
 			on: func(df *remoteCursorDependencies) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{"notFoundDb"}, nil)
 			},
 			wantErrMsg: fmt.Sprintf("database %s not found: %s", db, fmt.Sprintf("SUCCESS\n/full/path/%s", "notFoundDb")),
@@ -128,7 +127,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "should return unable to fetch database list error",
 			on: func(df *remoteCursorDependencies) {
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(false, dependencyError.Error())
+				df.remoteApi.On("fetch", "/db/list\n").Return(false, dependencyError.Error())
 			},
 			wantErrMsg: fmt.Sprintf("unable to fetch database list: %s", dependencyError.Error()),
 		},
@@ -137,7 +136,7 @@ func TestInit(t *testing.T) {
 			on: func(df *remoteCursorDependencies) {
 				dbPathResult := fmt.Sprintf("FAILURE\n/full/path/%s", db)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbPathResult)
+				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbPathResult)
 				df.remoteApi.On("getResultLines", dbPathResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),
@@ -147,9 +146,9 @@ func TestInit(t *testing.T) {
 			on: func(df *remoteCursorDependencies) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(false, "")
+				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey)).Return(false, "")
 			},
 			wantErrMsg: fmt.Sprintf("reading %s table: %s", table, ""),
 		},
@@ -159,9 +158,9 @@ func TestInit(t *testing.T) {
 				dbListResult := fmt.Sprintf("SUCCESS\n/full/path/%s", db)
 				tableLinesResult := fmt.Sprintf("FAILURE\n%s", "")
 
-				df.remoteApi.On("fetch", "/db/list\n", df.requestChannel).Return(true, dbListResult)
+				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
-				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey), df.requestChannel).Return(true, tableLinesResult)
+				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey)).Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{}, dependencyError)
 			},
 			wantErrMsg: dependencyError.Error(),
@@ -171,19 +170,17 @@ func TestInit(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			nodeClient := &mockNodeClientReader{}
-			requestChannel := make(chan *internal.NodeRequest)
-			rc := NewRemoteCursor(nodeClient, requestChannel)
+			rc := NewRemoteCursor(nodeClient)
 
 			if tc.on != nil {
 				df := &remoteCursorDependencies{
-					remoteApi:      nodeClient,
-					requestChannel: requestChannel,
+					remoteApi: nodeClient,
 				}
 
 				tc.on(df)
 			}
 
-			err := rc.Init(db, table, initialKey)
+			err := rc.Init(context.Background(), db, table, initialKey)
 
 			if tc.wantErrMsg != "" {
 				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)

@@ -2,72 +2,99 @@ package sessions
 
 import (
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"log"
+	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 )
 
 var _ CacheService = &Cache{}
 
 type Cache struct {
-	NodeSessions *lru.ARCCache[uint64, *NodeSession]
-	UISessions   *lru.ARCCache[string, *UiSession]
+	NodeSessions *lru.Cache[string, *NodeSession]
+	UISessions   *lru.Cache[string, *UISession]
+	uiNodeMap    map[string]map[string]*NodeSession
 }
 
-func (s *Cache) AddUISession(sessionId string, uiSession *UiSession) {
-	s.UISessions.Add(sessionId, uiSession)
+func (s *Cache) CreateUISession(sessionId string) (*UISession, error) {
+	session, err := NewUISession(sessionId, s)
+
+	if err != nil {
+		return nil, err
+	}
+
+	s.UISessions.Add(sessionId, session)
+
+	for _, node := range s.uiNodeMap[sessionId] {
+		session.Attach(node)
+	}
+
+	return session, nil
 }
 
-func (s *Cache) FindNodeSession(pin uint64) (*NodeSession, bool) {
-	return s.NodeSessions.Get(pin)
+func (s *Cache) FindNodeSession(sessionId string) (*NodeSession, bool) {
+	return s.NodeSessions.Get(sessionId)
 }
 
-func (s *Cache) FindUISession(sessionId string) (*UiSession, bool) {
+func (s *Cache) FindUISession(sessionId string) (*UISession, bool) {
 	return s.UISessions.Get(sessionId)
 }
 
-func (s *Cache) AllocateNewNodeSession() (uint64, *NodeSession, error) {
-	pin, err := generatePIN()
-	if err != nil {
-		return pin, nil, err
+func (s *Cache) CreateNodeSession(node *NodeInfo) (*NodeSession, error) {
+	requestCh := make(chan *erigon_node.NodeRequest)
+
+	nodeSession := &NodeSession{
+		RequestCh:    requestCh,
+		Client:       erigon_node.NewClient(node.Id, requestCh),
+		SessionCache: s,
+		NodeInfo:     node,
 	}
 
-	for s.NodeSessions.Contains(pin) {
-		pin, err = generatePIN()
-		if err != nil {
-			return pin, nil, err
-		}
-	}
-
-	nodeSession := &NodeSession{RequestCh: make(chan *internal.NodeRequest, 16)}
-	s.NodeSessions.Add(pin, nodeSession)
-	return pin, nodeSession, nil
+	s.NodeSessions.Add(node.Id, nodeSession)
+	return nodeSession, nil
 }
 
-func NewCache(maxNodeSessions int, maxUISessions int) CacheService {
-	ns, err := lru.NewARC[uint64, *NodeSession](maxNodeSessions)
+func NewCache(maxNodeSessions int, maxUISessions int) (CacheService, error) {
+
+	uis, err := lru.New[string, *UISession](maxUISessions)
+
 	if err != nil {
-		log.Printf("failed to create nodeSessions: %v", err)
+		return nil, err
 	}
 
-	uis, err := lru.NewARC[string, *UiSession](maxUISessions)
+	cache := &Cache{
+		UISessions: uis,
+		uiNodeMap:  map[string]map[string]*NodeSession{},
+	}
+
+	cache.NodeSessions, err = lru.NewWithEvict[string, *NodeSession](maxNodeSessions, func(key string, value *NodeSession) {
+
+		for _, session := range value.UISessions {
+			if nodes, ok := cache.uiNodeMap[session]; ok {
+				delete(nodes, key)
+
+				if len(nodes) == 0 {
+					delete(cache.uiNodeMap, session)
+				}
+			}
+
+			if uiSession, ok := cache.UISessions.Get(session); ok {
+				uiSession.Detach(value.NodeInfo.Id)
+			}
+		}
+	})
+
 	if err != nil {
-		log.Printf("failed to create uiSessions: %v", err)
+		return nil, err
 	}
 
-	return &Cache{
-		NodeSessions: ns,
-		UISessions:   uis,
-	}
-
+	return cache, nil
 }
 
 type CacheService interface {
 	// FindNodeSession retrieves node session from cache
-	FindNodeSession(pin uint64) (*NodeSession, bool)
+	FindNodeSession(nodeId string) (*NodeSession, bool)
 	// FindUISession retrieves the diagnostics UI session based on the session ID
-	FindUISession(sessionId string) (*UiSession, bool)
+	FindUISession(sessionId string) (*UISession, bool)
 	// AllocateNewNodeSession creates a new node session and inserts it in to the cache
-	AllocateNewNodeSession() (uint64, *NodeSession, error)
+	CreateNodeSession(node *NodeInfo) (*NodeSession, error)
 	// AddUISession inserts in to the cache the specified UI session
-	AddUISession(sessionId string, uiSession *UiSession)
+	CreateUISession(sessionId string) (*UISession, error)
 }

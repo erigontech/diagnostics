@@ -3,22 +3,17 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"golang.org/x/exp/maps"
 )
 
-func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter, templ *template.Template, requestChannel chan *internal.NodeRequest) {
-
-	snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
-		return a.Id < b.Id
-	})
+func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
+	/*
+		snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
+			return a.Id < b.Id
+		})*/
 	var tick int64
 	sendEvery := time.NewTicker(1000 * time.Millisecond)
 	defer sendEvery.Stop()
@@ -30,84 +25,89 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter,
 		default:
 		}
 		// First, fetch list of DB paths
-		success, result := c.fetch(fmt.Sprintf("/headers_download?sincetick=%d\n", tick), requestChannel)
-		if !success {
-			fmt.Fprintf(w, "Fetching list of changes: %s", result)
+
+		request, err := c.fetch(ctx, "headers_download", &DownloadParams{SinceTick: tick})
+
+		if err != nil {
+			fmt.Fprintf(w, "Fetching list of changes: %s", err)
 			return
 		}
 
-		lines, resultExtractErr := c.getResultLines(result)
-		if resultExtractErr != nil {
-			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
-			return
-		}
+		more, _ /*result*/, err := request.nextResult(ctx)
 
-		var changesMode bool
-		var err error
-		changes := map[uint64]struct{}{}
-		for _, line := range lines {
-			switch {
-			case len(line) == 0:
-				// Skip empty lines
-			case strings.HasPrefix(line, "snapshot "):
-				tick, err = strconv.ParseInt(line[len("snapshot "):], 10, 64)
-				if err != nil {
-					fmt.Fprintf(w, "parsing snapshot tick [%s]: %v\n", line, err)
-					return
-				}
-				changesMode = false
-				snapshot.Clear(true)
-			case strings.HasPrefix(line, "changes "):
-				tick, err = strconv.ParseInt(line[len("changes "):], 10, 64)
-				if err != nil {
-					fmt.Fprintf(w, "parsing changes tick [%s]: %v\n", line, err)
-					return
-				}
-				changesMode = true
-			default:
-				splits := strings.Split(line, ",")
-				if len(splits) != 2 {
-					fmt.Fprintf(w, "snapshot or change line must have 2 comma-separated items [%s]\n", line)
-					return
-				}
-				id, err := strconv.ParseUint(splits[0], 10, 64)
-				if err != nil {
-					fmt.Fprintf(w, "parsing id [%s]: %v\n", splits[0], err)
-					return
-				}
-				state, err := strconv.ParseUint(splits[1], 10, 8)
-				if err != nil {
-					fmt.Fprintf(w, "parsing state [%s]: %v\n", splits[1], err)
-					return
-				}
-				if changesMode {
-					/*
-						if _, ok := changes[id]; ok {
-							if firstItem, firstOk := snapshot.Min(); firstOk {
-								if id < firstItem.Id + VisLimit {
-									sendSnapshot(snapshot, w, templ, sendEvery)
-									maps.Clear(changes)
+		/*
+			var changesMode bool
+			var err error
+			changes := map[uint64]struct{}{}
+			for _, line := range lines {
+				switch {
+				case len(line) == 0:
+					// Skip empty lines
+				case strings.HasPrefix(line, "snapshot "):
+					tick, err = strconv.ParseInt(line[len("snapshot "):], 10, 64)
+					if err != nil {
+						fmt.Fprintf(w, "parsing snapshot tick [%s]: %v\n", line, err)
+						return
+					}
+					changesMode = false
+					snapshot.Clear(true)
+				case strings.HasPrefix(line, "changes "):
+					tick, err = strconv.ParseInt(line[len("changes "):], 10, 64)
+					if err != nil {
+						fmt.Fprintf(w, "parsing changes tick [%s]: %v\n", line, err)
+						return
+					}
+					changesMode = true
+				default:
+					splits := strings.Split(line, ",")
+					if len(splits) != 2 {
+						fmt.Fprintf(w, "snapshot or change line must have 2 comma-separated items [%s]\n", line)
+						return
+					}
+					id, err := strconv.ParseUint(splits[0], 10, 64)
+					if err != nil {
+						fmt.Fprintf(w, "parsing id [%s]: %v\n", splits[0], err)
+						return
+					}
+					state, err := strconv.ParseUint(splits[1], 10, 8)
+					if err != nil {
+						fmt.Fprintf(w, "parsing state [%s]: %v\n", splits[1], err)
+						return
+					}
+					if changesMode {
+						/*
+							if _, ok := changes[id]; ok {
+								if firstItem, firstOk := snapshot.Min(); firstOk {
+									if id < firstItem.Id + VisLimit {
+										sendSnapshot(snapshot, w, templ, sendEvery)
+										maps.Clear(changes)
+									}
 								}
 							}
-						}
-					*/
-					tick++
-				}
-				changes[id] = struct{}{}
-				if state == 0 {
-					snapshot.Delete(SnapshotItem{Id: id})
-				} else {
-					snapshot.ReplaceOrInsert(SnapshotItem{Id: id, State: byte(state)})
+		*/ /*
+						tick++
+					}
+					changes[id] = struct{}{}
+					if state == 0 {
+						snapshot.Delete(SnapshotItem{Id: id})
+					} else {
+						snapshot.ReplaceOrInsert(SnapshotItem{Id: id, State: byte(state)})
+					}
 				}
 			}
+			sendHeadersSnapshot(snapshot, w, sendEvery)
+			maps.Clear(changes)
+		*/
+
+		if !more {
+			break
 		}
-		sendHeadersSnapshot(snapshot, w, templ, sendEvery)
-		maps.Clear(changes)
+
 		<-sendEvery.C
 	}
 }
 
-func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template, sendEvery *time.Ticker) {
+func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, sendEvery *time.Ticker) {
 	//<- sendEvery.C
 	var hd HeaderDownload
 	first := true
@@ -136,8 +136,8 @@ func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWr
 		hd.Legends[item.State] = true
 		return item.Id < hd.HeaderNum+VisLimit // We limit visualisation to VisLimit first blocks
 	})
-	if err := templ.ExecuteTemplate(w, "headers_download.html", hd); err != nil {
-		fmt.Fprintf(w, "Executing headers_download template: %v", err)
-		return
-	}
+	//if err := templ.ExecuteTemplate(w, "headers_download.html", hd); err != nil {
+	//	fmt.Fprintf(w, "Executing headers_download template: %v", err)
+	//	return
+	//}
 }

@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type mockRemoteCursor struct {
@@ -17,11 +18,11 @@ type syncStagesDep struct {
 	rc *mockRemoteCursor
 }
 
-func (mrc *mockRemoteCursor) Init(db string, table string, initialKey []byte) error {
+func (mrc *mockRemoteCursor) Init(_ context.Context, db string, table string, initialKey []byte) error {
 	args := mrc.Called(db, table, initialKey)
 	return args.Error(0)
 }
-func (mrc *mockRemoteCursor) Next() ([]byte, []byte, error) {
+func (mrc *mockRemoteCursor) Next(_ context.Context) ([]byte, []byte, error) {
 	args := mrc.Called()
 	return args.Get(0).([]byte), args.Get(1).([]byte), args.Error(2)
 }
