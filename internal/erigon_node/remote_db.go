@@ -77,14 +77,8 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 	return dbPath, nil
 }
 
-type DBParams struct {
-	Path  string `json:"path"`
-	Table string `json:"table"`
-	Key   []byte `json:"key"`
-}
-
 func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) error {
-	request, err := rc.nodeClient.fetch(ctx, "db_read", DBParams{rc.dbPath, rc.table, startKey})
+	request, err := rc.nodeClient.fetch(ctx, "dbs/"+rc.dbPath+"/tables/"+rc.table+"/"+string(startKey), nil)
 
 	if err != nil {
 		return fmt.Errorf("reading %s table: %w", rc.table, err)

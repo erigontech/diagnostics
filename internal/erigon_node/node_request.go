@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 type Params struct {
-	NodeId       string          `json:"nodeId"`
-	MethodParams json.RawMessage `json:"methodParams,omitempty"`
+	NodeId      string     `json:"nodeId"`
+	QueryParams url.Values `json:"queryParams,omitempty"`
 }
 
 type Request struct {

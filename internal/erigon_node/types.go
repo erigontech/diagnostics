@@ -13,6 +13,19 @@ type Flags map[string]interface{}
 
 type CmdLineArgs string
 
+type LogFiles []LogFile
+
+type LogFile struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+type LogContent struct {
+	Offset   int64  `json:"offset"`
+	FileSize int64  `json:"fileSize"`
+	Chunk    []byte `json:"chunk"`
+}
+
 type BodyDownload struct {
 	Legends       [9]bool
 	BlockNum      uint64

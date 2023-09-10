@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/btree"
@@ -26,7 +28,7 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter)
 		}
 		// First, fetch list of DB paths
 
-		request, err := c.fetch(ctx, "headers_download", &DownloadParams{SinceTick: tick})
+		request, err := c.fetch(ctx, "headers_download", url.Values{"sinceTick": []string{strconv.FormatInt(tick, 10)}})
 
 		if err != nil {
 			fmt.Fprintf(w, "Fetching list of changes: %s", err)

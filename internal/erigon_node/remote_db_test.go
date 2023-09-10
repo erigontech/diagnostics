@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,58 +15,51 @@ type mockNodeClientReader struct {
 	mock.Mock
 }
 
-func (ra *mockNodeClientReader) LogHead(ctx context.Context, filename string) (LogPart, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ra *mockNodeClientReader) LogTail(ctx context.Context, filename string, offset uint64) (LogPart, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (ra *mockNodeClientReader) Version(ctx context.Context) (Versions, error) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) Flags(ctx context.Context) (Flags, error) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context, w http.ResponseWriter) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) {
-	//TODO implement me
-	panic("implement me")
+
+	panic("TODO")
 }
 
-func (ra *mockNodeClientReader) ProcessLogList(ctx context.Context, w http.ResponseWriter, sessionName string) error {
-	//TODO implement me
-	panic("implement me")
+func (ra *mockNodeClientReader) LogFiles(ctx context.Context) (LogFiles, error) {
+	return nil, fmt.Errorf("TODO")
 }
 
-func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, arg interface{}) (*NodeRequest, error) {
-	panic("implement me")
+func (ra *mockNodeClientReader) Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error {
+	return fmt.Errorf("TODO")
+}
+
+func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, params url.Values) (*NodeRequest, error) {
+	panic("TODO")
 	//args := ra.Called(url)
 	//return args.Bool(0), args.String(1)
 }

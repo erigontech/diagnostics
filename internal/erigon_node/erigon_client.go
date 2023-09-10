@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -51,22 +52,17 @@ func (c *NodeClient) Version(ctx context.Context) (Versions, error) {
 }
 
 func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
-	// If Versions have not been retrieved, go ahead and retrieve them
 	if c.versions == nil {
 		_, err := c.Version(ctx)
 		if err != nil {
-			//fmt.Fprintf(w, "Unable to process flag due to inability to get node version: %s", versions.Error)
-			return nil, err
+			return nil, fmt.Errorf("Unable to process flag due to inability to get node version: %w", err)
 		}
 	}
 
 	if c.versions.NodeVersion < 2 {
-		//fmt.Fprintf(w, "Flags only support version >= 2. Node version: %d", versions.NodeVersion)
-		// TODO semeantic error propagate
-		return nil, nil
+		return nil, fmt.Errorf("Flags only support version >= 2. Node version: %d", c.versions.NodeVersion)
 	}
 
-	// Retrieving the data from the node
 	request, err := c.fetch(ctx, "flags", nil)
 
 	if err != nil {
@@ -116,15 +112,9 @@ func (c *NodeClient) nextRequestId() string {
 	return id
 }
 
-func (c *NodeClient) fetch(ctx context.Context, method string, params interface{}) (*NodeRequest, error) {
+func (c *NodeClient) fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error) {
 	if c.requestChannel == nil {
 		return nil, fmt.Errorf("ERROR: Node is not allocated")
-	}
-
-	jsonMsg, err := json.Marshal(params)
-
-	if err != nil {
-		return nil, err
 	}
 
 	nodeRequest := &NodeRequest{
@@ -133,8 +123,8 @@ func (c *NodeClient) fetch(ctx context.Context, method string, params interface{
 			Id:     c.nextRequestId(),
 			Method: method,
 			Params: &Params{
-				NodeId:       c.nodeId,
-				MethodParams: jsonMsg,
+				NodeId:      c.nodeId,
+				QueryParams: params,
 			},
 		}}
 
@@ -168,14 +158,14 @@ type Client interface {
 	// CMDLineArgs retrieves the command line arguments provided to run the erigon node
 	CMDLineArgs(ctx context.Context) (CmdLineArgs, error)
 
+	LogFiles(ctx context.Context) (LogFiles, error)
+	Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error
+
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	FindSyncStages(ctx context.Context, w http.ResponseWriter)
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter)
 	FindReorgs(ctx context.Context, w http.ResponseWriter)
-	ProcessLogList(ctx context.Context, w http.ResponseWriter, sessionName string) error
-	LogHead(ctx context.Context, filename string) (LogPart, error)
-	LogTail(ctx context.Context, filename string, offset uint64) (LogPart, error)
 
-	fetch(ctx context.Context, method string, params interface{}) (*NodeRequest, error)
+	fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error)
 }

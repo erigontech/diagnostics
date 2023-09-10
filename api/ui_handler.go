@@ -3,17 +3,14 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"mime"
 	"net/http"
-	"net/url"
-	"time"
+	"path"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/ledgerwatch/diagnostics"
 	api_internal "github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/pkg/errors"
 )
 
 var _ http.Handler = &UIHandler{}
@@ -138,15 +135,14 @@ func (h *UIHandler) Flags(w http.ResponseWriter, r *http.Request) {
 	jsonData, err := json.Marshal(flags)
 
 	if err != nil {
-		fmt.Fprintf(w, "Unable to get version: %v", err)
+		api_internal.EncodeError(w, r, err)
 	}
 
-	fmt.Printf("json data: %s\n", jsonData)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
 }
 
-func (h *UIHandler) LogList(w http.ResponseWriter, r *http.Request) {
+func (h *UIHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	client, err := h.findNodeClient(w, r)
 
 	if err != nil {
@@ -154,10 +150,24 @@ func (h *UIHandler) LogList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client.ProcessLogList(r.Context(), w, r.FormValue(NodeId))
+	logs, err := client.LogFiles(r.Context())
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+		return
+	}
+
+	jsonData, err := json.Marshal(logs)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
-func (h *UIHandler) LogHead(w http.ResponseWriter, r *http.Request) {
+func (h *UIHandler) Log(w http.ResponseWriter, r *http.Request) {
 	client, err := h.findNodeClient(w, r)
 
 	if err != nil {
@@ -165,46 +175,55 @@ func (h *UIHandler) LogHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ /*tail :*/, err = client.LogHead(r.Context(), url.QueryEscape(r.Form.Get("file")))
+	file := path.Base(r.URL.Path)
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if file == "/" || file == "." {
+		http.Error(w, fmt.Sprintf("file is required - specify the name of log file to read"), http.StatusBadRequest)
 		return
 	}
 
-	//return TODO SEMANTIC ERRORING
+	var offset int64
 
-	//if err := h.uiTemplate.ExecuteTemplate(w, "log_read.html", tail); err != nil {
-	//	fmt.Fprintf(w, "Executing log_read template: %v", err)
-	//	return
-	//}
+	offsetStr := r.URL.Query().Get("offset")
+
+	if offsetStr != "" {
+		offset, err = strconv.ParseInt(offsetStr, 10, 64)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("offset %s is not a Uint64 number: %v", offsetStr, err), http.StatusBadRequest)
+			return
+		}
+
+		if offset < 0 {
+			http.Error(w, fmt.Sprintf("offset %d must be non-negative", offset), http.StatusBadRequest)
+			return
+		}
+	}
+
+	var size int64
+
+	sizeStr := r.URL.Query().Get("size")
+
+	if sizeStr != "" {
+		size, err = strconv.ParseInt(sizeStr, 10, 64)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("size %s is not a Uint64 number: %v", sizeStr, err), http.StatusBadRequest)
+			return
+		}
+
+		if size < 0 {
+			http.Error(w, fmt.Sprintf("size %d must be non-negative", offset), http.StatusBadRequest)
+			return
+		}
+	}
+
+	download := r.URL.Query().Get("download")
+
+	client.Log(r.Context(), w, file, offset, size, len(download) > 0)
 }
 
-func (h *UIHandler) LogTail(w http.ResponseWriter, r *http.Request) {
-	client, err := h.findNodeClient(w, r)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	offset, _ := retrieveSizeStrFrom(r)
-	//return TODO SEMANTIC ERRORING
-
-	_ /*tail :*/, err = client.LogTail(r.Context(), url.QueryEscape(r.Form.Get("file")), offset)
-	//return TODO SEMANTIC ERRORING
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//if err := h.uiTemplate.ExecuteTemplate(w, "log_read.html", tail); err != nil {
-	//	fmt.Fprintf(w, "Executing log_read template: %v", err)
-	//	return
-	//}
-}
-
+/*
 func (h *UIHandler) LogDownload(w http.ResponseWriter, r *http.Request) {
 	// Handles the use case when operator clicks on the link with the log file name, and this initiates the download of this file
 	// to the operator's computer (via browser). See LogReader above which is used in http.ServeContent
@@ -232,6 +251,7 @@ func (h *UIHandler) LogDownload(w http.ResponseWriter, r *http.Request) {
 	logReader := &erigon_node.LogReader{Filename: filename, Client: client, Offset: 0, Total: size, Ctx: r.Context()}
 	http.ServeContent(w, r, filename, time.Now(), logReader)
 }
+*/
 
 func (h *UIHandler) ReOrg(w http.ResponseWriter, r *http.Request) {
 	client, err := h.findNodeClient(w, r)
@@ -306,22 +326,19 @@ func NewUIHandler(
 		erigonNode: erigonNode,
 	}
 
-	r.Get("/session/{sessionId}", r.GetSession)
+	r.Get("/sessions/{sessionId}", r.GetSession)
 
 	// Erigon Node data
-	r.Get("/session/{sessionId}/node/{nodeId}/versions", r.Versions)
-	r.Get("/session/{sessionId}/node/{nodeId}/cmdline", r.CMDLine)
-	r.Get("/session/{sessionId}/node/{nodeId}/flags", r.Flags)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/versions", r.Versions)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/cmdline", r.CMDLine)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/flags", r.Flags)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/logs", r.Logs)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/logs/{file}", r.Log)
 
-	r.Get("/session/{sessionId}/node/{nodeId}/log_list", r.LogList)
-	r.Get("/session/{sessionId}/node/{nodeId}/log_head", r.LogHead)
-	r.Get("/session/{sessionId}/node/{nodeId}/log_tail", r.LogTail)
-	r.Get("/session/{sessionId}/node/{nodeId}/log_download", r.LogDownload)
-
-	r.Get("/session/{sessionId}/node/{nodeId}/reorgs", r.ReOrg)
-	r.Get("/session/{sessionId}/node/{nodeId}/bodies_download", r.BodiesDownload)
-	r.Get("/session/{sessionId}/node/{nodeId}/headers_download", r.HeadersDownload)
-	r.Get("/session/{sessionId}/node/{nodeId}/sync_stages", r.SyncStages)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/reorgs", r.ReOrg)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-stats", r.BodiesDownload)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-stats", r.HeadersDownload)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
 
 	return r
 }

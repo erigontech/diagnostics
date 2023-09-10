@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/btree"
 )
-
-type DownloadParams struct {
-	SinceTick int64 `json:"sinceTick"`
-}
 
 func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
 	/*snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
@@ -25,7 +23,7 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) 
 	for {
 
 		// First, fetch list of DB paths
-		request, err := c.fetch(ctx, "block_body_download", &DownloadParams{SinceTick: tick})
+		request, err := c.fetch(ctx, "block_body_download", url.Values{"sinceTick": []string{strconv.FormatInt(tick, 10)}})
 
 		if err != nil {
 			fmt.Fprintf(w, "Fetching list of changes: %s", err)
