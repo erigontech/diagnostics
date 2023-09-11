@@ -175,7 +175,7 @@ func (h *UIHandler) Log(w http.ResponseWriter, r *http.Request) {
 	file := path.Base(r.URL.Path)
 
 	if file == "/" || file == "." {
-		http.Error(w, fmt.Sprintf("file is required - specify the name of log file to read"), http.StatusBadRequest)
+		http.Error(w, "file is required - specify the name of log file to read", http.StatusBadRequest)
 		return
 	}
 
@@ -301,7 +301,7 @@ func (h *UIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (erig
 	session, ok := h.sessions.FindNodeSession(nodeId)
 
 	if !ok {
-		return nil, fmt.Errorf("Unknown nodeId: %s", nodeId)
+		return nil, fmt.Errorf("unknown nodeId: %s", nodeId)
 	}
 
 	for _, sid := range session.UISessions {
@@ -310,7 +310,7 @@ func (h *UIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (erig
 		}
 	}
 
-	return nil, fmt.Errorf("Unknown sessionId: %s", sessionId)
+	return nil, fmt.Errorf("unknown sessionId: %s", sessionId)
 }
 
 func NewUIHandler(

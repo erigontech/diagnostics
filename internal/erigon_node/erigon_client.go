@@ -40,18 +40,17 @@ func (c *NodeClient) Version(ctx context.Context) (Versions, error) {
 	request, err := c.fetch(ctx, "version", nil)
 
 	if err != nil {
-		return *versions, err
+		return Versions{}, err
 	}
 
 	_, result, err := request.nextResult(ctx)
 
 	if err != nil {
-		versions.Error = err.Error()
-		return *versions, nil
+		return Versions{}, err
 	}
 
-	if err := json.Unmarshal(result, versions); err != nil {
-		versions.Error = err.Error()
+	if err := json.Unmarshal(result, &versions); err != nil {
+		return Versions{}, err
 	}
 
 	c.Lock()
@@ -63,16 +62,23 @@ func (c *NodeClient) Version(ctx context.Context) (Versions, error) {
 	return *versions, nil
 }
 
-func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
-	if c.versions == nil {
-		_, err := c.Version(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to process flag due to inability to get node version: %w", err)
-		}
+func (c *NodeClient) checkVersion(ctx context.Context, min uint64) error {
+	version, err := c.Version(ctx)
+
+	if err != nil {
+		return fmt.Errorf("can't get node version: %w", err)
 	}
 
-	if c.versions.NodeVersion < 2 {
-		return nil, fmt.Errorf("Flags only support version >= 2. Node version: %d", c.versions.NodeVersion)
+	if version.NodeVersion < min {
+		return fmt.Errorf("required version >= %d. Node version: %d", min, c.versions.NodeVersion)
+	}
+
+	return nil
+}
+
+func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
+	if err := c.checkVersion(ctx, 2); err != nil {
+		return nil, err
 	}
 
 	request, err := c.fetch(ctx, "flags", nil)
@@ -90,6 +96,7 @@ func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
 	}
 
 	if err := json.Unmarshal(result, &flags); err != nil {
+		fmt.Println("Res", string(result), err)
 		return nil, err
 	}
 

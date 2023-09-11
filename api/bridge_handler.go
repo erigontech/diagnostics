@@ -63,7 +63,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil {
 				log.Printf("Error creating node session: %v\n", err)
-				internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error creating node session: %w", err)))
+				internal.EncodeError(w, r, diagnostics.AsBadRequestErr(fmt.Errorf("error creating node session: %w", err)))
 				return
 
 			}
@@ -85,13 +85,13 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 					request.Responses <- &erigon_node.Response{
 						Last: true,
 						Error: &erigon_node.Error{
-							Message: fmt.Errorf("Failed to marshal request: %w", err).Error(),
+							Message: fmt.Errorf("failed to marshal request: %w", err).Error(),
 						},
 					}
 					continue
 				}
 
-				log.Printf("Sending request %s\n", string(bytes))
+				//fmt.Printf("Sending request %s\n", string(bytes))
 
 				requestMutex.Lock()
 				requestMap[rpcRequest.Id] = request
@@ -102,6 +102,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 					delete(requestMap, rpcRequest.Id)
 					requestMutex.Unlock()
 
+					fmt.Println(request.Retries, err)
 					request.Retries++
 					if request.Retries < 15 {
 						select {
@@ -112,7 +113,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 						request.Responses <- &erigon_node.Response{
 							Last: true,
 							Error: &erigon_node.Error{
-								Message: fmt.Errorf("Failed to write metrics request: %w", err).Error(),
+								Message: fmt.Errorf("failed to write metrics request: %w", err).Error(),
 							},
 						}
 					}
@@ -124,11 +125,13 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
+	decoder := json.NewDecoder(r.Body)
+
 	for {
 		var response erigon_node.Response
 
-		if err = json.NewDecoder(r.Body).Decode(&response); err != nil {
-			log.Printf("Reading response: %v\n", err)
+		if err = decoder.Decode(&response); err != nil {
+			fmt.Printf("can't read response: %v\n", err)
 			continue
 		}
 

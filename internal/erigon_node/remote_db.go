@@ -55,7 +55,7 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 
 	var lines []string
 
-	err = json.Unmarshal(result, lines)
+	err = json.Unmarshal(result, &lines)
 
 	if err != nil {
 		return "", err
@@ -88,7 +88,7 @@ func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) err
 
 	var lines []string
 
-	err = json.Unmarshal(result, lines)
+	err = json.Unmarshal(result, &lines)
 
 	if err != nil {
 		return err
