@@ -62,7 +62,6 @@ func (h *UIHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Unable to create session: %v", err)
 	}
 
-	fmt.Printf("json data: %s\n", jsonData)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
 }
@@ -88,7 +87,6 @@ func (h *UIHandler) Versions(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Unable to get version: %v", err)
 	}
 
-	fmt.Printf("json data: %s\n", jsonData)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
 }
@@ -113,7 +111,6 @@ func (h *UIHandler) CMDLine(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Unable to get version: %v", err)
 	}
 
-	fmt.Printf("json data: %s\n", jsonData)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
 }

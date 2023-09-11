@@ -8,13 +8,11 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 var _ Client = &NodeClient{}
 
 type NodeClient struct {
-	sync.Mutex
 	versions       *Versions
 	requestId      uint64
 	requestChannel chan *NodeRequest
@@ -109,11 +107,9 @@ func (c *NodeClient) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
 }
 
 func (c *NodeClient) nextRequestId() string {
-	c.Lock()
-	id := c.requestId
+	id := strconv.FormatUint(c.requestId, 10)
 	c.requestId++
-	c.Unlock()
-	return strconv.FormatUint(id, 10)
+	return id
 }
 
 func (c *NodeClient) fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error) {
