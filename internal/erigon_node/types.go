@@ -21,9 +21,9 @@ type LogFile struct {
 }
 
 type LogContent struct {
-	Offset   int64  `json:"offset"`
-	FileSize int64  `json:"fileSize"`
-	Chunk    []byte `json:"chunk"`
+	Offset int64  `json:"offset"`
+	Size   int64  `json:"size"`
+	Chunk  []byte `json:"chunk"`
 }
 
 type BodyDownload struct {

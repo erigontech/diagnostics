@@ -2,22 +2,139 @@ package erigon_node
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
+
+type DBs []string
+type Tables []Table
+
+type Table struct {
+	Name  string `json:"name"`
+	Count uint64 `json:"count"`
+	Size  uint64 `json:"size"`
+}
+
+type Results struct{}
+
+func (c *NodeClient) DBs(ctx context.Context) (DBs, error) {
+	request, err := c.fetch(ctx, "dbs", nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var dbs DBs
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &dbs); err != nil {
+		return nil, err
+	}
+
+	return dbs, nil
+}
+
+func (c *NodeClient) Tables(ctx context.Context, db string) (Tables, error) {
+	request, err := c.fetch(ctx, "dbs/"+db+"/tables", nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var tables Tables
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &tables); err != nil {
+		return nil, err
+	}
+
+	return tables, nil
+}
+
+func (c *NodeClient) Table(ctx context.Context, db string, table string) (Results, error) {
+	return Results{}, fmt.Errorf("TODO")
+}
 
 type RemoteDbReader interface {
 	Init(ctx context.Context, db string, table string, initialKey []byte) error
 	Next(ctx context.Context) ([]byte, []byte, error)
 }
 
+type results [][2]string
+
+func (r *results) UnmarshalJSON(json []byte) error {
+
+	*r = nil
+
+	result := [2]string{}
+
+	i := 0
+	ri := 0
+
+	for ; i < len(json); i++ {
+		if i == 0 {
+			if json[i] != byte('{') {
+				return fmt.Errorf(`unexpected json start '%c'`, json[i])
+			}
+
+			continue
+		}
+
+		if json[i] == byte('}') {
+			break
+		}
+
+		switch json[i] {
+		case byte('"'):
+			var len int
+
+			len, result[ri] = tostr(json[i:])
+			i += len
+
+			switch ri {
+			case 0:
+				ri++
+			case 1:
+				*r = append(*r, result)
+				result = [2]string{}
+				ri = 0
+			}
+		case byte(':'), byte(','):
+			continue
+		default:
+			return fmt.Errorf("unexpected char '%c' at %d", json[i], i)
+		}
+	}
+
+	return nil
+}
+
+func tostr(json []byte) (pos int, str string) {
+	// expects that the lead character is a '"'
+	for i := 1; i < len(json); i++ {
+		if json[i] == byte('"') {
+			return i, string(json[1:i])
+		}
+	}
+	return len(json), string(json[1:])
+}
+
 type RemoteCursor struct {
 	nodeClient Client
 	dbPath     string
 	table      string
-	lines      []string // Parsed response
+	results    results
 }
 
 func NewRemoteCursor(nodeClient Client) *RemoteCursor {
@@ -45,13 +162,17 @@ func (rc *RemoteCursor) Init(ctx context.Context, db string, table string, initi
 }
 
 func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, error) {
-	request, err := rc.nodeClient.fetch(ctx, "db_list", nil)
+	request, err := rc.nodeClient.fetch(ctx, "dbs", nil)
 
 	if err != nil {
 		return "", fmt.Errorf("unable to fetch database list: %s", err)
 	}
 
 	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return "", fmt.Errorf("unable to fetch database list: %s", err)
+	}
 
 	var lines []string
 
@@ -65,7 +186,7 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 	var dbPath string
 
 	for _, line := range lines {
-		if strings.HasSuffix(line, fmt.Sprintf("/%s", db)) {
+		if line == db {
 			dbPath = line
 		}
 	}
@@ -78,7 +199,7 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 }
 
 func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) error {
-	request, err := rc.nodeClient.fetch(ctx, "dbs/"+rc.dbPath+"/tables/"+rc.table+"/"+string(startKey), nil)
+	request, err := rc.nodeClient.fetch(ctx, "dbs/"+rc.dbPath+"/tables/"+rc.table+"/"+string(startKey)+"?limit=256", nil)
 
 	if err != nil {
 		return fmt.Errorf("reading %s table: %w", rc.table, err)
@@ -86,15 +207,24 @@ func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) err
 
 	_, result, err := request.nextResult(ctx)
 
-	var lines []string
+	if err != nil {
+		return err
+	}
 
-	err = json.Unmarshal(result, &lines)
+	var results struct {
+		Offset  int64   `json:"offset"`
+		Limit   int64   `json:"limit"`
+		Count   int64   `json:"count"`
+		Results results `json:"results"`
+	}
+
+	err = json.Unmarshal(result, &results)
 
 	if err != nil {
 		return err
 	}
 
-	rc.lines = lines
+	rc.results = results.Results
 	return nil
 }
 
@@ -124,25 +254,22 @@ func (rc *RemoteCursor) Next(ctx context.Context) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("cursor not initialized")
 	}
 
-	if len(rc.lines) == 0 {
+	if len(rc.results) == 0 {
 		return nil, nil, nil
 	}
-	line := rc.lines[0]
-	sepIndex := strings.Index(line, " | ")
-	if sepIndex == -1 {
-		return nil, nil, fmt.Errorf("could not find key-value separator | in the result line: %v", line)
-	}
+	result := rc.results[0]
+
 	var k, v []byte
 	var e error
-	if k, e = hex.DecodeString(line[:sepIndex]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the key [%s]: %v", line[:sepIndex], e)
+	if k, e = base64.URLEncoding.DecodeString(result[0]); e != nil {
+		return nil, nil, fmt.Errorf("could not parse the key [%s]: %v", result[0], e)
 	}
-	if v, e = hex.DecodeString(line[sepIndex+3:]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the value [%s]: %v", line[sepIndex+3:], e)
+	if v, e = base64.URLEncoding.DecodeString(result[1]); e != nil {
+		return nil, nil, fmt.Errorf("could not parse the value [%s]: %v", result[1], e)
 	}
-	rc.lines = rc.lines[1:]
+	rc.results = rc.results[1:]
 
-	if len(rc.lines) == 0 {
+	if len(rc.results) == 0 {
 		if e = rc.nextTableChunk(ctx, advance(k)); e != nil {
 			return k, v, e
 		}

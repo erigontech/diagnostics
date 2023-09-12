@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -96,7 +95,6 @@ func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
 	}
 
 	if err := json.Unmarshal(result, &flags); err != nil {
-		fmt.Println("Res", string(result), err)
 		return nil, err
 	}
 
@@ -154,19 +152,6 @@ func (c *NodeClient) fetch(ctx context.Context, method string, params url.Values
 	return nodeRequest, nil
 }
 
-func (c *NodeClient) getResultLines(result string) ([]string, error) {
-	lines := strings.Split(result, "\n")
-	if len(lines) == 0 || !strings.HasPrefix(lines[0], SuccessLine) {
-		return nil, fmt.Errorf("incorrect response (first line needs to be SUCCESS): %s", result)
-	}
-
-	if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
-		lines = lines[:len(lines)-1]
-	}
-
-	return lines[1:], nil
-}
-
 func NewErigonNodeClient() Client {
 	return &NodeClient{}
 }
@@ -178,12 +163,16 @@ type Client interface {
 	Flags(ctx context.Context) (Flags, error)
 	// CMDLineArgs retrieves the command line arguments provided to run the erigon node
 	CMDLineArgs(ctx context.Context) (CmdLineArgs, error)
+	FindSyncStages(ctx context.Context) (SyncStageProgress, error)
 
 	LogFiles(ctx context.Context) (LogFiles, error)
 	Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error
 
+	DBs(ctx context.Context) (DBs, error)
+	Tables(ctx context.Context, db string) (Tables, error)
+	Table(ctx context.Context, db string, table string) (Results, error)
+
 	// TODO: refactor the following methods to follow above pattern where appropriate
-	FindSyncStages(ctx context.Context, w http.ResponseWriter)
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter)
 	FindReorgs(ctx context.Context, w http.ResponseWriter)

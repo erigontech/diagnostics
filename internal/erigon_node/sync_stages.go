@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"net/http"
 	"strconv"
 )
 
@@ -20,20 +19,11 @@ const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
 const syncProgressBase = 10
 
-func (c *NodeClient) FindSyncStages(ctx context.Context, w http.ResponseWriter) {
+func (c *NodeClient) FindSyncStages(ctx context.Context) (SyncStageProgress, error) {
 	rc := NewRemoteCursor(c)
 	syncStages := &SyncStages{rc: rc}
 
-	_ /*syncStageProgress*/, err := syncStages.fetchSyncStageProgress(ctx)
-	if err != nil {
-		fmt.Printf("Unable to fetch sync stage progress: %v\n", err)
-		//	return nil, err
-	}
-
-	//if templateErr := template.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {
-	//	fmt.Fprintf(w, "Executing Sync stages template: %v\n", templateErr)
-	//	return
-	//}
+	return syncStages.fetchSyncStageProgress(ctx)
 }
 
 func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProgress, error) {

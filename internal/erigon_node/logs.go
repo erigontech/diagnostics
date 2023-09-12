@@ -31,16 +31,16 @@ func (c *NodeClient) LogFiles(ctx context.Context) (LogFiles, error) {
 
 }
 
-func (c *NodeClient) Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error {
+func (c *NodeClient) Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, limit int64, download bool) error {
 	var params url.Values
 
-	if offset > 0 || size > 0 {
+	if offset > 0 || limit > 0 {
 		params = url.Values{
 			"offset": []string{strconv.FormatInt(offset, 10)},
 		}
 
-		if size > 0 {
-			params.Set("size", strconv.FormatInt(size, 10))
+		if limit > 0 {
+			params.Set("limit", strconv.FormatInt(limit, 10))
 		}
 	}
 

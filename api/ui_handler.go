@@ -197,33 +197,30 @@ func (h *UIHandler) Log(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var size int64
+	var limit int64
 
-	sizeStr := r.URL.Query().Get("size")
+	limitStr := r.URL.Query().Get("limit")
 
-	if sizeStr != "" {
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
+	if limitStr != "" {
+		limit, err = strconv.ParseInt(limitStr, 10, 64)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("size %s is not a Uint64 number: %v", sizeStr, err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("limit %s is not a Uint64 number: %v", limitStr, err), http.StatusBadRequest)
 			return
 		}
 
-		if size < 0 {
-			http.Error(w, fmt.Sprintf("size %d must be non-negative", offset), http.StatusBadRequest)
+		if limit < 0 {
+			http.Error(w, fmt.Sprintf("limit %d must be non-negative", offset), http.StatusBadRequest)
 			return
 		}
 	}
 
 	download := r.URL.Query().Get("download")
 
-	client.Log(r.Context(), w, file, offset, size, len(download) > 0)
+	client.Log(r.Context(), w, file, offset, limit, len(download) > 0)
 }
 
-/*
-func (h *UIHandler) LogDownload(w http.ResponseWriter, r *http.Request) {
-	// Handles the use case when operator clicks on the link with the log file name, and this initiates the download of this file
-	// to the operator's computer (via browser). See LogReader above which is used in http.ServeContent
+func (h *UIHandler) DBs(w http.ResponseWriter, r *http.Request) {
 	client, err := h.findNodeClient(w, r)
 
 	if err != nil {
@@ -231,24 +228,54 @@ func (h *UIHandler) LogDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	size, err := retrieveSizeStrFrom(r)
+	dbs, err := client.DBs(r.Context())
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+		return
+	}
+
+	jsonData, err := json.Marshal(dbs)
+
 	if err != nil {
 		api_internal.EncodeError(w, r, err)
 	}
-	filename := r.Form.Get("file")
-	if client == nil {
-		api_internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("ERROR: Node is not allocated\n")))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
+func (h *UIHandler) Tables(w http.ResponseWriter, r *http.Request) {
+	db, tables := path.Split(chi.URLParam(r, "*"))
+
+	if tables != "tables" {
+		http.Error(w, "unexpected db path format", http.StatusNotFound)
+		return
 	}
 
-	cd := mime.FormatMediaType("attachment", map[string]string{"filename": SessionId + "_" + filename})
+	client, err := h.findNodeClient(w, r)
 
-	w.Header().Set("Content-Disposition", cd)
-	w.Header().Set("Content-Type", "application/octet-stream")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	logReader := &erigon_node.LogReader{Filename: filename, Client: client, Offset: 0, Total: size, Ctx: r.Context()}
-	http.ServeContent(w, r, filename, time.Now(), logReader)
+	dbs, err := client.Tables(r.Context(), db[:len(db)-1])
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+		return
+	}
+
+	jsonData, err := json.Marshal(dbs)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
-*/
 
 func (h *UIHandler) ReOrg(w http.ResponseWriter, r *http.Request) {
 	client, err := h.findNodeClient(w, r)
@@ -291,7 +318,22 @@ func (h *UIHandler) SyncStages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client.FindSyncStages(r.Context(), w)
+	syncStages, err := client.FindSyncStages(r.Context())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch sync stage progress: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, err := json.Marshal(syncStages)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+
 }
 
 func (h *UIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (erigon_node.Client, error) {
@@ -331,6 +373,9 @@ func NewUIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/flags", r.Flags)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/logs", r.Logs)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/logs/{file}", r.Log)
+
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/dbs", r.DBs)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/dbs/*", r.Tables)
 
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/reorgs", r.ReOrg)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-stats", r.BodiesDownload)
