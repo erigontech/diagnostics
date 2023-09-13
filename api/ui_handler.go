@@ -378,8 +378,8 @@ func NewUIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/dbs/*", r.Tables)
 
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/reorgs", r.ReOrg)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-stats", r.BodiesDownload)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-stats", r.HeadersDownload)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-summary", r.BodiesDownload)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
 
 	return r

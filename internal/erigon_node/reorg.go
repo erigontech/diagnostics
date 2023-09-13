@@ -56,9 +56,7 @@ func (c *NodeClient) executeFlush(writer io.Writer,
 // return back total blocks set and wrong blocks
 // if there are errors in the middle of processing will return back
 // slice of errors
-func (c *NodeClient) findReorgsInternally(ctx context.Context,
-	rc *RemoteCursor,
-) (map[uint64][]byte, []uint64, []error) {
+func (c *NodeClient) findReorgsInternally(ctx context.Context, rc *RemoteCursor) (map[uint64][]byte, []uint64, []error) {
 	var errors []error
 	set := make(map[uint64][]byte)
 	var wrongBlocks []uint64

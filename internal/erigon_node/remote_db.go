@@ -71,13 +71,13 @@ type RemoteDbReader interface {
 	Next(ctx context.Context) ([]byte, []byte, error)
 }
 
-type results [][2]string
+type results [][2][]byte
 
-func (r *results) UnmarshalJSON(json []byte) error {
+func (r *results) UnmarshalJSON(json []byte) (err error) {
 
 	*r = nil
 
-	result := [2]string{}
+	result := [2][]byte{}
 
 	i := 0
 	ri := 0
@@ -97,17 +97,20 @@ func (r *results) UnmarshalJSON(json []byte) error {
 
 		switch json[i] {
 		case byte('"'):
-			var len int
+			len, value := tostr(json[i:])
 
-			len, result[ri] = tostr(json[i:])
 			i += len
+
+			if result[ri], err = base64.URLEncoding.DecodeString(value); err != nil {
+				return err
+			}
 
 			switch ri {
 			case 0:
 				ri++
 			case 1:
 				*r = append(*r, result)
-				result = [2]string{}
+				result = [2][]byte{}
 				ri = 0
 			}
 		case byte(':'), byte(','):
@@ -259,20 +262,12 @@ func (rc *RemoteCursor) Next(ctx context.Context) ([]byte, []byte, error) {
 	}
 	result := rc.results[0]
 
-	var k, v []byte
-	var e error
-	if k, e = base64.URLEncoding.DecodeString(result[0]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the key [%s]: %v", result[0], e)
-	}
-	if v, e = base64.URLEncoding.DecodeString(result[1]); e != nil {
-		return nil, nil, fmt.Errorf("could not parse the value [%s]: %v", result[1], e)
-	}
 	rc.results = rc.results[1:]
 
 	if len(rc.results) == 0 {
-		if e = rc.nextTableChunk(ctx, advance(k)); e != nil {
-			return k, v, e
+		if e := rc.nextTableChunk(ctx, advance(result[0])); e != nil {
+			return result[0], result[1], e
 		}
 	}
-	return k, v, e
+	return result[0], result[1], nil
 }
