@@ -25,3 +25,8 @@
 *.log
 
 _bin/
+
+go.work*
+
+# temp testing
+hive/  

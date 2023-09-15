@@ -7,7 +7,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/ledgerwatch/diagnostics/api/internal"
-	"github.com/ledgerwatch/diagnostics/assets"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
 )
@@ -32,8 +31,7 @@ func NewHandler(services APIServices) http.Handler {
 		Handler)
 
 	r.Mount(internal.HealthCheckEndPoint, HealthCheckHandler())
-	r.Mount(internal.ScriptEndPoint, http.FileServer(http.FS(assets.Scripts)))
-	r.Mount(internal.SupportEndPoint, NewBridgeHandler(services.StoreSession))
+	r.Mount(internal.BridgeEndPoint, NewBridgeHandler(services.StoreSession))
 
 	r.Group(func(r chi.Router) {
 		session := sessions.Middleware{CacheService: services.StoreSession}
