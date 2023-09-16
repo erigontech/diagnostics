@@ -202,7 +202,7 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 }
 
 func (rc *RemoteCursor) nextTableChunk(ctx context.Context, startKey []byte) error {
-	request, err := rc.nodeClient.fetch(ctx, "dbs/"+rc.dbPath+"/tables/"+rc.table+"/"+string(startKey)+"?limit=256", nil)
+	request, err := rc.nodeClient.fetch(ctx, "dbs/"+rc.dbPath+"/tables/"+rc.table+"/"+base64.URLEncoding.EncodeToString(startKey)+"?limit=256", nil)
 
 	if err != nil {
 		return fmt.Errorf("reading %s table: %w", rc.table, err)
