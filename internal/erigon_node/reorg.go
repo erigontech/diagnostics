@@ -18,15 +18,21 @@ const (
 	maxCount     = 1000
 )
 
+type Reorg struct {
+	TotalScanned int      `json:"TotalScanned"`
+	WrongBlocks  []uint64 `json:"WrongBlocks"`
+	TimeTook     string   `json:"TimeTook"`
+}
+
 // FindReorgs - Go through "Header" table and look for entries with the same block number but different hashes
-func (c *NodeClient) FindReorgs(ctx context.Context, writer http.ResponseWriter) {
+func (c *NodeClient) FindReorgs(ctx context.Context, writer http.ResponseWriter) (Reorg, error) {
 	start := time.Now()
 	var err error
 
 	rc := NewRemoteCursor(c)
 	if err = rc.Init(ctx, headersDb, headersTable, nil); err != nil {
 		fmt.Fprintf(writer, "Create remote cursor: %v", err)
-		return
+		return Reorg{}, err
 	}
 
 	total, wrongBlocks, errors := c.findReorgsInternally(ctx, rc)
@@ -36,8 +42,11 @@ func (c *NodeClient) FindReorgs(ctx context.Context, writer http.ResponseWriter)
 		}
 	}
 
-	fmt.Fprintf(writer, "Reorg iterator: %d, total scanned %s\n", len(total), time.Since(start))
-	fmt.Fprintf(writer, "Reorg iterator: %d, wrong blocks\n", len(wrongBlocks))
+	return Reorg{
+		TotalScanned: len(total),
+		WrongBlocks:  wrongBlocks,
+		TimeTook:     time.Since(start).String(),
+	}, nil
 }
 
 func (c *NodeClient) executeFlush(writer io.Writer,

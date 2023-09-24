@@ -285,7 +285,19 @@ func (h *UIHandler) ReOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client.FindReorgs(r.Context(), w)
+	reorgs, err := client.FindReorgs(r.Context(), w)
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	jsonData, err := json.Marshal(reorgs)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 func (h *UIHandler) BodiesDownload(w http.ResponseWriter, r *http.Request) {

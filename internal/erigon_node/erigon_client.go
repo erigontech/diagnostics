@@ -172,10 +172,11 @@ type Client interface {
 	Tables(ctx context.Context, db string) (Tables, error)
 	Table(ctx context.Context, db string, table string) (Results, error)
 
+	FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error)
+
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter)
-	FindReorgs(ctx context.Context, w http.ResponseWriter)
 
 	fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error)
 }
