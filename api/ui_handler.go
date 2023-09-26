@@ -345,6 +345,31 @@ func (h *UIHandler) SyncStages(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
+}
+
+func (h *UIHandler) Peers(w http.ResponseWriter, r *http.Request) {
+	client, err := h.findNodeClient(w, r)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	peers, err := client.FindPeers(r.Context())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch peers: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, err := json.Marshal(peers)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 
 }
 
@@ -393,6 +418,7 @@ func NewUIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-summary", r.BodiesDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/peers", r.Peers)
 
 	return r
 }

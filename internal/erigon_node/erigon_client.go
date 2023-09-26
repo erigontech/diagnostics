@@ -123,6 +123,28 @@ func (c *NodeClient) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
 	return args, nil
 }
 
+func (c *NodeClient) FindPeers(ctx context.Context) (PeersInfo, error) {
+	var peers PeersInfo
+
+	request, err := c.fetch(ctx, "peers", nil)
+
+	if err != nil {
+		return peers, err
+	}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &peers); err != nil {
+		return nil, err
+	}
+
+	return peers, nil
+}
+
 func (c *NodeClient) nextRequestId() string {
 	c.Lock()
 	id := c.requestId
@@ -173,6 +195,8 @@ type Client interface {
 	Table(ctx context.Context, db string, table string) (Results, error)
 
 	FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error)
+
+	FindPeers(ctx context.Context) (PeersInfo, error)
 
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
