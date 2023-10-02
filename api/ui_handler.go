@@ -373,6 +373,32 @@ func (h *UIHandler) Peers(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (h *UIHandler) Bootnodes(w http.ResponseWriter, r *http.Request) {
+	client, err := h.findNodeClient(w, r)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	bootnodes, err := client.Bootnodes(r.Context())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch bootnodes: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, err := json.Marshal(bootnodes)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+
+}
+
 func (h *UIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (erigon_node.Client, error) {
 	sessionId := chi.URLParam(r, SessionId)
 	nodeId := chi.URLParam(r, NodeId)
@@ -419,6 +445,7 @@ func NewUIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/peers", r.Peers)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bootnodes", r.Bootnodes)
 
 	return r
 }

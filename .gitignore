@@ -30,3 +30,7 @@ go.work*
 
 # temp testing
 hive/  
+
+*__debug_bin*
+yarn.lock
+node_modules

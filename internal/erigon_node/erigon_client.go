@@ -12,6 +12,8 @@ import (
 
 var _ Client = &NodeClient{}
 
+type Bootnodes []string
+
 type NodeClient struct {
 	sync.Mutex
 	versions       *Versions
@@ -145,6 +147,28 @@ func (c *NodeClient) FindPeers(ctx context.Context) (PeersInfo, error) {
 	return peers, nil
 }
 
+func (c *NodeClient) Bootnodes(ctx context.Context) (Bootnodes, error) {
+	var bootnodes Bootnodes
+
+	request, err := c.fetch(ctx, "bootnodes", nil)
+
+	if err != nil {
+		return bootnodes, err
+	}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &bootnodes); err != nil {
+		return nil, err
+	}
+
+	return bootnodes, nil
+}
+
 func (c *NodeClient) nextRequestId() string {
 	c.Lock()
 	id := c.requestId
@@ -195,8 +219,9 @@ type Client interface {
 	Table(ctx context.Context, db string, table string) (Results, error)
 
 	FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error)
-
 	FindPeers(ctx context.Context) (PeersInfo, error)
+
+	Bootnodes(ctx context.Context) (Bootnodes, error)
 
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
