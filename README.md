@@ -196,6 +196,7 @@ http://<metrics.addr>:<metrics.port>/debug/metrics/prometheus
 If metrics are exposed, textual representation of metrics will be displayed in the browser.
 
 # How to connect Erigon node to the diagnostics system
+![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
  Open your default web browser. The app's diagnostic user interface (UI) will automatically open at https://localhost:8000 after you run one of the following commands:
 ```
