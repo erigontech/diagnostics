@@ -261,14 +261,36 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 # Currently implemented diagnostics
 
-  In the application, each tab displays a list of connected Erigon nodes, allowing the operator to view the code version with which each Erigon node has been built. Additionally, the operator can switch between connected nodes. The corresponding code responsible for this functionality in Erigon can be found in the file `internal/api/ui_handler.go`. This file contains the implementation details for managing the connected nodes and displaying their code versions within the diagnostics UI.
+## Status Bar
+  The Status Bar in our application displays essential information about the current session and operating erigon node. It also allows operators to switch between different sessions and nodes quickly.
+  ![status-bar](/_images/statusbar/status_bar.png)
+  - ### Current Session
+    The "Current Session" section of the status bar displays information about the currently active session.
+    ![status-bar-session](/_images/statusbar/status_bar_sessions.png)
 
-![versions](/_images/versions.png)
+  - ### Operating Node
+    The "Operating Node" section of the status bar displays information about the currently active erigon node.
+    ![status-bar-node](/_images/statusbar/status_bar_nodes.png)
+
+  - ### Switching Between Sessions and Nodes
+    You can easily switch between different sessions and nodes by clicking on the respective session or node in the status bar.
+
+  - ### Session/Node Popup
+    After clicking on a session or node, a popup will appear, displaying a list of available sessions or nodes to switch between.
+
+    To Switch Between Sessions or Nodes:
+    - Click on the "Current Session" or "Operating Node" section of the status bar.
+    - A popup window will appear, listing all available sessions or nodes.
+    - Click on the desired session or node in the list.
+    - The application will switch to the selected session or node.
+
+    ![sessions-popup](/_images/statusbar/sessions_popup.png)
+    ![nodes-popup](/_images/statusbar/nodes_popup.png)
 ## Process Tab
   - ### Command:
     Within the diagnostics application, the operator has the capability to inspect the command line arguments that were used to launch the Erigon node. This functionality is implemented in the file `internal/erigon_node/erigon_client.go`, specifically within the function named `CMDLineArgs`. 
 
-![cmd line](/_images/cmd_line.png)
+![cmd line](/_images/process/cmd_line.png)
 
   - ### Flags:
     In the Erigon node, the operator can examine the flags that are set in the CLI context by the user when launching the node. This functionality is implemented in the file internal/erigon_node/erigon_client.go. The relevant code for retrieving and displaying these flags can be found within this file.
@@ -282,21 +304,56 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
     
     This table allows the operator to easily review and understand the configuration settings for various flags in the Erigon node, including whether these settings were user-defined or are using default values.
 
-![flags](/_images/flags.png)
+![flags](/_images/process/flags.png)
 
   - ### Node info
 
     Contains detailed info about erigon node. Coresponding code located at `internal/api/ui_handler.go`
 
-![sync_stage](/_images/node_info.png)
+![sync_stage](/_images/process/node_info.png)
 
   - ### Sync stages
 
     This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
     This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
 
-![sync_stage](/_images/sync_stages.png)
+![sync_stage](/_images/process/sync_stages.png)
+
+  - ### Reorgs
+
+    This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via erigon support tunnel. Re-orgs can be identified by the presence of multiple block headers with the same block height but different block hashes.
+
+    One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
+
+    The corresponding code in Erigon is in the file internal/sessions/cache.go, and it relies on a feature recently added to the Erigon's code, which is mdbx.PathDbMap(), the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem. This allows cache.go to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
   
+  ![sync_stage](/_images/process/find_reorgs.png)
+
+## Network Tab
+
+Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+
+### Overview Data Table:
+
+  - **Active Peers:** Displays the number of currently active peers in the network.
+  - **Static Peers:** Indicates the number of static peers defined in your Erigon configuration.
+  - **Total Seen Peers:** Shows the total number of peers observed during all diagnostics sessions with the current node.
+  - **Total Errors:** Provides information about any errors or issues encountered with network peers.
+
+By clicking on the Active, Static, or Total Seen Peers table, you can access detailed information about each peer. The peer details table includes the following columns:
+
+  - **Enode URL:** The URL of the Erigon node associated with the peer.
+  - **Peer ID:** A unique identifier for the peer.
+  - **Client ID:** Details about the connected client, including its name and version (e.g., Geth/v1.13.0-stable-7371b381/linux-amd64/go1.21.1).
+  - **Type:** Indicates whether the peer is static, a bootnode, or dynamic.
+  - **Status:** Displays the status of the peer, indicating whether it's currently active.
+  - **Errors Count:** Shows the total count of errors encountered with this peer.
+  - **Last Seen Error:** Provides information about the most recent error seen with this peer.
+
+This detailed peer information allows you to gain insights into your network connections, helping you troubleshoot and manage your network effectively.
+
+![sync_stage](/_images/peers.png)
+
 ## Logs Tab
 
   Since version 2.43.0, Erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log rotation. Using diagnostics system,
@@ -310,26 +367,6 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 Operator has the capability to inspect the databases and their tables. This functionality is implemented in the file  `internal/erigon_node/remote_db.go`.
 
 ![flags](/_images/dbs.png)
-
-## (--DEPRECATED--) Reorg scanner
-
-This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via `erigon support` tunnel. Re-orgs can be identified by
-the presence of multiple block headers with the same block height but different block hashes.
-
-One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against
-Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
-
-The corresponding code in Erigon is in the file `internal/sessions/cache.go`, and it relies on a feature recently added to the Erigon's code, which is
-`mdbx.PathDbMap()`, the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem.
-This allows `cache.go` to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
-
-The code on the side of the diagnostics system is `internal/erigon_node/reorgs.go`. The function `findReorgs` generates HTML piece by piece, executing two different html templates
-(`assets/template/reorg_spacer.html` and `assets/template/reorg_block.html`). These continuously generated HTML lines are picked up by javascript function `findReorgs`
-in file `assets/script/session.js`, which appends them to `innerHTML` field of the div element. This creates an effect of animation, notifying the operator of the
-progress of the scanning for reorgs (with spacer html pieces, one for each 1000 blocks), and showing intermediate results of the scan (with block html pieces,
-one for each reorged block found).
-
-![scan reorgs](/_images/scan_reorgs.png)
 
 ## (--DEPRECATED--) Header Download
 This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`.
