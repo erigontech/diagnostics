@@ -10,11 +10,17 @@ type Versions struct {
 }
 
 type PeerNetworkInfo struct {
-	LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
-	RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
-	Inbound       bool   `json:"inbound"`
-	Trusted       bool   `json:"trusted"`
-	Static        bool   `json:"static"`
+	LocalAddress  string         `json:"localAddress"`  // Local endpoint of the TCP data connection
+	RemoteAddress string         `json:"remoteAddress"` // Remote endpoint of the TCP data connection
+	Inbound       bool           `json:"inbound"`
+	Trusted       bool           `json:"trusted"`
+	Static        bool           `json:"static"`
+	BytesIn       int            `json:"bytesIn"`  // Number of bytes received from the peer
+	BytesOut      int            `json:"bytesOut"` // Number of bytes sent to the peer
+	CapBytesIn    map[string]int `json:"capBytesIn"`
+	CapBytesOut   map[string]int `json:"capBytesOut"`
+	TypeBytesIn   map[string]int `json:"typeBytesIn"`
+	TypeBytesOut  map[string]int `json:"typeBytesOut"`
 }
 
 type PeerInfo struct {
@@ -28,8 +34,6 @@ type PeerInfo struct {
 	Caps          []string               `json:"caps"`          // Protocols advertised by this peer
 	Network       PeerNetworkInfo        `json:"network"`
 	Protocols     map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
-	BytesIn       int                    `json:"bytesIn"`   // Number of bytes received from the peer
-	BytesOut      int                    `json:"bytesOut"`  // Number of bytes sent to the peer
 }
 
 type PeersInfo []PeerInfo
