@@ -17,7 +17,6 @@ import (
 	"github.com/ledgerwatch/diagnostics/api"
 	"github.com/ledgerwatch/diagnostics/internal/logging"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/ledgerwatch/diagnostics/web"
 )
 
 func main() {
@@ -92,7 +91,34 @@ func main() {
 
 	}
 
-	http.Handle("/", web.UI)
+	r := http.NewServeMux()
+
+	r.HandleFunc("/network", index)
+	r.HandleFunc("/logs", index)
+	r.HandleFunc("/chain", index)
+	r.HandleFunc("/data", index)
+	r.HandleFunc("/debug", index)
+	r.HandleFunc("/testing", index)
+	r.HandleFunc("/performance", index)
+	r.HandleFunc("/documentation", index)
+	r.HandleFunc("/admin", index)
+	buildHandler := http.FileServer(http.Dir("./../../web/dist"))
+	r.Handle("/", buildHandler)
+
+	server := &http.Server{
+		Handler:      r,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	/*http.Handle("/", web.UI)
 
 	server := &http.Server{
 		Addr:              ":8000",
@@ -103,7 +129,7 @@ func main() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
-	}()
+	}()*/
 
 	open("http://localhost:8000")
 
@@ -118,6 +144,10 @@ func main() {
 		log.Println("Terminating eagerly.")
 		os.Exit(-int(syscall.SIGINT))
 	}
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./../../web/dist/index.html")
 }
 
 // open opens the specified URL in the default browser of the user.
