@@ -198,7 +198,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 # How to connect Erigon node to the diagnostics system
 ![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
- Open your default web browser. The app's diagnostic user interface (UI) will automatically open at https://localhost:8000 after you run one of the following commands:
+ The app's diagnostic user interface (UI) will automatically open at https://localhost:8000 after you run one of the following commands:
 ```
 ./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
@@ -209,7 +209,7 @@ or
 
 
 #### Step 2: 
-In the same web browser, open a new tab and navigate to `https://localhost:8080/ui`. Please note that you may need to accept the security risks associated with the self-signed certificate. This action is required only the first time you access this URL, as your browser will remember your choice for subsequent visits.
+In the same web browser, open a new tab and navigate to `https://localhost`. Please note that you may need to accept the security risks associated with the self-signed certificate. This action is required only the first time you access this URL, as your browser will remember your choice for subsequent visits.
 
 #### Step 3: 
 Return to the app's UI at https://localhost:8000. Follow these steps to create a session:
@@ -342,17 +342,39 @@ Our diagnostics tools allow you to collect and view essential information about 
 
 By clicking on the Active, Static, or Total Seen Peers table, you can access detailed information about each peer. The peer details table includes the following columns:
 
-  - **Enode URL:** The URL of the Erigon node associated with the peer.
   - **Peer ID:** A unique identifier for the peer.
-  - **Client ID:** Details about the connected client, including its name and version (e.g., Geth/v1.13.0-stable-7371b381/linux-amd64/go1.21.1).
   - **Type:** Indicates whether the peer is static, a bootnode, or dynamic.
   - **Status:** Displays the status of the peer, indicating whether it's currently active.
+  - **Network Usage:** Shows the total amount of data sent and received over the network.
   - **Errors Count:** Shows the total count of errors encountered with this peer.
-  - **Last Seen Error:** Provides information about the most recent error seen with this peer.
 
 This detailed peer information allows you to gain insights into your network connections, helping you troubleshoot and manage your network effectively.
 
 ![sync_stage](/_images/peers.png)
+
+### Peer Details Popup
+
+**Main Info:**
+
+- **ID:** A unique identifier for the network peer.
+- **Bytes In:** The total amount of data received by the peer, measured in megabytes (MB).
+- **Bytes Out:** The total amount of data sent by the peer, measured in kilobytes (KB).
+
+**Network Usage By Capability:**
+
+- **Type:** The capability of the communication channel.
+- **Bytes In:** The amount of data received from the peer.
+- **Bytes Out:** The amount of data sent to the peer.
+
+**Network Usage By Type:**
+
+- **Type:** The specific message type. (https://github.com/ethereum/devp2p/blob/master/caps/eth.md#protocol-messages)
+- **Bytes In:** The amount of data received for each type.
+- **Bytes Out:** The amount of data sent for each type.
+
+Use this detailed popup to analyze and monitor the network activity of peers, aiding in troubleshooting, optimizing performance, and resource allocation. It offers a clear and concise breakdown of peer interactions with the network, facilitating better network management and decision-making.
+
+![sync_stage](/_images/peer_details.png)
 
 ## Logs Tab
 
