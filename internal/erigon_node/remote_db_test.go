@@ -45,11 +45,6 @@ func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.Resp
 	panic("TODO")
 }
 
-func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) {
-
-	panic("TODO")
-}
-
 func (ra *mockNodeClientReader) LogFiles(ctx context.Context) (LogFiles, error) {
 	return nil, fmt.Errorf("TODO")
 }
@@ -79,6 +74,18 @@ func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, params ur
 func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
+}
+
+func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error) {
+	panic("TODO")
+}
+
+func (ra *mockNodeClientReader) FindPeers(ctx context.Context) (PeersInfo, error) {
+	panic("TODO")
+}
+
+func (ra *mockNodeClientReader) Bootnodes(ctx context.Context) (Bootnodes, error) {
+	panic("TODO")
 }
 
 type remoteCursorDependencies struct {
