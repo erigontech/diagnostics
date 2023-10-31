@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"html/template"
-	"io"
 	"net/http"
 	"time"
 )
@@ -49,7 +47,7 @@ func (c *NodeClient) FindReorgs(ctx context.Context, writer http.ResponseWriter)
 	}, nil
 }
 
-func (c *NodeClient) executeFlush(writer io.Writer,
+/*func (c *NodeClient) executeFlush(writer io.Writer,
 	template *template.Template,
 	name string, data any) error {
 	if err := template.ExecuteTemplate(writer, name, data); err != nil {
@@ -59,7 +57,7 @@ func (c *NodeClient) executeFlush(writer io.Writer,
 		f.Flush()
 	}
 	return nil
-}
+}*/
 
 // findReorgsInternally - searching for reorgs,
 // return back total blocks set and wrong blocks
@@ -77,7 +75,7 @@ func (c *NodeClient) findReorgsInternally(ctx context.Context, rc *RemoteCursor)
 	for k, _, err = rc.Next(ctx); err == nil && k != nil; k, _, err = rc.Next(ctx) {
 		select {
 		case <-ctx.Done():
-			return nil, nil, []error{fmt.Errorf("Interrupted\n")}
+			return nil, nil, []error{fmt.Errorf("Interrupted")}
 		default:
 		}
 
@@ -99,6 +97,7 @@ func (c *NodeClient) findReorgsInternally(ctx context.Context, rc *RemoteCursor)
 
 		iterator++
 		if iterator%maxCount == 0 {
+			fmt.Print(".")
 			//if template != nil {
 			//	if err := c.executeFlush(nil, template, "reorg_block.html", bn); err != nil {
 			//		errors = append(errors, fmt.Errorf("Executing reorg_spacer template: %v\n", err))

@@ -71,10 +71,10 @@ func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, params ur
 	//return args.Bool(0), args.String(1)
 }
 
-func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
+/*func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
-}
+}*/
 
 func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error) {
 	panic("TODO")

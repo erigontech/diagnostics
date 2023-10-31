@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	"github.com/google/btree"
 )
 
 func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
@@ -36,6 +34,11 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter)
 		}
 
 		more, _ /*result*/, err := request.nextResult(ctx)
+
+		if err != nil {
+			fmt.Fprintf(w, "Fetching list of changes: %s", err)
+			return
+		}
 
 		/*
 			var changesMode bool
@@ -109,7 +112,7 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter)
 	}
 }
 
-func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, sendEvery *time.Ticker) {
+/*func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, sendEvery *time.Ticker) {
 	//<- sendEvery.C
 	var hd HeaderDownload
 	first := true
@@ -142,4 +145,4 @@ func sendHeadersSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWr
 	//	fmt.Fprintf(w, "Executing headers_download template: %v", err)
 	//	return
 	//}
-}
+}*/

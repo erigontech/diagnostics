@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	"github.com/google/btree"
 )
 
 func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
@@ -38,6 +36,11 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) 
 		}
 
 		more, _ /*result*/, err := request.nextResult(ctx)
+
+		if err != nil {
+			fmt.Fprintf(w, "Fetching list of changes: %s", err)
+			return
+		}
 
 		/*
 			var changesMode bool
@@ -110,7 +113,7 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) 
 	}
 }
 
-func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter) {
+/*func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter) {
 	//<- sendEvery.C
 	var bd BodyDownload
 	first := true
@@ -143,6 +146,6 @@ func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter) {
 	//	fmt.Fprintf(w, "Executing body_download template: %v", err)
 	//	return
 	//}
-}
+}*/
 
 const VisLimit = 1000
