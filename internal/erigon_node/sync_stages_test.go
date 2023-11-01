@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type mockRemoteCursor struct {
@@ -66,8 +68,8 @@ func TestFetchSyncStageProgress(t *testing.T) {
 			},
 			assert: func(ssp SyncStageProgress) {
 				exp := SyncStageProgress{
-					string(firstStageName):  fmt.Sprintf("%d", firstStageProgress),
-					string(secondStageName): fmt.Sprintf("%d", secondStageProgress),
+					string(firstStageName):  strconv.FormatUint(firstStageProgress, 10),
+					string(secondStageName): strconv.FormatUint(secondStageProgress, 10),
 				}
 
 				assert.Equal(t, exp, ssp)
@@ -129,7 +131,7 @@ func TestFetchSyncStageProgress(t *testing.T) {
 			syncStageProgress, err := syncStages.fetchSyncStageProgress(tc.ctx)
 
 			if tc.wantErrMsg != "" {
-				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
+				require.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
 				return
 			}
 

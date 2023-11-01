@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReorgs(t *testing.T) {
@@ -50,7 +51,7 @@ func TestReorgs(t *testing.T) {
 			},
 			assert: func(total map[uint64][]byte, wrongBlocks []uint64, errors []error) {
 				assert.Empty(t, errors)
-				assert.Len(t, wrongBlocks, 0)
+				assert.Empty(t, wrongBlocks)
 				assert.Len(t, total, 1)
 			},
 		},
@@ -72,7 +73,7 @@ func TestReorgs(t *testing.T) {
 			err := rc.Init(context.Background(), db, table, initialKey)
 
 			if tc.wantErrMsg != "" {
-				assert.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
+				require.EqualErrorf(t, err, tc.wantErrMsg, "expected error %q, got %s", tc.wantErrMsg, err)
 				return
 			}
 
