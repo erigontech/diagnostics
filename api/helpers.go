@@ -1,14 +1,6 @@
 package api
 
-import (
-	"fmt"
-	"log"
-	"net/http"
-	"strconv"
-	"strings"
-)
-
-func retrievePinFromURL(r *http.Request) (pins []uint64, err error) {
+/*func retrievePinFromURL(r *http.Request) (pins []uint64, err error) {
 
 	for _, session := range strings.Split(r.URL.Query().Get("sessions"), ",") {
 		pin, err := strconv.ParseUint(session, 10, 64)
@@ -41,4 +33,4 @@ func retrieveSizeStrFrom(r *http.Request) (uint64, error) {
 	}
 
 	return offset, nil
-}
+}*/
