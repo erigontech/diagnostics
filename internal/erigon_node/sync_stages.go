@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"html/template"
-	"net/http"
 	"strconv"
 )
 
@@ -22,24 +19,15 @@ const syncStageDb = "chaindata"
 const syncStageTable = "SyncStage"
 const syncProgressBase = 10
 
-func (c *NodeClient) FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
-	rc := NewRemoteCursor(c, requestChannel)
+func (c *NodeClient) FindSyncStages(ctx context.Context) (SyncStageProgress, error) {
+	rc := NewRemoteCursor(c)
 	syncStages := &SyncStages{rc: rc}
 
-	syncStageProgress, err := syncStages.fetchSyncStageProgress(ctx)
-	if err != nil {
-		fmt.Fprintf(w, "Unable to fetch sync stage progress: %v\n", err)
-		return
-	}
-
-	if templateErr := template.ExecuteTemplate(w, "sync_stages.html", syncStageProgress); templateErr != nil {
-		fmt.Fprintf(w, "Executing Sync stages template: %v\n", templateErr)
-		return
-	}
+	return syncStages.fetchSyncStageProgress(ctx)
 }
 
 func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProgress, error) {
-	if cursorError := ss.rc.Init(syncStageDb, syncStageTable, nil); cursorError != nil {
+	if cursorError := ss.rc.Init(ctx, syncStageDb, syncStageTable, nil); cursorError != nil {
 		return nil, fmt.Errorf("could not initialize remote cursor: %v", cursorError)
 	}
 
@@ -47,7 +35,7 @@ func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProg
 
 	var k, v []byte
 	var e error
-	for k, v, e = ss.rc.Next(); e == nil && k != nil; k, v, e = ss.rc.Next() {
+	for k, v, e = ss.rc.Next(ctx); e == nil && k != nil; k, v, e = ss.rc.Next(ctx) {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context channel interrupted")

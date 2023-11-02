@@ -17,3 +17,20 @@
 
 # IDE configuration
 .idea
+
+# misc
+.DS_Store
+.vscode
+
+*.log
+
+_bin/
+
+go.work*
+
+# temp testing
+hive/  
+
+*__debug_bin*
+yarn.lock
+node_modules

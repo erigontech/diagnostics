@@ -2,171 +2,200 @@ package erigon_node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
-	"time"
-
-	"github.com/ledgerwatch/diagnostics/internal"
+	"sync"
 )
 
 var _ Client = &NodeClient{}
 
+type Bootnodes []string
+
 type NodeClient struct {
-	versions *Versions
+	sync.Mutex
+	versions       *Versions
+	requestId      uint64
+	requestChannel chan *NodeRequest
+	nodeId         string
 }
 
-func (c *NodeClient) Version(_ context.Context, requestChannel chan *internal.NodeRequest) (Versions, error) {
-	success, result := c.fetch("/version\n", requestChannel)
-	var versions Versions
+func NewClient(nodeId string, requestChannel chan *NodeRequest) Client {
+	return &NodeClient{
+		nodeId:         nodeId,
+		requestChannel: requestChannel,
+	}
+}
 
-	if success {
-		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], SuccessLine) {
-			versions.Success = true
-			if len(lines) < 2 {
-				versions.Error = "at least node version needs to be present"
-				versions.Success = false
-			} else {
-				var err error
-				versions.NodeVersion, err = strconv.ParseUint(lines[1], 10, 64)
-				if err != nil {
-					versions.Error = fmt.Sprintf("parsing node version [%s]: %v", lines[1], err)
-					versions.Success = false
-				} else {
-					for idx, line := range lines[2:] {
-						switch idx {
-						case 0:
-							versions.CodeVersion = line
-						case 1:
-							versions.GitCommit = line
-						}
-					}
-				}
-			}
-		} else {
-			versions.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
-		}
-		c.versions = &versions
-	} else {
-		versions.Error = result
+func (c *NodeClient) Version(ctx context.Context) (Versions, error) {
+	c.Lock()
+	versions := c.versions
+	c.Unlock()
+
+	if versions != nil {
+		return *versions, nil
 	}
 
-	return versions, nil
-}
+	request, err := c.fetch(ctx, "version", nil)
 
-func (c *NodeClient) Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error) {
-	// If Versions have not been retrieved, go ahead and retrieve them
+	if err != nil {
+		return Versions{}, err
+	}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return Versions{}, err
+	}
+
+	if err := json.Unmarshal(result, &versions); err != nil {
+		return Versions{}, err
+	}
+
+	c.Lock()
 	if c.versions == nil {
-		_, err := c.Version(ctx, requestChannel)
-		if err != nil {
-			//fmt.Fprintf(w, "Unable to process flag due to inability to get node version: %s", versions.Error)
-			return Flags{}, err
-		}
+		c.versions = versions
+	}
+	c.Unlock()
+
+	return *versions, nil
+}
+
+func (c *NodeClient) checkVersion(ctx context.Context, min uint64) error {
+	version, err := c.Version(ctx)
+
+	if err != nil {
+		return fmt.Errorf("can't get node version: %w", err)
 	}
 
-	if c.versions.NodeVersion < 2 {
-		//fmt.Fprintf(w, "Flags only support version >= 2. Node version: %d", versions.NodeVersion)
-		// TODO semeantic error propagate
-		return Flags{}, nil
+	if version.NodeVersion < min {
+		return fmt.Errorf("required version >= %d. Node version: %d", min, c.versions.NodeVersion)
 	}
 
-	// Retrieving the data from the node
-	success, result := c.fetch("/flags\n", requestChannel)
+	return nil
+}
+
+func (c *NodeClient) Flags(ctx context.Context) (Flags, error) {
+	if err := c.checkVersion(ctx, 2); err != nil {
+		return nil, err
+	}
+
+	request, err := c.fetch(ctx, "flags", nil)
+
+	if err != nil {
+		return nil, err
+	}
 
 	var flags Flags
-	flags.FlagPayload = make(map[string]string)
-	if success {
-		lines := strings.Split(result, "\n")
-		if len(lines) > 0 && strings.HasPrefix(lines[0], SuccessLine) {
-			flags.Success = true
-			for _, line := range lines[1:] {
-				if len(line) > 0 {
-					flagName, flagValue, found := strings.Cut(line, "=")
-					if !found {
-						flags.Error = fmt.Sprintf("fail to parse line %s", line)
-						flags.Success = false
-					} else {
-						flags.FlagPayload[flagName] = flagValue
-					}
-				}
-			}
-		} else {
-			flags.Error = fmt.Sprintf("incorrect response (first line needs to be SUCCESS): %v", lines)
-		}
-	} else {
-		flags.Error = result
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(result, &flags); err != nil {
+		return nil, err
 	}
 
 	return flags, nil
 }
 
-func (c *NodeClient) CMDLineArgs(_ context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs {
-	success, result := c.fetch("/cmdline\n", requestChannel)
+func (c *NodeClient) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
 	var args CmdLineArgs
-	if success {
-		if strings.HasPrefix(result, SuccessLine) {
-			args.Args = strings.ReplaceAll(result[len(SuccessLine):], "\n", " ")
-		} else {
-			args.Args = result
-		}
-		args.Success = true
-	} else {
-		args.Success = false
-		args.Error = result
+
+	request, err := c.fetch(ctx, "cmdline", nil)
+
+	if err != nil {
+		return args, err
 	}
 
-	return args
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return "", err
+	}
+
+	if err := json.Unmarshal(result, &args); err != nil {
+		return "", err
+	}
+
+	return args, nil
 }
 
-func (c *NodeClient) fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string) {
-	if requestChannel == nil {
-		return false, "ERROR: Node is not allocated\n"
+func (c *NodeClient) FindPeers(ctx context.Context) (PeersInfo, error) {
+	var peers PeersInfo
+
+	request, err := c.fetch(ctx, "peers", nil)
+
+	if err != nil {
+		return peers, err
 	}
-	// Request command line arguments
-	nodeRequest := &internal.NodeRequest{Url: url}
-	requestChannel <- nodeRequest
-	var sb strings.Builder
-	var success bool
-	for nodeRequest != nil {
-		nodeRequest.Lock.Lock()
-		clear := nodeRequest.Served
-		if nodeRequest.Served {
-			if nodeRequest.Err == "" {
-				sb.Reset()
-				sb.Write(nodeRequest.Response)
-				success = true
-			} else {
-				success = false
-				fmt.Fprintf(&sb, "ERROR: %s\n", nodeRequest.Err)
-				if nodeRequest.Retries < 15 { // TODO: MaxRequestRetries use this  instead of 15
-					clear = false
-				}
-			}
-		}
-		nodeRequest.Lock.Unlock()
-		if clear {
-			nodeRequest = nil
-		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
 	}
-	return success, sb.String()
+
+	if err := json.Unmarshal(result, &peers); err != nil {
+		return nil, err
+	}
+
+	return peers, nil
 }
 
-func (c *NodeClient) getResultLines(result string) ([]string, error) {
-	lines := strings.Split(result, "\n")
-	if len(lines) == 0 || !strings.HasPrefix(lines[0], SuccessLine) {
-		return nil, fmt.Errorf("incorrect response (first line needs to be SUCCESS): %s", result)
+func (c *NodeClient) Bootnodes(ctx context.Context) (Bootnodes, error) {
+	var bootnodes Bootnodes
+
+	request, err := c.fetch(ctx, "bootnodes", nil)
+
+	if err != nil {
+		return bootnodes, err
 	}
 
-	if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
-		lines = lines[:len(lines)-1]
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return nil, err
 	}
 
-	return lines[1:], nil
+	if err := json.Unmarshal(result, &bootnodes); err != nil {
+		return nil, err
+	}
+
+	return bootnodes, nil
+}
+
+func (c *NodeClient) nextRequestId() string {
+	c.Lock()
+	id := c.requestId
+	c.requestId++
+	c.Unlock()
+	return strconv.FormatUint(id, 10)
+}
+
+func (c *NodeClient) fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error) {
+	if c.requestChannel == nil {
+		return nil, fmt.Errorf("ERROR: Node is not allocated")
+	}
+
+	nodeRequest := &NodeRequest{
+		Responses: make(chan *Response),
+		Request: &Request{
+			Id:     c.nextRequestId(),
+			Method: method,
+			Params: &Params{
+				NodeId:      c.nodeId,
+				QueryParams: params,
+			},
+		}}
+
+	c.requestChannel <- nodeRequest
+
+	return nodeRequest, nil
 }
 
 func NewErigonNodeClient() Client {
@@ -175,21 +204,28 @@ func NewErigonNodeClient() Client {
 
 type Client interface {
 	// Version retrieves the versions from the Erigon node exposed
-	Version(ctx context.Context, requestChannel chan *internal.NodeRequest) (Versions, error)
+	Version(ctx context.Context) (Versions, error)
 	// Flags given version has been retrieved, provides the flags
-	Flags(ctx context.Context, requestChannel chan *internal.NodeRequest) (Flags, error)
+	Flags(ctx context.Context) (Flags, error)
 	// CMDLineArgs retrieves the command line arguments provided to run the erigon node
-	CMDLineArgs(ctx context.Context, requestChannel chan *internal.NodeRequest) CmdLineArgs
-	// fetch requests the data from the specified end point
-	fetch(url string, requestChannel chan *internal.NodeRequest) (bool, string)
-	getResultLines(result string) ([]string, error)
+	CMDLineArgs(ctx context.Context) (CmdLineArgs, error)
+	FindSyncStages(ctx context.Context) (SyncStageProgress, error)
+
+	LogFiles(ctx context.Context) (LogFiles, error)
+	Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error
+
+	DBs(ctx context.Context) (DBs, error)
+	Tables(ctx context.Context, db string) (Tables, error)
+	Table(ctx context.Context, db string, table string) (Results, error)
+
+	FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error)
+	FindPeers(ctx context.Context) (PeersInfo, error)
+
+	Bootnodes(ctx context.Context) (Bootnodes, error)
 
 	// TODO: refactor the following methods to follow above pattern where appropriate
-	FindSyncStages(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
-	BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
-	HeadersDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
-	FindReorgs(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest)
-	ProcessLogList(w http.ResponseWriter, template *template.Template, sessionName string, requestChannel chan *internal.NodeRequest)
-	LogHead(filename string, requestChannel chan *internal.NodeRequest) LogPart
-	LogTail(filename string, offset uint64, requestChannel chan *internal.NodeRequest) LogPart
+	BodiesDownload(ctx context.Context, w http.ResponseWriter)
+	HeadersDownload(ctx context.Context, w http.ResponseWriter)
+
+	fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error)
 }

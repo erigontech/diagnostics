@@ -2,8 +2,9 @@ package internal
 
 import (
 	"encoding/json"
-	"github.com/ledgerwatch/diagnostics"
 	"net/http"
+
+	"github.com/ledgerwatch/diagnostics"
 )
 
 type Error struct {
@@ -24,7 +25,7 @@ func marshalError(r *http.Request, err error) Error {
 
 	} else {
 		code = http.StatusInternalServerError
-		message = "internal server error"
+		message = err.Error()
 	}
 
 	return Error{

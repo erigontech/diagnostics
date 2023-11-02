@@ -13,6 +13,7 @@ var (
 	cfgFile         string
 	listenAddr      string
 	listenPort      int
+	routerPort      int
 	serverKeyFile   string
 	serverCertFile  string
 	caCertFiles     []string
@@ -42,6 +43,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
 	rootCmd.Flags().StringVar(&listenAddr, "addr", "localhost", "network interface to listen on")
 	rootCmd.Flags().IntVar(&listenPort, "port", 8080, "port to listen on")
+	rootCmd.Flags().IntVar(&routerPort, "rest.port", 0, "port to listen on")
 	rootCmd.Flags().StringVar(&serverKeyFile, "tls.key", "", "path to server TLS key")
 	_ = rootCmd.MarkFlagRequired("tls.key")
 	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")

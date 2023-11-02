@@ -3,24 +3,31 @@ package erigon_node
 import (
 	"context"
 	"fmt"
-	"github.com/google/btree"
-	"github.com/ledgerwatch/diagnostics/internal"
-	"golang.org/x/exp/maps"
-	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
-func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, template *template.Template, requestChannel chan *internal.NodeRequest) {
-	snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
+func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
+	/*snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
 		return a.Id < b.Id
-	})
+	})*/
+
 	var tick int64
 	sendEvery := time.NewTicker(1000 * time.Millisecond)
 	defer sendEvery.Stop()
+
 	for {
+
+		// First, fetch list of DB paths
+		request, err := c.fetch(ctx, "block_body_download", url.Values{"sinceTick": []string{strconv.FormatInt(tick, 10)}})
+
+		if err != nil {
+			fmt.Fprintf(w, "Fetching list of changes: %s", err)
+			return
+		}
+
 		select {
 		case <-ctx.Done():
 			fmt.Fprintf(w, "Interrupted\n")
@@ -28,23 +35,17 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, 
 		default:
 		}
 
-		// First, fetch list of DB paths
-		success, result := c.fetch(fmt.Sprintf("/block_body_download?sincetick=%d\n", tick), requestChannel)
-		if !success {
-			fmt.Fprintf(w, "Fetching list of changes: %s", result)
+		more, _ /*result*/, err := request.nextResult(ctx)
+
+		if err != nil {
+			fmt.Fprintf(w, "Fetching list of changes: %s", err)
 			return
 		}
 
-		lines, resultExtractErr := c.getResultLines(result)
-		if resultExtractErr != nil {
-			fmt.Fprintf(w, "incorrect response: %v\n", resultExtractErr)
-			return
-		}
+		/*
+			var changesMode bool
 
-		var changesMode bool
-		var err error
-		changes := map[uint64]struct{}{}
-		for _, line := range lines {
+			changes := map[uint64]struct{}{}
 			switch {
 			case len(line) == 0:
 				// Skip empty lines
@@ -89,7 +90,7 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, 
 								}
 							}
 						}
-					*/
+		*/ /*
 					tick++
 				}
 				changes[id] = struct{}{}
@@ -99,14 +100,20 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter, 
 					snapshot.ReplaceOrInsert(SnapshotItem{Id: id, State: byte(state)})
 				}
 			}
+
+			sendSnapshot(snapshot, w)
+			maps.Clear(changes)
+		*/
+
+		if !more {
+			break
 		}
-		sendSnapshot(snapshot, w, template)
-		maps.Clear(changes)
+
 		<-sendEvery.C
 	}
 }
 
-func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, templ *template.Template) {
+/*func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter) {
 	//<- sendEvery.C
 	var bd BodyDownload
 	first := true
@@ -135,10 +142,10 @@ func sendSnapshot(snapshot *btree.BTreeG[SnapshotItem], w http.ResponseWriter, t
 		bd.Legends[item.State] = true
 		return item.Id < bd.BlockNum+VisLimit // We limit visualisation to VisLimit first blocks
 	})
-	if err := templ.ExecuteTemplate(w, "body_download.html", bd); err != nil {
-		fmt.Fprintf(w, "Executing body_download template: %v", err)
-		return
-	}
-}
+	//if err := templ.ExecuteTemplate(w, "body_download.html", bd); err != nil {
+	//	fmt.Fprintf(w, "Executing body_download template: %v", err)
+	//	return
+	//}
+}*/
 
 const VisLimit = 1000

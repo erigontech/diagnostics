@@ -5,17 +5,16 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
 	"github.com/ledgerwatch/diagnostics/api"
-	"github.com/ledgerwatch/diagnostics/assets"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/logging"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
 )
@@ -35,12 +34,10 @@ func main() {
 	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT)
 
 	// Initialize Services
-	cache := sessions.NewCache(5, 5)
-	ErigonNodeClient := erigon_node.NewErigonNodeClient()
-	uiSessions := sessions.NewUISession(cache)
-	htmlTemplates, err := template.ParseFS(assets.Templates, "template/*.html")
+	cache, err := sessions.NewCache(5, 5)
+
 	if err != nil {
-		log.Fatalf("parsing session.html template: %v", err)
+		log.Fatalf("session cache creation  failed: %v", err)
 	}
 
 	// Initializes and adds the provided certificate to the pool, to be used in TLS config
@@ -61,10 +58,7 @@ func main() {
 	// Passing in the services to REST layer
 	handlers := api.NewHandler(
 		api.APIServices{
-			UISessions:    uiSessions,
-			ErigonNode:    ErigonNodeClient,
-			StoreSession:  &cache,
-			HtmlTemplates: htmlTemplates,
+			StoreSession: cache,
 		})
 
 	srv := &http.Server{
@@ -74,11 +68,70 @@ func main() {
 		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
+
 	go func() {
 		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()
+
+	if routerPort > 0 {
+		srv := &http.Server{
+			Addr:              fmt.Sprintf("%s:%d", listenAddr, routerPort),
+			Handler:           handlers,
+			MaxHeaderBytes:    1 << 20,
+			ReadHeaderTimeout: 1 * time.Minute,
+		}
+
+		go func() {
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				log.Fatal(err)
+			}
+		}()
+
+	}
+
+	r := http.NewServeMux()
+
+	r.HandleFunc("/network", index)
+	r.HandleFunc("/logs", index)
+	r.HandleFunc("/chain", index)
+	r.HandleFunc("/data", index)
+	r.HandleFunc("/debug", index)
+	r.HandleFunc("/testing", index)
+	r.HandleFunc("/performance", index)
+	r.HandleFunc("/documentation", index)
+	r.HandleFunc("/admin", index)
+	buildHandler := http.FileServer(http.Dir("./../../web/dist"))
+	r.Handle("/", buildHandler)
+
+	server := &http.Server{
+		Handler:      r,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	/*http.Handle("/", web.UI)
+
+	server := &http.Server{
+		Addr:              ":8000",
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()*/
+
+	open("http://localhost:8000")
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
@@ -91,4 +144,26 @@ func main() {
 		log.Println("Terminating eagerly.")
 		os.Exit(-int(syscall.SIGINT))
 	}
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./../../web/dist/index.html")
+}
+
+// open opens the specified URL in the default browser of the user.
+func open(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+	}
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
 }
