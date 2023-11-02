@@ -75,22 +75,6 @@ func main() {
 		}
 	}()
 
-	if routerPort > 0 {
-		srv := &http.Server{
-			Addr:              fmt.Sprintf("%s:%d", listenAddr, routerPort),
-			Handler:           handlers,
-			MaxHeaderBytes:    1 << 20,
-			ReadHeaderTimeout: 1 * time.Minute,
-		}
-
-		go func() {
-			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-				log.Fatal(err)
-			}
-		}()
-
-	}
-
 	r := http.NewServeMux()
 
 	r.HandleFunc("/network", index)
