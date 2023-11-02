@@ -9,6 +9,7 @@ import (
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
+	"github.com/ledgerwatch/diagnostics/web"
 )
 
 type APIServices struct {
@@ -33,11 +34,26 @@ func NewHandler(services APIServices) http.Handler {
 	r.Mount(internal.HealthCheckEndPoint, HealthCheckHandler())
 	r.Mount(internal.BridgeEndPoint, NewBridgeHandler(services.StoreSession))
 
+	r.Mount("/", web.UI)
+	r.HandleFunc("/network", index)
+	r.HandleFunc("/logs", index)
+	r.HandleFunc("/chain", index)
+	r.HandleFunc("/data", index)
+	r.HandleFunc("/debug", index)
+	r.HandleFunc("/testing", index)
+	r.HandleFunc("/performance", index)
+	r.HandleFunc("/documentation", index)
+	r.HandleFunc("/admin", index)
+
 	r.Group(func(r chi.Router) {
 		session := sessions.Middleware{CacheService: services.StoreSession}
 		r.Use(session.Middleware)
-		r.Mount("/", NewAPIHandler(services.StoreSession, services.ErigonNode))
+		r.Mount("/api", NewAPIHandler(services.StoreSession, services.ErigonNode))
 	})
 
 	return r
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./../../web/dist/index.html")
 }
