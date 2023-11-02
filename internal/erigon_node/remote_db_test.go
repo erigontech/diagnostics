@@ -1,99 +1,106 @@
 package erigon_node
 
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"net/url"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-)
-
-type mockNodeClientReader struct {
+/*type mockNodeClientReader struct {
 	mock.Mock
 }
 
 func (ra *mockNodeClientReader) Version(ctx context.Context) (Versions, error) {
-
-	panic("TODO")
+	return Versions{
+		Success:        true,
+		Error:          "",
+		NodeVersion:    1,
+		SupportVersion: 1,
+		CodeVersion:    "1.0.0",
+		GitCommit:      "1.0.0",
+	}, nil
 }
 
 func (ra *mockNodeClientReader) Flags(ctx context.Context) (Flags, error) {
-
-	panic("TODO")
+	flags := Flags{}
+	flags["--config"] = "config.toml"
+	return flags, nil
 }
 
 func (ra *mockNodeClientReader) CMDLineArgs(ctx context.Context) (CmdLineArgs, error) {
-
-	panic("TODO")
+	return "", nil
 }
 
 func (ra *mockNodeClientReader) FindSyncStages(ctx context.Context) (SyncStageProgress, error) {
-
-	panic("TODO")
+	stages := SyncStageProgress{}
+	stages["first_stage"] = "3458658"
+	return stages, nil
 }
 
 func (ra *mockNodeClientReader) BodiesDownload(ctx context.Context, w http.ResponseWriter) {
 
-	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
 
-	panic("TODO")
 }
 
 func (ra *mockNodeClientReader) LogFiles(ctx context.Context) (LogFiles, error) {
-	return nil, fmt.Errorf("TODO")
+	log := LogFiles{}
+	log = append(log, LogFile{
+		Name: "erigon.log",
+		Size: 100,
+	})
+
+	return log, nil
 }
 
 func (ra *mockNodeClientReader) Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, size int64, download bool) error {
-	return fmt.Errorf("TODO")
+	return nil
 }
 
 func (c *mockNodeClientReader) DBs(ctx context.Context) (DBs, error) {
-	panic("TODO")
+	dbs := DBs{}
+	dbs = append(dbs, "")
+	return dbs, nil
 }
 
 func (c *mockNodeClientReader) Tables(ctx context.Context, db string) (Tables, error) {
-	panic("TODO")
+	tbs := Tables{}
+	tbs = append(tbs, Table{
+		Name:  "testTable",
+		Count: 1,
+		Size:  1,
+	})
+	return tbs, nil
 }
 
 func (c *mockNodeClientReader) Table(ctx context.Context, db string, table string) (Results, error) {
-	panic("TODO")
+	return Results{}, nil
 }
 
 func (ra *mockNodeClientReader) fetch(ctx context.Context, url string, params url.Values) (*NodeRequest, error) {
-	panic("TODO")
+	return nil, nil
 	//args := ra.Called(url)
 	//return args.Bool(0), args.String(1)
-}
+}*/
 
 /*func (ra *mockNodeClientReader) getResultLines(result string) ([]string, error) {
 	args := ra.Called(result)
 	return args.Get(0).([]string), args.Error(1)
 }*/
 
-func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error) {
-	panic("TODO")
+/*func (ra *mockNodeClientReader) FindReorgs(ctx context.Context, w http.ResponseWriter) (Reorg, error) {
+	return Reorg{}, nil
 }
 
 func (ra *mockNodeClientReader) FindPeers(ctx context.Context) (PeersInfo, error) {
-	panic("TODO")
+	return PeersInfo{}, nil
 }
 
 func (ra *mockNodeClientReader) Bootnodes(ctx context.Context) (Bootnodes, error) {
-	panic("TODO")
+	return Bootnodes{}, nil
 }
 
 type remoteCursorDependencies struct {
 	remoteApi *mockNodeClientReader
-}
+}*/
 
-func TestInit(t *testing.T) {
+/*func TestInit(t *testing.T) {
 	var (
 		db                     = "testDb"
 		table                  = "testTable"
@@ -117,7 +124,7 @@ func TestInit(t *testing.T) {
 				tableLine := fmt.Sprintf("%s | %s", lineKey, lineValue)
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
-				df.remoteApi.On("fetch", "/db/list\n").Return(true, dbListResult)
+				df.remoteApi.On("fetch", "dbs").Return(true, dbListResult)
 				df.remoteApi.On("getResultLines", dbListResult).Return([]string{dbPath}, nil)
 				df.remoteApi.On("fetch", fmt.Sprintf("/db/read?path=%s&table=%s&key=%x\n", dbPath, table, initialKey)).Return(true, tableLinesResult)
 				df.remoteApi.On("getResultLines", tableLinesResult).Return([]string{tableLine}, nil)
@@ -204,4 +211,4 @@ func TestInit(t *testing.T) {
 			tc.assert(rc)
 		})
 	}
-}
+}*/

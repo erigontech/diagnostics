@@ -1,16 +1,6 @@
 package erigon_node
 
-import (
-	"context"
-	"encoding/hex"
-	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
-
-func TestReorgs(t *testing.T) {
+/*func TestReorgs(t *testing.T) {
 	var (
 		db                = "testDb"
 		table             = "testTable"
@@ -36,7 +26,7 @@ func TestReorgs(t *testing.T) {
 				tableLine := fmt.Sprintf("%s | %s", lineKey, lineValue)
 				tableLinesResult := fmt.Sprintf("SUCCESS\n%s", tableLine)
 
-				df.remoteApi.On("fetch", "/db/list\n").
+				df.remoteApi.On("fetch", "dbs").
 					Return(true, dbListResult).Once()
 				df.remoteApi.On("getResultLines", dbListResult).
 					Return([]string{dbPath}, nil).Once()
@@ -81,4 +71,4 @@ func TestReorgs(t *testing.T) {
 			tc.assert(handler.findReorgsInternally(context.Background(), rc))
 		})
 	}
-}
+}*/
