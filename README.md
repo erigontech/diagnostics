@@ -255,7 +255,7 @@ diagnostics system, start with `/support/` prefix, followed by the PIN of the se
 `BridgeHandler` type.
 
 Operators (those who are trying to assist the Erigon node users) also access Diagnostics system, but in the form of User Interface, built using HTML
-and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `UiHandler` type.
+and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `APIHandler` type.
 
 ![diagnostics system architecture](/_images/diagnostics.drawio.png)
 

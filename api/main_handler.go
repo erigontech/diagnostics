@@ -36,7 +36,7 @@ func NewHandler(services APIServices) http.Handler {
 	r.Group(func(r chi.Router) {
 		session := sessions.Middleware{CacheService: services.StoreSession}
 		r.Use(session.Middleware)
-		r.Mount("/", NewUIHandler(services.StoreSession, services.ErigonNode))
+		r.Mount("/", NewAPIHandler(services.StoreSession, services.ErigonNode))
 	})
 
 	return r

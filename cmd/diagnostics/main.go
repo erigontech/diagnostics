@@ -61,20 +61,6 @@ func main() {
 			StoreSession: cache,
 		})
 
-	srv := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
-		Handler:           handlers,
-		MaxHeaderBytes:    1 << 20,
-		TLSConfig:         tlsConfig,
-		ReadHeaderTimeout: 1 * time.Minute,
-	}
-
-	go func() {
-		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}()
-
 	r := http.NewServeMux()
 
 	r.HandleFunc("/network", index)
@@ -86,6 +72,37 @@ func main() {
 	r.HandleFunc("/performance", index)
 	r.HandleFunc("/documentation", index)
 	r.HandleFunc("/admin", index)
+
+	buildHandler := http.FileServer(http.Dir("./../../web/dist"))
+	r.Handle("/", buildHandler)
+	r.Handle("/api", handlers)
+
+	srv := &http.Server{
+		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
+		Handler:           r,
+		MaxHeaderBytes:    1 << 20,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 1 * time.Minute,
+	}
+
+	go func() {
+		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	/*r := http.NewServeMux()
+
+	r.HandleFunc("/network", index)
+	r.HandleFunc("/logs", index)
+	r.HandleFunc("/chain", index)
+	r.HandleFunc("/data", index)
+	r.HandleFunc("/debug", index)
+	r.HandleFunc("/testing", index)
+	r.HandleFunc("/performance", index)
+	r.HandleFunc("/documentation", index)
+	r.HandleFunc("/admin", index)
+
 	buildHandler := http.FileServer(http.Dir("./../../web/dist"))
 	r.Handle("/", buildHandler)
 
@@ -100,7 +117,7 @@ func main() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
-	}()
+	}()*/
 
 	/*http.Handle("/", web.UI)
 
@@ -115,7 +132,7 @@ func main() {
 		}
 	}()*/
 
-	open("http://localhost:8000")
+	open("https://localhost:8080")
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
