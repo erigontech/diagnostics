@@ -198,7 +198,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 # How to connect Erigon node to the diagnostics system
 ![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
- The app's diagnostic user interface (UI) will automatically open at https://localhost:8000 after you run one of the following commands:
+ The app's diagnostic user interface (UI) will automatically open at https://localhost:8080 after you run one of the following commands:
 ```
 ./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
@@ -209,10 +209,10 @@ or
 
 
 #### Step 2: 
-In the same web browser, open a new tab and navigate to `https://localhost`. Please note that you may need to accept the security risks associated with the self-signed certificate. This action is required only the first time you access this URL, as your browser will remember your choice for subsequent visits.
+Please note that you may need to accept the security risks associated with the self-signed certificate. This action is required only the first time you access this URL, as your browser will remember your choice for subsequent visits.
 
 #### Step 3: 
-Return to the app's UI at https://localhost:8000. Follow these steps to create a session:
+Follow these steps to create a session:
 
 ![create new operation session 1](/_images/create_session_1.png)
 
@@ -255,7 +255,7 @@ diagnostics system, start with `/support/` prefix, followed by the PIN of the se
 `BridgeHandler` type.
 
 Operators (those who are trying to assist the Erigon node users) also access Diagnostics system, but in the form of User Interface, built using HTML
-and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `UiHandler` type.
+and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `APIHandler` type.
 
 ![diagnostics system architecture](/_images/diagnostics.drawio.png)
 

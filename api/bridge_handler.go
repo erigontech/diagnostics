@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var _ http.Handler = &UIHandler{}
+var _ http.Handler = &APIHandler{}
 
 type BridgeHandler struct {
 	chi.Router
