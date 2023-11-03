@@ -61,22 +61,6 @@ func main() {
 			StoreSession: cache,
 		})
 
-	//r := http.NewServeMux()
-
-	/*r.HandleFunc("/network", index)
-	r.HandleFunc("/logs", index)
-	r.HandleFunc("/chain", index)
-	r.HandleFunc("/data", index)
-	r.HandleFunc("/debug", index)
-	r.HandleFunc("/testing", index)
-	r.HandleFunc("/performance", index)
-	r.HandleFunc("/documentation", index)
-	r.HandleFunc("/admin", index)*/
-
-	//buildHandler := http.FileServer(http.Dir("./../../web/dist"))
-	//r.Handle("/ui/", buildHandler)
-	//r.Handle("/", handlers)
-
 	srv := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
 		Handler:           handlers,
