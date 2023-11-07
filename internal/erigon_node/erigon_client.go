@@ -223,6 +223,8 @@ type Client interface {
 
 	Bootnodes(ctx context.Context) (Bootnodes, error)
 
+	ShanphotSync(ctx context.Context) (DownloadStatistics, error)
+
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter)
