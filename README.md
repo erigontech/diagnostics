@@ -331,9 +331,11 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 ## Network Tab
 
-Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+1. ### Peers data
 
-### Overview Data Table:
+  Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+
+  #### Overview Data Table:
 
   - **Active Peers:** Displays the number of currently active peers in the network.
   - **Static Peers:** Indicates the number of static peers defined in your Erigon configuration.
@@ -352,7 +354,7 @@ This detailed peer information allows you to gain insights into your network con
 
 ![sync_stage](/_images/peers.png)
 
-### Peer Details Popup
+#### Peer Details Popup
 
 **Main Info:**
 
@@ -375,6 +377,26 @@ This detailed peer information allows you to gain insights into your network con
 Use this detailed popup to analyze and monitor the network activity of peers, aiding in troubleshooting, optimizing performance, and resource allocation. It offers a clear and concise breakdown of peer interactions with the network, facilitating better network management and decision-making.
 
 ![sync_stage](/_images/peer_details.png)
+
+### Snapshots data
+  This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" parts
+
+ - **Part**: Part Name - This represents the name or identifier of the part.
+- **Progress**: Download Percentage - This indicates the downloading progress as a percentage.
+- **Downloaded**: Downloaded Data - This shows the amount of data that has been downloaded.
+- **Total**: Total Data Size - The overall size of data for this specific part.
+- **Time Left**: Estimated Time Remaining - This represents the estimated time remaining for this part to complete.
+- **Total Time**: Total Elapsed Time - The total time duration during which this part has been downloading.
+- **Download Rate**: Current Download Speed - The current download speed for this part.
+- **Upload Rate**: Current Upload Speed - The current upload speed for this part.
+- **Peers**: Peer Count - The number of peers or network nodes involved in this part of the task.
+- **Files**: Number of Files - The total number of files associated with this part.
+- **Connections**: Network Connections - The total number of network connections established for this part.
+- **Alloc**: Allocated Resources - The amount of resources allocated for this part.
+- **Sys**: System Resource Usage - The system's resource usage for this part.
+
+Background change it's color as soon as part downloaded 
+![snapshot](/_images/snapshot_sync.png)
 
 ## Logs Tab
 
