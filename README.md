@@ -131,7 +131,7 @@ To view the application in your browser, go to the URL `https://localhost:8080/u
 To build, perform `git clone`, change to the directory with the source code and run:
 
 ```
-go build .
+make
 ```
 The above command can also be run with **Make**:
 ```
