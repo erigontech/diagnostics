@@ -379,21 +379,21 @@ Use this detailed popup to analyze and monitor the network activity of peers, ai
 ![sync_stage](/_images/peer_details.png)
 
 ### Snapshots data
-  This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" parts
+  This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" stages
 
- - **Part**: Part Name - This represents the name or identifier of the part.
+ - **Part**: stage Name - This represents the name or identifier of the stage.
 - **Progress**: Download Percentage - This indicates the downloading progress as a percentage.
 - **Downloaded**: Downloaded Data - This shows the amount of data that has been downloaded.
-- **Total**: Total Data Size - The overall size of data for this specific part.
-- **Time Left**: Estimated Time Remaining - This represents the estimated time remaining for this part to complete.
-- **Total Time**: Total Elapsed Time - The total time duration during which this part has been downloading.
-- **Download Rate**: Current Download Speed - The current download speed for this part.
-- **Upload Rate**: Current Upload Speed - The current upload speed for this part.
-- **Peers**: Peer Count - The number of peers or network nodes involved in this part of the task.
-- **Files**: Number of Files - The total number of files associated with this part.
-- **Connections**: Network Connections - The total number of network connections established for this part.
-- **Alloc**: Allocated Resources - The amount of resources allocated for this part.
-- **Sys**: System Resource Usage - The system's resource usage for this part.
+- **Total**: Total Data Size - The overall size of data for this specific stage.
+- **Time Left**: Estimated Time Remaining - This represents the estimated time remaining for this stage to complete.
+- **Total Time**: Total Elapsed Time - The total time duration during which this stage has been downloading.
+- **Download Rate**: Current Download Speed - The current download speed for this stage.
+- **Upload Rate**: Current Upload Speed - The current upload speed for this stage.
+- **Peers**: Peer Count - The number of peers or network nodes involved in this stage of the task.
+- **Files**: Number of Files - The total number of files associated with this stage.
+- **Connections**: Network Connections - The total number of network connections established for this stage.
+- **Alloc**: Allocated Resources - The amount of resources allocated for this stage.
+- **Sys**: System Resource Usage - The system's resource usage for this stage.
 
 Background change it's color as soon as part downloaded 
 ![snapshot](/_images/snapshot_sync.png)
@@ -409,6 +409,26 @@ Background change it's color as soon as part downloaded
 
 ## Data Tab
 Operator has the capability to inspect the databases and their tables. This functionality is implemented in the file  `internal/erigon_node/remote_db.go`.
+
+![flags](/_images/dbs.png)
+
+## Admin Tab
+### Session Management
+
+- **List Sessions**: View active sessions.
+
+- **Create New Session**: Start a new session.
+
+- **Obtain PIN for Session**: Generate a session PIN for security.
+
+### Data Management
+
+- **Clear All Data**: Permanently delete all sessions and data. Use with caution:
+
+   - Dignostic updates may contain breaking changes which will result in crashes.  To prevent application crashes need to cleard data.
+
+**Note:** Data deletion is irreversible.
+
 
 ![flags](/_images/dbs.png)
 
