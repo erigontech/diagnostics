@@ -112,12 +112,12 @@ cd diagnostics
 
 Build the project
 ```
-go build .
+make
 ```
 
 Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+make run-self-signed
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
