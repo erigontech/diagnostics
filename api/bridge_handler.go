@@ -76,7 +76,13 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer nodeSession.Disconnect()
 
-			for request := range nodeSession.RequestCh {
+			for {
+				var request *erigon_node.NodeRequest
+				select {
+				case request = <-nodeSession.RequestCh:
+				case <-ctx.Done():
+					return
+				}
 				rpcRequest := request.Request
 
 				bytes, err := json.Marshal(rpcRequest)
@@ -132,6 +138,12 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 		if err = decoder.Decode(&response); err != nil {
 			fmt.Printf("can't read response: %v\n", err)
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return
+			default:
+			}
 			continue
 		}
 
