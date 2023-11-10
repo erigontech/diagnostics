@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/ledgerwatch/diagnostics"
@@ -55,6 +56,8 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 	requestMap := map[string]*erigon_node.NodeRequest{}
 	requestMutex := sync.Mutex{}
 
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
 	for _, node := range connectionInfo.Nodes {
 		nodeSession, ok := h.cache.FindNodeSession(node.Id)
 
@@ -73,7 +76,9 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 		nodeSession.Connect(r.RemoteAddr)
 
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			defer nodeSession.Disconnect()
 
 			for {
