@@ -35,6 +35,7 @@ func NewHandler(services APIServices) http.Handler {
 	r.Mount(internal.BridgeEndPoint, NewBridgeHandler(services.StoreSession))
 
 	r.Mount("/", web.UI)
+	r.HandleFunc("/snapshot-sync", index)
 	r.HandleFunc("/network", index)
 	r.HandleFunc("/logs", index)
 	r.HandleFunc("/chain", index)
