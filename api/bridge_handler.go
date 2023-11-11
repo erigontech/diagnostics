@@ -53,6 +53,7 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 	// If the connection is closed by the server, it will also notify everything that waits on the request context.
 	*r = *r.WithContext(ctx)
 
+	fmt.Println("Upgarading")
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
