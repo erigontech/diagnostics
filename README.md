@@ -101,23 +101,15 @@ To set and use a custom address and port, here a
 [link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
 
 ## Diagnostics Set Up
-Clone the diagnostics repository
 ```
 git clone https://github.com/ledgerwatch/diagnostics.git
-```
-Change into the folder
-```
 cd diagnostics
-```
-
-Build the project
-```
-go build .
+make build
 ```
 
 Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+make run-self-signed
 ```
 
 To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
@@ -126,29 +118,6 @@ To view the application in your browser, go to the URL `https://localhost:8080/u
 
 ## Connect the Erigon Node to the Diagnostics System setup
 [Link to more information on this step](#how-to-connect-erigon-node-to-the-diagnostics-system)
-
-## How to build and run
-To build, perform `git clone`, change to the directory with the source code and run:
-
-```
-go build .
-```
-The above command can also be run with **Make**:
-```
-  make build
-```
-
-This will create `diagnostics` executable in the same directory.
-
-To run with premade self-signed certificates for TLS (mandatory for HTTP/2), use this command:
-
-```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
-```
-The above command can also be run with **Make**:
-```
-  make run-self-signed
-```
 
 # Testing & Linting
 
@@ -200,7 +169,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 #### Step 1: 
  The app's diagnostic user interface (UI) will automatically open at https://localhost:8080 after you run one of the following commands:
 ```
-./diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+./_bin/diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
 ```
 or
 ```
@@ -306,49 +275,49 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 ![flags](/_images/process/flags.png)
 
-  - ### Node info
+- ### Node info
 
-    Contains detailed info about erigon node. Coresponding code located at `internal/api/ui_handler.go`
+  Contains detailed info about erigon node. Coresponding code located at `internal/api/ui_handler.go`
 
 ![sync_stage](/_images/process/node_info.png)
 
-  - ### Sync stages
+- ### Sync stages
 
-    This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
-    This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
+  This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
+  This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
 
 ![sync_stage](/_images/process/sync_stages.png)
 
-  - ### Reorgs
+- ### Reorgs
 
-    This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via erigon support tunnel. Re-orgs can be identified by the presence of multiple block headers with the same block height but different block hashes.
+  This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via erigon support tunnel. Re-orgs can be identified by the presence of multiple block headers with the same block height but different block hashes.
 
-    One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
+  One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
 
-    The corresponding code in Erigon is in the file internal/sessions/cache.go, and it relies on a feature recently added to the Erigon's code, which is mdbx.PathDbMap(), the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem. This allows cache.go to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
-  
-  ![sync_stage](/_images/process/find_reorgs.png)
+  The corresponding code in Erigon is in the file internal/sessions/cache.go, and it relies on a feature recently added to the Erigon's code, which is mdbx.PathDbMap(), the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem. This allows cache.go to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
+
+![sync_stage](/_images/process/find_reorgs.png)
 
 ## Network Tab
 
 1. ### Peers data
 
-  Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
 
-  #### Overview Data Table:
+#### Overview Data Table:
 
-  - **Active Peers:** Displays the number of currently active peers in the network.
-  - **Static Peers:** Indicates the number of static peers defined in your Erigon configuration.
-  - **Total Seen Peers:** Shows the total number of peers observed during all diagnostics sessions with the current node.
-  - **Total Errors:** Provides information about any errors or issues encountered with network peers.
+- **Active Peers:** Displays the number of currently active peers in the network.
+- **Static Peers:** Indicates the number of static peers defined in your Erigon configuration.
+- **Total Seen Peers:** Shows the total number of peers observed during all diagnostics sessions with the current node.
+- **Total Errors:** Provides information about any errors or issues encountered with network peers.
 
 By clicking on the Active, Static, or Total Seen Peers table, you can access detailed information about each peer. The peer details table includes the following columns:
 
-  - **Peer ID:** A unique identifier for the peer.
-  - **Type:** Indicates whether the peer is static, a bootnode, or dynamic.
-  - **Status:** Displays the status of the peer, indicating whether it's currently active.
-  - **Network Usage:** Shows the total amount of data sent and received over the network.
-  - **Errors Count:** Shows the total count of errors encountered with this peer.
+- **Peer ID:** A unique identifier for the peer.
+- **Type:** Indicates whether the peer is static, a bootnode, or dynamic.
+- **Status:** Displays the status of the peer, indicating whether it's currently active.
+- **Network Usage:** Shows the total amount of data sent and received over the network.
+- **Errors Count:** Shows the total count of errors encountered with this peer.
 
 This detailed peer information allows you to gain insights into your network connections, helping you troubleshoot and manage your network effectively.
 
@@ -379,9 +348,9 @@ Use this detailed popup to analyze and monitor the network activity of peers, ai
 ![sync_stage](/_images/peer_details.png)
 
 ### Snapshots data
-  This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" stages
+This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" stages
 
- - **Part**: stage Name - This represents the name or identifier of the stage.
+- **Part**: stage Name - This represents the name or identifier of the stage.
 - **Progress**: Download Percentage - This indicates the downloading progress as a percentage.
 - **Downloaded**: Downloaded Data - This shows the amount of data that has been downloaded.
 - **Total**: Total Data Size - The overall size of data for this specific stage.
@@ -395,15 +364,15 @@ Use this detailed popup to analyze and monitor the network activity of peers, ai
 - **Alloc**: Allocated Resources - The amount of resources allocated for this stage.
 - **Sys**: System Resource Usage - The system's resource usage for this stage.
 
-Background change it's color as soon as part downloaded 
+Background change it's color as soon as part downloaded
 ![snapshot](/_images/snapshot_sync.png)
 
 ## Logs Tab
 
-  Since version 2.43.0, Erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log rotation. Using diagnostics system,
-  these logs can be looked at and downloaded to the operator's computer. Viewing the logs is one of the most frequent requests of the operator to the user,
-  and it makes sense to make this process much more convenient and efficient. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`.
-  Note that the codes does not give access to any other files in the file system, only to the directory dedicated to the logs.
+Since version 2.43.0, Erigon nodes write logs by default with `INFO` level into `<datadir>/logs` directory, there is log rotation. Using diagnostics system,
+these logs can be looked at and downloaded to the operator's computer. Viewing the logs is one of the most frequent requests of the operator to the user,
+and it makes sense to make this process much more convenient and efficient. The corresponding code in Erigon is in the file `internal/erigon_node/erigon_client.go`.
+Note that the codes does not give access to any other files in the file system, only to the directory dedicated to the logs.
 
 ![logs](/_images/logs.png)
 
@@ -425,7 +394,7 @@ Operator has the capability to inspect the databases and their tables. This func
 
 - **Clear All Data**: Permanently delete all sessions and data. Use with caution:
 
-   - Dignostic updates may contain breaking changes which will result in crashes.  To prevent application crashes need to cleard data.
+  - Dignostic updates may contain breaking changes which will result in crashes.  To prevent application crashes need to cleard data.
 
 **Note:** Data deletion is irreversible.
 
