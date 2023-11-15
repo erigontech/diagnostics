@@ -70,7 +70,7 @@ func main() {
 		}
 	}()
 
-	open("https://localhost:8080")
+	open(fmt.Sprintf("%s:%d", listenAddr, listenPort))
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
