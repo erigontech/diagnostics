@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"log"
@@ -50,11 +49,6 @@ func main() {
 		certPool.AppendCertsFromPEM(caCert)
 	}
 
-	tlsConfig := &tls.Config{
-		RootCAs:    certPool,
-		MinVersion: tls.VersionTLS12,
-	}
-
 	// Passing in the services to REST layer
 	handlers := api.NewHandler(
 		api.APIServices{
@@ -65,12 +59,13 @@ func main() {
 		Addr:              fmt.Sprintf("%s:%d", listenAddr, listenPort),
 		Handler:           handlers,
 		MaxHeaderBytes:    1 << 20,
-		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
 
 	go func() {
-		if err := srv.ListenAndServeTLS(serverCertFile, serverKeyFile); err != http.ErrServerClosed {
+		err := srv.ListenAndServe()
+
+		if err != nil {
 			log.Fatal(err)
 		}
 	}()

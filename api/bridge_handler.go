@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/ledgerwatch/diagnostics"
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
@@ -23,20 +25,40 @@ type BridgeHandler struct {
 	cache sessions.CacheService
 }
 
+const (
+	wsReadBuffer       = 1024
+	wsWriteBuffer      = 1024
+	wsPingInterval     = 60 * time.Second
+	wsPingWriteTimeout = 5 * time.Second
+	wsMessageSizeLimit = 32 * 1024 * 1024
+)
+
+var wsBufferPool = new(sync.Pool)
+
 func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 	//Sends a success Message to the Node client, to receive more information
-	flusher, _ := w.(http.Flusher)
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	defer r.Body.Close()
+
+	upgrader := websocket.Upgrader{
+		EnableCompression: true,
+		ReadBufferSize:    wsReadBuffer,
+		WriteBufferSize:   wsWriteBuffer,
+		WriteBufferPool:   wsBufferPool,
+	}
 
 	// Update the request context with the connection context.
 	// If the connection is closed by the server, it will also notify everything that waits on the request context.
 	*r = *r.WithContext(ctx)
 
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error upgrading websocket: %v", err)))
+		return
+	}
 
 	connectionInfo := struct {
 		Version  uint64               `json:"version"`
@@ -44,11 +66,18 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 		Nodes    []*sessions.NodeInfo `json:"nodes"`
 	}{}
 
-	err := json.NewDecoder(r.Body).Decode(&connectionInfo)
+	_, message, err := conn.ReadMessage()
+
+	if err != nil {
+		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error reading connection info: %v", err)))
+		return
+	}
+
+	err = json.Unmarshal(message, &connectionInfo)
 
 	if err != nil {
 		log.Printf("Error reading connection info: %v\n", err)
-		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error reading connection info: %v", err)))
+		internal.EncodeError(w, r, diagnostics.AsBadRequestErr(errors.Errorf("Error unmarshaling connection info: %v", err)))
 		return
 	}
 
@@ -97,12 +126,10 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 				requestMap[rpcRequest.Id] = request
 				requestMutex.Unlock()
 
-				if _, err := w.Write(bytes); err != nil {
+				if err := conn.WriteMessage(websocket.TextMessage, bytes); err != nil {
 					requestMutex.Lock()
 					delete(requestMap, rpcRequest.Id)
 					requestMutex.Unlock()
-
-					fmt.Println(request.Retries, err)
 					request.Retries++
 					if request.Retries < 15 {
 						select {
@@ -119,18 +146,21 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 					}
 					continue
 				}
-
-				flusher.Flush()
 			}
 		}()
 	}
 
-	decoder := json.NewDecoder(r.Body)
-
 	for {
 		var response erigon_node.Response
 
-		if err = decoder.Decode(&response); err != nil {
+		_, message, err := conn.ReadMessage()
+
+		if err != nil {
+			fmt.Printf("can't read response: %v\n", err)
+			continue
+		}
+
+		if err = json.Unmarshal(message, &response); err != nil {
 			fmt.Printf("can't read response: %v\n", err)
 			continue
 		}
@@ -163,7 +193,7 @@ func NewBridgeHandler(cacheSvc sessions.CacheService) BridgeHandler {
 		cache:  cacheSvc,
 	}
 
-	r.Post("/", r.Bridge)
+	r.Get("/", r.Bridge)
 
 	return *r
 }
