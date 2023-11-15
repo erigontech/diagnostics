@@ -70,7 +70,7 @@ func main() {
 		}
 	}()
 
-	open(fmt.Sprintf("%s:%d", listenAddr, listenPort))
+	open(fmt.Sprintf("http://%s:%d", listenAddr, listenPort))
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
