@@ -14,9 +14,6 @@ var (
 	listenAddr      string
 	listenPort      int
 	routerPort      int
-	serverKeyFile   string
-	serverCertFile  string
-	caCertFiles     []string
 	insecure        bool
 	maxNodeSessions int
 	maxUISessions   int
@@ -44,11 +41,6 @@ func init() {
 	rootCmd.Flags().StringVar(&listenAddr, "addr", "localhost", "network interface to listen on")
 	rootCmd.Flags().IntVar(&listenPort, "port", 8080, "port to listen on")
 	rootCmd.Flags().IntVar(&routerPort, "rest.port", 0, "port to listen on")
-	rootCmd.Flags().StringVar(&serverKeyFile, "tls.key", "", "path to server TLS key")
-	_ = rootCmd.MarkFlagRequired("tls.key")
-	rootCmd.Flags().StringVar(&serverCertFile, "tls.cert", "", "paths to server TLS certificates")
-	_ = rootCmd.MarkFlagRequired("tls.cert")
-	rootCmd.Flags().StringSliceVar(&caCertFiles, "tls.cacerts", []string{}, "comma-separated list of paths to and CAs TLS certificates")
 	rootCmd.Flags().BoolVar(&insecure, "insecure", false, "whether to use insecure PIN generation for testing purposes (default is false)")
 	rootCmd.Flags().IntVar(&maxNodeSessions, "node.sessions", 5000, "maximum number of node sessions to allow")
 	rootCmd.Flags().IntVar(&maxUISessions, "ui.sessions", 5000, "maximum number of UI sessions to allow")
