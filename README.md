@@ -165,7 +165,7 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 # How to connect Erigon node to the diagnostics system
 ![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
- The app's diagnostic user interface (UI) will automatically open at http://< --metrics.addr --metrics.port> after you run one of the following commands:
+ The app's diagnostic user interface (UI) will automatically open at http://metrics.addr:metrics.port after you run one of the following commands:
 ```
   cd ./cmd/diagnostics && go run .
 ```
@@ -191,10 +191,10 @@ Enter session name which helps you helassociate session with erigon node user
 Once the new session is successfully created, it will be allocated a unique 8-digit PIN number. You can find this PIN displayed alongside the session in the list of created sessions. Please note that currently, you can only create one session, but support for multiple sessions will be extended in the future.
 
 #### Step 4: 
-Ensure that the Erigon node is already running on your system. Then, open a new console window and run the following command. Be sure to specify the session PIN at the end of the `--diagnostics.url` command line flag. Since the website uses a self-signed certificate without a properly allocated CName, you need to use the `--insecure` flag to establish a connection.
+Ensure that the Erigon node is already running on your system. Then, open a new console window and run the following command. Be sure to specify the session PIN at the end of the `--diagnostics.addr` command line flag. Since the website uses a self-signed certificate without a properly allocated CName, you need to use the `--insecure` flag to establish a connection.
 
 ```
-./build/bin/erigon support --debug.urls http://localhost:6060 --diagnostics.url http://< --metrics.addr --metrics.port> --diagnostics.sessions YOUR_SESSION_PIN --insecure
+./build/bin/erigon support --debug.addrs localhost:6060 --diagnostics.addr <metrics.addr:metrics.port> --diagnostics.sessions YOUR_SESSION_PIN --insecure
 ```
 
 Replace `YOUR_SESSION_PIN` with the 8-digit PIN allocated to your session during the previous step. This command will attach the diagnostics tool erigon node using the provided PIN.
