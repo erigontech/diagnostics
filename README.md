@@ -112,8 +112,6 @@ Run the application. This may take a while. Expect to see a TLS Handshake error 
 make run-self-signed
 ```
 
-To view the application in your browser, go to the URL `https://localhost:8080/ui`. Your browser will likely ask to accept the risks (due to self-signed certificate), do that.
-
 [Link to more information on this step](#how-to-build-and-run)
 
 ## Connect the Erigon Node to the Diagnostics System setup
@@ -167,20 +165,16 @@ If metrics are exposed, textual representation of metrics will be displayed in t
 # How to connect Erigon node to the diagnostics system
 ![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
- The app's diagnostic user interface (UI) will automatically open at https://localhost:8080 after you run one of the following commands:
+ The app's diagnostic user interface (UI) will automatically open at http://< --metrics.addr --metrics.port> after you run one of the following commands:
 ```
-./_bin/diagnostics --tls.cert demo-tls/diagnostics.crt --tls.key demo-tls/diagnostics-key.pem --tls.cacerts demo-tls/CA-cert.pem
+  cd ./cmd/diagnostics && go run .
 ```
 or
 ```
   make run-self-signed
 ```
 
-
 #### Step 2: 
-Please note that you may need to accept the security risks associated with the self-signed certificate. This action is required only the first time you access this URL, as your browser will remember your choice for subsequent visits.
-
-#### Step 3: 
 Follow these steps to create a session:
 
 ![create new operation session 1](/_images/create_session_1.png)
@@ -193,28 +187,26 @@ Enter session name which helps you helassociate session with erigon node user
 
 ![create new operation session 3](/_images/create_session_3.png)
 
-#### Step 4: 
+#### Step 3: 
 Once the new session is successfully created, it will be allocated a unique 8-digit PIN number. You can find this PIN displayed alongside the session in the list of created sessions. Please note that currently, you can only create one session, but support for multiple sessions will be extended in the future.
 
-#### Step 5: 
+#### Step 4: 
 Ensure that the Erigon node is already running on your system. Then, open a new console window and run the following command. Be sure to specify the session PIN at the end of the `--diagnostics.url` command line flag. Since the website uses a self-signed certificate without a properly allocated CName, you need to use the `--insecure` flag to establish a connection.
 
 ```
-./build/bin/erigon support --debug.urls http://localhost:6060 --diagnostics.url https://localhost:8080 --diagnostics.sessions YOUR_SESSION_PIN --insecure
+./build/bin/erigon support --debug.urls http://localhost:6060 --diagnostics.url http://< --metrics.addr --metrics.port> --diagnostics.sessions YOUR_SESSION_PIN --insecure
 ```
 
 Replace `YOUR_SESSION_PIN` with the 8-digit PIN allocated to your session during the previous step. This command will attach the diagnostics tool erigon node using the provided PIN.
 
-#### Step 6: 
+#### Step 5: 
 Once the diagnostics tool successfully connects to the Erigon node, return to your web browser and reload the page. This step is necessary to query data from the connected node.
 
-#### Step 7: 
-Currently diagnostics UI support "Process", "Logs", "Data" tabs
 # Architecture of diagnostics system
 
 Following diagram shows schematically how the process of diagnostics works. Erigon nodes that can be diagnosed, need to be running with `--metrics` flag.
 Diagnostics system (HTTP/2 website) needs to be running somewhere. For the public use, it can be a website managed by Erigon team, for example. For
-personal and testing use, this can be locally run website with self-signed certificates.
+personal and testing use, this can be locally run website.
 
 In order to connect Erigon node to the Diagnostics system, user needs to start a process with a command `erigon support`, as described earlier.
 The initiations of network connections are shown as solid single arrows. One can see that `erigon support` initiates connections to both Erigon node

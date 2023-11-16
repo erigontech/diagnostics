@@ -36,7 +36,8 @@ func NewHandler(services APIServices) http.Handler {
 
 	r.Mount("/", web.UI)
 	r.HandleFunc("/snapshot-sync", index)
-	r.HandleFunc("/network", index)
+	r.HandleFunc("/sentry-network", index)
+	r.HandleFunc("/sentinel-network", index)
 	r.HandleFunc("/logs", index)
 	r.HandleFunc("/chain", index)
 	r.HandleFunc("/data", index)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"log"
 	"net/http"
@@ -37,16 +36,6 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("session cache creation  failed: %v", err)
-	}
-
-	// Initializes and adds the provided certificate to the pool, to be used in TLS config
-	certPool := x509.NewCertPool()
-	for _, caCertFile := range caCertFiles {
-		caCert, err := os.ReadFile(caCertFile)
-		if err != nil {
-			log.Fatalf("reading server certificate: %v", err)
-		}
-		certPool.AppendCertsFromPEM(caCert)
 	}
 
 	// Passing in the services to REST layer

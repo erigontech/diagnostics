@@ -15,8 +15,8 @@ run:
 	go run ./cmd/diagnostics
 
 run-self-signed:
-	go run ./cmd/diagnostics  --tls.cert _demo-tls/diagnostics.crt --tls.key _demo-tls/diagnostics-key.pem --tls.cacerts _demo-tls/CA-cert.pem
-
+## In order to solw relod UI 404 issue first cd to folder and after run
+	cd ./cmd/diagnostics && go run .
 clean:
 	rm -rf $(BUILD_DIR)
 
