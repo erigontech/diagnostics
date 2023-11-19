@@ -84,6 +84,8 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 	requestMap := map[string]*erigon_node.NodeRequest{}
 	requestMutex := sync.Mutex{}
 
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
 	for _, node := range connectionInfo.Nodes {
 		nodeSession, ok := h.cache.FindNodeSession(node.Id)
 
@@ -102,10 +104,18 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 		nodeSession.Connect(r.RemoteAddr)
 
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			defer nodeSession.Disconnect()
 
-			for request := range nodeSession.RequestCh {
+			for {
+				var request *erigon_node.NodeRequest
+				select {
+				case request = <-nodeSession.RequestCh:
+				case <-ctx.Done():
+					return
+				}
 				rpcRequest := request.Request
 
 				bytes, err := json.Marshal(rpcRequest)
@@ -162,6 +172,12 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 
 		if err = json.Unmarshal(message, &response); err != nil {
 			fmt.Printf("can't read response: %v\n", err)
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return
+			default:
+			}
 			continue
 		}
 
