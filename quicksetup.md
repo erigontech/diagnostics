@@ -77,7 +77,7 @@ Enter session name which helps you helassociate session with erigon node user
 Once the new session is successfully created, it will be allocated a unique 8-digit PIN number. You can find this PIN displayed alongside the session in the list of created sessions. Please note that currently, you can only create one session, but support for multiple sessions will be extended in the future.
 
 #### Step 4: 
-Go to erigon folder and run command
+Go to erigon folder and run command, make sure that you DO NOT pass URL sheme in DIAGNOSTICS_ADDRESS (84c5df474.ngrok-free.dev or localhost:8080) 
 
 ```
 ./build/bin/erigon support --debug.addrs localhost:6060 --diagnostics.addr DIAGNOSTICS_ADDRESS --diagnostics.sessions YOUR_SESSION_PIN --insecure
