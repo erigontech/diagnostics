@@ -422,7 +422,31 @@ func (h *APIHandler) ShanphotSync(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
+}
 
+func (h *APIHandler) ShanphotFilesList(w http.ResponseWriter, r *http.Request) {
+	client, err := h.findNodeClient(w, r)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	snapSync, err := client.ShanphotFiles(r.Context())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch snapshot files list: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, err := json.Marshal(snapSync)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 func (h *APIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (erigon_node.Client, error) {
@@ -473,6 +497,7 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/peers", r.Peers)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bootnodes", r.Bootnodes)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-sync", r.ShanphotSync)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-files-list", r.ShanphotFilesList)
 
 	return r
 }
