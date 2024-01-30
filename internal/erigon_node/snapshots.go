@@ -7,7 +7,8 @@ import (
 
 type DownloadStatistics map[string]interface{}
 
-// FindReorgs - Go through "Header" table and look for entries with the same block number but different hashes
+type ShanshotFilesList interface{}
+
 func (c *NodeClient) ShanphotSync(ctx context.Context) (DownloadStatistics, error) {
 	var syncStats DownloadStatistics
 
@@ -28,4 +29,26 @@ func (c *NodeClient) ShanphotSync(ctx context.Context) (DownloadStatistics, erro
 	}
 
 	return syncStats, nil
+}
+
+func (c *NodeClient) ShanphotFiles(ctx context.Context) (ShanshotFilesList, error) {
+	var filesList ShanshotFilesList
+
+	request, err := c.fetch(ctx, "snapshot-files-list", nil)
+
+	if err != nil {
+		return filesList, err
+	}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return filesList, err
+	}
+
+	if err := json.Unmarshal(result, &filesList); err != nil {
+		return filesList, err
+	}
+
+	return filesList, nil
 }
