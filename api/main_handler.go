@@ -46,6 +46,7 @@ func NewHandler(services APIServices) http.Handler {
 	r.HandleFunc("/performance", index)
 	r.HandleFunc("/documentation", index)
 	r.HandleFunc("/admin", index)
+	r.HandleFunc("/downloader", index)
 
 	r.Group(func(r chi.Router) {
 		session := sessions.Middleware{CacheService: services.StoreSession}
