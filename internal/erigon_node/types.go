@@ -24,7 +24,7 @@ type PeerNetworkInfo struct {
 }
 
 type PeerInfo struct {
-	ENR           string                 `json:"enr,omitempty"` // Ethereum Node Record
+	ENR           string                 `json:"enr"`           // Ethereum Node Record
 	Enode         string                 `json:"enode"`         // Node URL
 	ID            string                 `json:"id"`            // Unique node identifier
 	Name          string                 `json:"name"`          // Name of the node, including client type, version, OS, custom data
