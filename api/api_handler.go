@@ -468,6 +468,33 @@ func (h *APIHandler) findNodeClient(w http.ResponseWriter, r *http.Request) (eri
 	return nil, fmt.Errorf("unknown sessionId: %s", sessionId)
 }
 
+func (h *APIHandler) UniversalRequest(w http.ResponseWriter, r *http.Request) {
+	apiStr := chi.URLParam(r, "*")
+
+	client, err := h.findNodeClient(w, r)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response, err := client.GetResponse(r.Context(), apiStr)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch snapshot files list: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, err := json.Marshal(response)
+
+	if err != nil {
+		api_internal.EncodeError(w, r, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
 func NewAPIHandler(
 	sessions sessions.CacheService,
 	erigonNode erigon_node.Client,
@@ -498,6 +525,7 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bootnodes", r.Bootnodes)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-sync", r.ShanphotSync)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-files-list", r.ShanphotFilesList)
+	r.Get("/v2/sessions/{sessionId}/nodes/{nodeId}/*", r.UniversalRequest)
 
 	return r
 }
