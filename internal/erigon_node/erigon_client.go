@@ -198,6 +198,28 @@ func (c *NodeClient) fetch(ctx context.Context, method string, params url.Values
 	return nodeRequest, nil
 }
 
+func (c *NodeClient) GetResponse(ctx context.Context, api string) (interface{}, error) {
+	var response interface{}
+
+	request, err := c.fetch(ctx, api, nil)
+
+	if err != nil {
+		return response, err
+	}
+
+	_, result, err := request.nextResult(ctx)
+
+	if err != nil {
+		return response, err
+	}
+
+	if err := json.Unmarshal(result, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
 func NewErigonNodeClient() Client {
 	return &NodeClient{}
 }
@@ -225,6 +247,8 @@ type Client interface {
 
 	ShanphotSync(ctx context.Context) (DownloadStatistics, error)
 	ShanphotFiles(ctx context.Context) (ShanshotFilesList, error)
+
+	GetResponse(ctx context.Context, api string) (interface{}, error)
 
 	// TODO: refactor the following methods to follow above pattern where appropriate
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
