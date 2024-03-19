@@ -8,29 +8,6 @@ import (
 	"strconv"
 )
 
-func (c *NodeClient) LogFiles(ctx context.Context) (LogFiles, error) {
-	request, err := c.fetch(ctx, "logs", nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var files LogFiles
-
-	_, result, err := request.nextResult(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(result, &files); err != nil {
-		return nil, err
-	}
-
-	return files, nil
-
-}
-
 func (c *NodeClient) Log(ctx context.Context, w http.ResponseWriter, file string, offset int64, limit int64, download bool) error {
 	var params url.Values
 

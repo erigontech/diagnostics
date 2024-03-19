@@ -7,7 +7,6 @@ import (
 	"fmt"
 )
 
-type DBs []string
 type Tables []Table
 
 type Table struct {
@@ -17,28 +16,6 @@ type Table struct {
 }
 
 type Results struct{}
-
-func (c *NodeClient) DBs(ctx context.Context) (DBs, error) {
-	request, err := c.fetch(ctx, "dbs", nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var dbs DBs
-
-	_, result, err := request.nextResult(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(result, &dbs); err != nil {
-		return nil, err
-	}
-
-	return dbs, nil
-}
 
 func (c *NodeClient) Tables(ctx context.Context, db string) (Tables, error) {
 	request, err := c.fetch(ctx, "dbs/"+db+"/tables", nil)
