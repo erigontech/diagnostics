@@ -246,11 +246,7 @@ func (h *APIHandler) findNodeClient(r *http.Request) (erigon_node.Client, error)
 func (h *APIHandler) UniversalRequest(w http.ResponseWriter, r *http.Request) {
 	apiStr := chi.URLParam(r, "*")
 
-<<<<<<< HEAD
 	client, err := h.findNodeClient(r)
-=======
-	client, err := h.findNodeClient(w, r)
->>>>>>> main
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -293,14 +289,6 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bodies/download-summary", r.BodiesDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
-<<<<<<< HEAD
-
-=======
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/peers", r.Peers)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/bootnodes", r.Bootnodes)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-sync", r.ShanphotSync)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/snapshot-files-list", r.ShanphotFilesList)
->>>>>>> main
 	r.Get("/v2/sessions/{sessionId}/nodes/{nodeId}/*", r.UniversalRequest)
 
 	return r
