@@ -52,6 +52,7 @@ linters-settings:
       - commentFormatting
       - ifElseChain
       - sprintfQuotedString
+      - commentedOutCode
 
     settings:
       hugeParam:
