@@ -39,14 +39,12 @@ linters-settings:
       - performance
       - diagnostic
     disabled-checks:
-      - appendAssign
       - rangeValCopy
       - exitAfterDefer
       - elseif
       - dupBranchBody
       - assignOp
       - singleCaseSwitch
-      - unlambda
       - captLocal
       - commentFormatting
       - ifElseChain
@@ -55,9 +53,6 @@ linters-settings:
       - preferFprint
 
     settings:
-      hugeParam:
-        # size in bytes that makes the warning trigger (default 80)
-        sizeThreshold: 1000
       rangeExprCopy:
         # size in bytes that makes the warning trigger (default 512)
         sizeThreshold: 512
