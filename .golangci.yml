@@ -39,7 +39,6 @@ linters-settings:
       - performance
       - diagnostic
     disabled-checks:
-      - regexpMust
       - appendAssign
       - rangeValCopy
       - exitAfterDefer
