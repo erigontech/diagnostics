@@ -51,10 +51,6 @@ linters-settings:
       - captLocal
       - commentFormatting
       - ifElseChain
-      - importShadow
-      - paramTypeCombine
-      - builtinShadow
-      - typeUnparen
       - sprintfQuotedString
 
     settings:

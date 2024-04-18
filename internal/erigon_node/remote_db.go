@@ -161,7 +161,6 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 	if err != nil {
 		return "", err
 	}
-	// fmt.Println("lines: ", lines)
 
 	var dbPath string
 
