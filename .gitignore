@@ -36,3 +36,5 @@ yarn.lock
 node_modules
 
 logs/
+
+golangci-lint
