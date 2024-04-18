@@ -38,6 +38,7 @@ linters-settings:
     enabled-tags:
       - performance
       - diagnostic
+      - style
     disabled-checks:
       - rangeValCopy
       - exitAfterDefer
@@ -51,6 +52,12 @@ linters-settings:
       - sprintfQuotedString
       - commentedOutCode
       - preferFprint
+
+      # style tag
+      - importShadow
+      - emptyStringTest
+      - paramTypeCombine
+      - unnamedResult
 
     settings:
       rangeExprCopy:

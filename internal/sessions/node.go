@@ -28,7 +28,7 @@ type NodeInfo struct {
 
 // NodeSession corresponds to one Erigon node connected via "erigon support" bridge to an operator
 type NodeSession struct {
-	sync.Mutex
+	lock         sync.Mutex
 	Connected    bool
 	RemoteAddr   string
 	Client       erigon_node.Client
@@ -39,15 +39,15 @@ type NodeSession struct {
 }
 
 func (ns *NodeSession) Connect(remoteAddr string) {
-	ns.Lock()
-	defer ns.Unlock()
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
 	ns.Connected = true
 	ns.RemoteAddr = remoteAddr
 }
 
 func (ns *NodeSession) Disconnect() {
-	ns.Lock()
-	defer ns.Unlock()
+	ns.lock.Lock()
+	defer ns.lock.Unlock()
 	ns.Connected = false
 }
 

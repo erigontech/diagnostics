@@ -13,7 +13,7 @@ import (
 var _ Client = &NodeClient{}
 
 type NodeClient struct {
-	sync.Mutex
+	lock           sync.Mutex
 	requestId      uint64
 	requestChannel chan *NodeRequest
 	nodeId         string
@@ -27,10 +27,10 @@ func NewClient(nodeId string, requestChannel chan *NodeRequest) Client {
 }
 
 func (c *NodeClient) nextRequestId() string {
-	c.Lock()
+	c.lock.Lock()
 	id := c.requestId
 	c.requestId++
-	c.Unlock()
+	c.lock.Unlock()
 	return strconv.FormatUint(id, 10)
 }
 

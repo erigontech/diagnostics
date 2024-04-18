@@ -74,9 +74,9 @@ func (r *results) UnmarshalJSON(json []byte) (err error) {
 
 		switch json[i] {
 		case byte('"'):
-			len, value := tostr(json[i:])
+			length, value := tostr(json[i:])
 
-			i += len
+			i += length
 
 			if result[ri], err = base64.URLEncoding.DecodeString(value); err != nil {
 				return err
