@@ -34,49 +34,32 @@ linters:
 #    - stylecheck
 
 linters-settings:
-  gocritic:
-    # Which checks should be enabled; can't be combined with 'disabled-checks';
-    # See https://go-critic.github.io/overview#checks-overview
-    # To check which checks are enabled run `GL_DEBUG=gocritic ./build/bin/golangci-lint run`
-    # By default list of stable checks is used.
-    enabled-checks:
-      # - ruleguard
-      # - defaultCaseOrder
-
-    # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
+  gocritic: # see https://golangci-lint.run/usage/linters/#gocritic and https://go-critic.github.io/overview#checks-overview
+    enabled-tags:
+      - performance
+      - diagnostic
+      - style
     disabled-checks:
-      - regexpMust
-      - appendAssign
-      #      - hugeParam
       - rangeValCopy
       - exitAfterDefer
       - elseif
       - dupBranchBody
       - assignOp
       - singleCaseSwitch
-      - unlambda
       - captLocal
       - commentFormatting
       - ifElseChain
-      - importShadow
-      - paramTypeCombine
-      - builtinShadow
-      - typeUnparen
+      - sprintfQuotedString
+      - commentedOutCode
+      - preferFprint
 
-    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
-    # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
-    enabled-tags:
-      - performance
-      - diagnostic
-      - opinionated
-    disabled-tags:
-      - experimental
+      # style tag
+      - importShadow
+      - emptyStringTest
+      - paramTypeCombine
+      - unnamedResult
+
     settings:
-      # ruleguard:
-      #  rules: "rules.go"
-      hugeParam:
-        # size in bytes that makes the warning trigger (default 80)
-        sizeThreshold: 1000
       rangeExprCopy:
         # size in bytes that makes the warning trigger (default 512)
         sizeThreshold: 512
@@ -96,7 +79,7 @@ linters-settings:
     min-len: 2
     min-occurrences: 2
   gofmt:
-    auto-fix: false
+    simplify: false
 
 issues:
   exclude-rules:

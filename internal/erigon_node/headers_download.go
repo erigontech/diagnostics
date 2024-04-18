@@ -10,10 +10,6 @@ import (
 )
 
 func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter) {
-	/*
-		snapshot := btree.NewG(16, func(a, b SnapshotItem) bool {
-			return a.Id < b.Id
-		})*/
 	var tick int64
 	sendEvery := time.NewTicker(1000 * time.Millisecond)
 	defer sendEvery.Stop()
