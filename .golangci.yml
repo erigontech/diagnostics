@@ -53,6 +53,7 @@ linters-settings:
       - ifElseChain
       - sprintfQuotedString
       - commentedOutCode
+      - preferFprint
 
     settings:
       hugeParam:
