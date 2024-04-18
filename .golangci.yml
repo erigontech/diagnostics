@@ -34,13 +34,16 @@ linters:
 #    - stylecheck
 
 linters-settings:
-  gocritic: # see https://golangci-lint.run/usage/linters/#gocritic
-
-    # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
+  gocritic: # see https://golangci-lint.run/usage/linters/#gocritic and  https://github.com/go-critic/go-critic#usage -> section "Tags"
+    enabled-tags:
+      - performance
+      - diagnostic
+      - opinionated
+    disabled-tags:
+      - experimental
     disabled-checks:
       - regexpMust
       - appendAssign
-      #      - hugeParam
       - rangeValCopy
       - exitAfterDefer
       - elseif
@@ -57,14 +60,6 @@ linters-settings:
       - typeUnparen
       - sprintfQuotedString
 
-    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
-    # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
-    enabled-tags:
-      - performance
-      - diagnostic
-      - opinionated
-    disabled-tags:
-      - experimental
     settings:
       hugeParam:
         # size in bytes that makes the warning trigger (default 80)
