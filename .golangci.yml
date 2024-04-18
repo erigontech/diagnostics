@@ -1,5 +1,5 @@
 run:
-  deadline: 10m
+  timeout: 10m
 
 linters:
   presets:
@@ -41,7 +41,6 @@ linters-settings:
     # By default list of stable checks is used.
     enabled-checks:
       # - ruleguard
-      - truncateCmp
       # - defaultCaseOrder
 
     # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
@@ -83,9 +82,6 @@ linters-settings:
         sizeThreshold: 512
         # whether to check test functions (default true)
         skipTestFuncs: true
-      truncateCmp:
-        # whether to skip int/uint/uintptr types (default true)
-        skipArchDependent: true
       underef:
         # whether to skip (*x).method() calls where x is a pointer receiver (default true)
         skipRecvDeref: true
@@ -118,19 +114,16 @@ issues:
       linters:
         - gosec
         - unused
-        - deadcode
         - gocritic
     - path: hack\.go
       linters:
         - gosec
         - unused
-        - deadcode
         - gocritic
     - path: cmd/devp2p
       linters:
         - gosec
         - unused
-        - deadcode
         - gocritic
     - path: metrics/sample\.go
       linters:
