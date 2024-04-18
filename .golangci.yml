@@ -38,9 +38,6 @@ linters-settings:
     enabled-tags:
       - performance
       - diagnostic
-      - opinionated
-    disabled-tags:
-      - experimental
     disabled-checks:
       - regexpMust
       - appendAssign
