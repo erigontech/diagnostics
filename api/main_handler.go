@@ -9,7 +9,7 @@ import (
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/ledgerwatch/diagnostics/web"
+	"github.com/ledgerwatch/erigonwatch"
 )
 
 type APIServices struct {
@@ -34,7 +34,10 @@ func NewHandler(services APIServices) http.Handler {
 	r.Mount(internal.HealthCheckEndPoint, HealthCheckHandler())
 	r.Mount(internal.BridgeEndPoint, NewBridgeHandler(services.StoreSession))
 
-	r.Mount("/", web.UI)
+	assets, _ := erigonwatch.UIFiles()
+	fs := http.FileServer(http.FS(assets))
+
+	r.Mount("/", fs)
 	r.HandleFunc("/snapshot-sync", index)
 	r.HandleFunc("/sentry-network", index)
 	r.HandleFunc("/sentinel-network", index)
