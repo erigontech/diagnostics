@@ -9,7 +9,7 @@ import (
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/ledgerwatch/diagnostics/web"
+	"github.com/ledgerwatch/erigonwatch"
 )
 
 type APIServices struct {
@@ -18,10 +18,24 @@ type APIServices struct {
 }
 
 func NewHandler(services APIServices) http.Handler {
+	supportedSubpaths := []string{
+		"sentry-network",
+		"sentinel-network",
+		"downloader",
+		"logs",
+		"chain",
+		"data",
+		"debug",
+		"testing",
+		"performance",
+		"documentation",
+		"issues",
+		"admin",
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	//r.Use(bridge.Middleware)
 	r.Use(middleware.RouteHeaders().
 		Route("Origin", "*", cors.Handler(cors.Options{
 			AllowedOrigins:   []string{"*"},
@@ -34,19 +48,14 @@ func NewHandler(services APIServices) http.Handler {
 	r.Mount(internal.HealthCheckEndPoint, HealthCheckHandler())
 	r.Mount(internal.BridgeEndPoint, NewBridgeHandler(services.StoreSession))
 
-	r.Mount("/", web.UI)
-	r.HandleFunc("/snapshot-sync", index)
-	r.HandleFunc("/sentry-network", index)
-	r.HandleFunc("/sentinel-network", index)
-	r.HandleFunc("/logs", index)
-	r.HandleFunc("/chain", index)
-	r.HandleFunc("/data", index)
-	r.HandleFunc("/debug", index)
-	r.HandleFunc("/testing", index)
-	r.HandleFunc("/performance", index)
-	r.HandleFunc("/documentation", index)
-	r.HandleFunc("/admin", index)
-	r.HandleFunc("/downloader", index)
+	assets, _ := erigonwatch.UIFiles()
+	fs := http.FileServer(http.FS(assets))
+
+	r.Mount("/", fs)
+
+	for _, subpath := range supportedSubpaths {
+		addhandler(r, "/"+subpath, fs)
+	}
 
 	r.Group(func(r chi.Router) {
 		session := sessions.Middleware{CacheService: services.StoreSession}
@@ -57,6 +66,6 @@ func NewHandler(services APIServices) http.Handler {
 	return r
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./../../web/dist/index.html")
+func addhandler(r *chi.Mux, path string, handler http.Handler) {
+	r.Handle(path, http.StripPrefix(path, handler))
 }
