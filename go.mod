@@ -1,6 +1,6 @@
 module github.com/ledgerwatch/diagnostics
 
-go 1.21
+go 1.21.5
 
 require (
 	github.com/go-chi/chi/v5 v5.0.12
@@ -14,7 +14,7 @@ require (
 require (
 	github.com/go-chi/cors v1.2.1
 	github.com/gorilla/websocket v1.5.1
-	github.com/ledgerwatch/erigonwatch v0.0.0-20240505164936-9252080c6d27
+	github.com/ledgerwatch/erigonwatch v0.1.0
 )
 
 require (
