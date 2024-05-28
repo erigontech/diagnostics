@@ -70,33 +70,24 @@ necessarily want people to work for free.
 
 
 ## Erigon Node Set Up
-Clone the Erigon repository
-```
-git clone --recurse-submodules -j8 https://github.com/ledgerwatch/erigon.git
-```
+For building the bleeding edge development branch:
 
-Change into the repo, and make sure you are on the ```devel``` branch
-```
+```sh
+git clone --recurse-submodules https://github.com/ledgerwatch/erigon.git
 cd erigon
-git checkout devel
-```
-
-Build the repo
-```
+git checkout main
 make erigon
+./build/bin/erigon
 ```
 
-Run the Node. To make sure that it connects to the diagnostics system, add the --metrics flag.
-The `<data_directory>` field will be the directory path to your database. The sepolia chain and the --internalcl options will allow for quicker setup for testing
+Run the Node. The `<data_directory>` field will be the directory path to your database. The sepolia chain and the --internalcl options will allow for quicker setup for testing
 
 ```
-./build/bin/erigon --datadir <data_directory> --chain sepolia --internalcl --metrics
+./build/bin/erigon --datadir <data_directory> --chain sepolia
 ```
 
-Check the prometheus logs by navigating to the url below
-```
-http://localhost:6060/debug/metrics/prometheus
-```
+For more details check [Erigon documentation](https://github.com/ledgerwatch/erigon?tab=readme-ov-file#getting-started)
+
 To set and use a custom address and port, here a
 [link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
 
@@ -112,23 +103,8 @@ Run the application. This may take a while. Expect to see a TLS Handshake error 
 make run-self-signed
 ```
 
-[Link to more information on this step](#how-to-build-and-run)
-
 ## Connect the Erigon Node to the Diagnostics System setup
 [Link to more information on this step](#how-to-connect-erigon-node-to-the-diagnostics-system)
-
-# Testing & Linting
-
-Running the tests including integration and end to end can be done using the Makefile:
-```
-make test
-```
-
-Linting with golangci:
-```
-  make lint
-```
-
 
 # How to run an Erigon node that can be connected to the diagnostics system
 
