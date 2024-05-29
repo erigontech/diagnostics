@@ -103,45 +103,13 @@ Run the application. This may take a while. Expect to see a TLS Handshake error 
 make run-self-signed
 ```
 
-## Connect the Erigon Node to the Diagnostics System setup
-[Link to more information on this step](#how-to-connect-erigon-node-to-the-diagnostics-system)
-
-# How to run an Erigon node that can be connected to the diagnostics system
-
-For an Erigon node to be connected to the diagnostics system, it needs to expose metrics using this command line flag:
-
-```
---metrics
-```
-
-By default, the metrics are exposed on `localhost` and port `6060`. In order to expose them on a different networking interface and/or different port,
-the following command line flags can be used:
-
-```
---metrics.addr <IP of interface> --metrics.port <port>
-```
-
-If you are not sure what kind of node to run, you can try Ethereum Sepolia testnet with Caplin (Erigon's experimental embedded Consensus Layer support).
-Caplin works on Sepolia in `devel` branch of Erigon, but this wll be included into the next release. Build Erigon from `devel` branch, choose data directory
-and run this command:
-
-```
-erigon --datadir <data_directory> --chain sepolia --internalcl --metrics
-```
-
-The flag `--internalcl` enables Caplin, which means that you won't need to install a Consensus Layer separately, and this will make your work simpler.
-
-In order to check is the metrics are exposed on given interface or port, you can check it in the browser by going to
-```
-http://<metrics.addr>:<metrics.port>/debug/metrics/prometheus
-```
-
-If metrics are exposed, textual representation of metrics will be displayed in the browser.
+# Connection overview
 
 # How to connect Erigon node to the diagnostics system
-![diagnostics system connection](/_images/diagnostics-connection-anim.gif)
 #### Step 1: 
- The app's diagnostic user interface (UI) will automatically open at http://metrics.addr:metrics.port after you run one of the following commands:
+You can specify address and port of diagnostics UI to be served on. The default values is `--addr=localhost` and `--port=8080`
+
+ The app's diagnostic user interface (UI) will automatically open at `http://addr:port` after you run one of the following commands:
 ```
   cd ./cmd/diagnostics && go run .
 ```

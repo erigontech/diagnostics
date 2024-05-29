@@ -1,0 +1,46 @@
+@startuml
+participant "Erigon Node" as Erigon
+participant "Diagnostics" as Diag
+participant "Support Command" as Support
+participant "UI" as UI
+
+note right of Erigon
+"./build/bin/erigon"
+end note
+Erigon -> Erigon: Run Erigon node
+
+note right of Diag
+   "make run-self-signed"
+end note
+Diag -> Diag: Run Diagnostics
+
+note right of UI
+Automatically opens browser with default address
+(address can be specified using flags) 
+end note
+Diag -> UI: Serve UI
+
+note right of UI
+Creating diagnostics session to obtain PIN.
+PIN is required for support command
+end note
+UI -> UI: Create diagnostics session
+
+note right of Support
+./build/bin/erigon support 
+end note
+Support -> Erigon: Run support command to establish tunnel
+
+Erigon <-> Diag: Create tunnel
+
+UI -> Diag: Query data
+
+Diag -> Erigon: Ask for data queried by UI
+
+Erigon -> Diag: Return queried data
+
+Diag -> UI: Return queried data
+
+UI -> UI: Display data
+
+@enduml
