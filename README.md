@@ -8,15 +8,31 @@
   - [Pre-requisites](#pre-requisites)
   - [Erigon Node Setup](#erigon-node-set-up)
   - [Diagnostics Setup](#diagnostics-set-up)
-  - [Connect Erigon The Diagnostics System](#connect-the-erigon-node-to-the-diagnostics-system-setup)
-- [Architecture of diagnostics system](#architecture-of-diagnostics-system)
+  - [Diagnostics architecture diagram ](#diagnostics-architecture-diagram)
+- [How to setup](#how-to-connect-erigon-node-to-the-diagnostics-system)
+  - [Local Erigon Node](#local-erigon-node)
+  - [Remote Erigon Node](#remote-erigon-node)
+    - [Diagnostics setup](#step-1)
+    - [Create a session](#step-2)
+    - [Retrieve PIN](#step-3)
+    - [Connect to node](#step-4)
+    - [Observe node data](#step-5)
 - [Currently implemented diagnostics](#currently-implemented-diagnostics)
-  - [Code version](#code-version)
-  - [Command line arguments](#command-line-arguments)
-  - [Logs](#logs)
-  - [Reorg scanner](#reorg-scanner)
-  - [Sync stages](#sync-stages)
-  - [Block body download](#block-body-download)
+ - [Status Bar](#status-bar)
+  - [Current Session](#current-session)
+  - [Operating Node](#operating-node)
+  - [Switching Between Sessions and Nodes](#switching-between-sessions-and-nodes)
+-[Process Tab](#process-tab)
+  - [Command](#command)
+  - [Flags](#flags)
+  - [Node info](#node-info)
+- [Network Tab](#network-tab)
+  - [Peers data](#peers-data)
+  - [Downloader](#downloader)
+- [Logs Tab](#logs-tab)
+- [Data Tab](#data-tab)
+- [Admin Tab](#admin-tab)
+- [Available Flags](#available-flags)
 - [Ideas for Possible improvements](#ideas-for-possible-improvements)
 
 # Overview
@@ -64,9 +80,9 @@ necessarily want people to work for free.
 # Development Environment Setup
 
 
-## Pre-requisites
-- Golang installed locally
-- Erigon Node running locally (if needed, please review the Erigon Node quick setup guide below)
+## Prerequisites
+- Go installed locally
+- Erigon node running locally (if needed, please review the Erigon node quick setup guide below)
 
 
 ## Erigon Node Set Up
@@ -80,7 +96,7 @@ make erigon
 ./build/bin/erigon
 ```
 
-Run the Node. The `<data_directory>` field will be the directory path to your database. The sepolia chain and the --internalcl options will allow for quicker setup for testing
+Run the Node. The `<data_directory>` field will be the directory path to your database. The sepolia chain option will allow for quicker setup for testing.
 
 ```
 ./build/bin/erigon --datadir <data_directory> --chain sepolia
@@ -102,67 +118,50 @@ Run the application. This may take a while. Expect to see a TLS Handshake error 
 ```
 make run-self-signed
 ```
+[Available flags](#available-flags)
 
-# Connection overview
+# Diagnostics architecture diagram
+![overview](/_diagrams/remote_connection.png)
 
 # How to connect Erigon node to the diagnostics system
+## Local Erigon node:
+  //TODO: create diag commands readme
+## Remote Erigon node: 
 #### Step 1: 
-You can specify address and port of diagnostics UI to be served on. The default values is `--addr=localhost` and `--port=8080`
+[Diagnostics setup](#diagnostics-set-up)
 
- The app's diagnostic user interface (UI) will automatically open at `http://addr:port` after you run one of the following commands:
-```
-  cd ./cmd/diagnostics && go run .
-```
-or
-```
-  make run-self-signed
-```
-
-#### Step 2: 
+#### Step 2:
 Follow these steps to create a session:
 
 ![create new operation session 1](/_images/create_session_1.png)
 
-press create session
+Press "Create Session".
 
 ![create new operation session 2](/_images/create_session_2.png)
 
-Enter session name which helps you helassociate session with erigon node user
+Enter a session name which helps you associate the session with the Erigon node user.
 
 ![create new operation session 3](/_images/create_session_3.png)
 
-#### Step 3: 
+#### Step 3:
 Once the new session is successfully created, it will be allocated a unique 8-digit PIN number. You can find this PIN displayed alongside the session in the list of created sessions. Please note that currently, you can only create one session, but support for multiple sessions will be extended in the future.
 
-#### Step 4: 
-Ensure that the Erigon node is already running on your system. Then, open a new console window and run the following command. Be sure to specify the session PIN at the end of the `--diagnostics.addr` command line flag. Since the website uses a self-signed certificate without a properly allocated CName, you need to use the `--insecure` flag to establish a connection.
+#### Step 4:
+Ensure that the Erigon node is already running and run the following command. Two important bits are to pass the proper diagnostics address and session PIN.
+
+- `--diagnostics.addr`: By default, the diagnostics address is localhost:8080. You may [tunnel](https://ngrok.com/docs/getting-started/#step-3-put-your-app-online) it to connect to a remote node, you must specify it for this flag.
+- `--diagnostics.sessions`: Place the 8-digit PIN allocated to your session during the previous step. This command will attach the diagnostics tool to the Erigon node using the provided PIN.
+
 
 ```
-./build/bin/erigon support --debug.addrs localhost:6060 --diagnostics.addr <metrics.addr:metrics.port> --diagnostics.sessions YOUR_SESSION_PIN --insecure
+./build/bin/erigon support <flags>
 ```
+[Support command documentation](https://github.com/ledgerwatch/erigon/tree/main/turbo/app#support)
 
-Replace `YOUR_SESSION_PIN` with the 8-digit PIN allocated to your session during the previous step. This command will attach the diagnostics tool erigon node using the provided PIN.
 
 #### Step 5: 
 Once the diagnostics tool successfully connects to the Erigon node, return to your web browser and reload the page. This step is necessary to query data from the connected node.
 
-# Architecture of diagnostics system
-
-Following diagram shows schematically how the process of diagnostics works. Erigon nodes that can be diagnosed, need to be running with `--metrics` flag.
-Diagnostics system (HTTP/2 website) needs to be running somewhere. For the public use, it can be a website managed by Erigon team, for example. For
-personal and testing use, this can be locally run website.
-
-In order to connect Erigon node to the Diagnostics system, user needs to start a process with a command `erigon support`, as described earlier.
-The initiations of network connections are shown as solid single arrows. One can see that `erigon support` initiates connections to both Erigon node
-and the diagnostics system. Then, it uses the feature of HTTP/2 called "duplex connection", to create a logical tunnel that allows diagnostics system
-to make HTTP requests to the Erigon node, and receive the information exposed on the metrics port. The URLs used to connect `erigon support` to the
-diagnostics system, start with `/support/` prefix, followed by the PIN of the session. In the code inside `cmd/root.go`, this corresponds to the
-`BridgeHandler` type.
-
-Operators (those who are trying to assist the Erigon node users) also access Diagnostics system, but in the form of User Interface, built using HTML
-and Javascript. The URLs used for such access, start with `ui/` prefix. In the code inside `cmd/root.go`, this corresponds to the `APIHandler` type.
-
-![diagnostics system architecture](/_images/diagnostics.drawio.png)
 
 # Currently implemented diagnostics
 
@@ -193,7 +192,7 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
     ![nodes-popup](/_images/statusbar/nodes_popup.png)
 ## Process Tab
   - ### Command:
-    Within the diagnostics application, the operator has the capability to inspect the command line arguments that were used to launch the Erigon node. This functionality is implemented in the file `internal/erigon_node/erigon_client.go`, specifically within the function named `CMDLineArgs`. 
+    Within the diagnostics application, the operator has the capability to inspect the command line arguments that were used to launch the Erigon node.
 
 ![cmd line](/_images/process/cmd_line.png)
 
@@ -213,59 +212,42 @@ and Javascript. The URLs used for such access, start with `ui/` prefix. In the c
 
 - ### Node info
 
-  Contains detailed info about erigon node. Coresponding code located at `internal/api/ui_handler.go`
+  Contains detailed info about erigon node.
 
 ![sync_stage](/_images/process/node_info.png)
 
-- ### Sync stages
 
-  This is another example of how the diagnostics system can access the Erigon node's database remotely, via `erigon support` tunnel.
-  This feature adds an ability to see the node's sync stage, by returning the number of synced blocks per stage.
-
-![sync_stage](/_images/process/sync_stages.png)
-
-- ### Reorgs
-
-  This is the first very crude example of how diagnostics system can access Erigon node's database remotely, via erigon support tunnel. Re-orgs can be identified by the presence of multiple block headers with the same block height but different block hashes.
-
-  One of the ideas for the further development of the diagnostics system is the addition of many more such useful "diagnostics scripts", that could be run against Erigon's node's database, to check the state of the node, or certain inconsistencies etc.
-
-  The corresponding code in Erigon is in the file internal/sessions/cache.go, and it relies on a feature recently added to the Erigon's code, which is mdbx.PathDbMap(), the global function that returns the mapping of all currently open MDBX environments (databases), keyed by the paths to their directories in the filesystem. This allows cache.go to create a read-only transaction for any of these environments (databases) and provide remote reading by the diagnostics system.
-
-![sync_stage](/_images/process/find_reorgs.png)
 
 ## Network Tab
 
-1. ### Peers data
+The Network tab contains information about network peers and the downloader.
 
-Our diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, total seen peers, and any encountered errors. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+### Peers Data
 
-#### Overview Data Table:
+The diagnostics tools allow you to collect and view essential information about network peers, enabling you to monitor and manage your network connections effectively. This data includes details about active peers, static peers, and total seen peers. The information is presented in a tabular format, and you can access detailed data for each section by clicking on the respective row.
+
+#### Overview Data Table
 
 - **Active Peers:** Displays the number of currently active peers in the network.
 - **Static Peers:** Indicates the number of static peers defined in your Erigon configuration.
 - **Total Seen Peers:** Shows the total number of peers observed during all diagnostics sessions with the current node.
-- **Total Errors:** Provides information about any errors or issues encountered with network peers.
 
 By clicking on the Active, Static, or Total Seen Peers table, you can access detailed information about each peer. The peer details table includes the following columns:
 
 - **Peer ID:** A unique identifier for the peer.
 - **Type:** Indicates whether the peer is static, a bootnode, or dynamic.
 - **Status:** Displays the status of the peer, indicating whether it's currently active.
-- **Network Usage:** Shows the total amount of data sent and received over the network.
-- **Errors Count:** Shows the total count of errors encountered with this peer.
+- **Total In:** Shows the total amount of data received over the network.
+- **Total Out:** Shows the total amount of data sent over the network.
+- **In Speed:** Shows the data receiving speed over the network.
+- **Out Speed:** Shows the data sending speed over the network.
 
-This detailed peer information allows you to gain insights into your network connections, helping you troubleshoot and manage your network effectively.
 
 ![sync_stage](/_images/peers.png)
 
 #### Peer Details Popup
 
-**Main Info:**
-
-- **ID:** A unique identifier for the network peer.
-- **Bytes In:** The total amount of data received by the peer, measured in megabytes (MB).
-- **Bytes Out:** The total amount of data sent by the peer, measured in kilobytes (KB).
+- **Main Info:** Info about peer.
 
 **Network Usage By Capability:**
 
@@ -283,24 +265,27 @@ Use this detailed popup to analyze and monitor the network activity of peers, ai
 
 ![sync_stage](/_images/peer_details.png)
 
-### Snapshots data
-This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" stages
+### Downloader
 
-- **Part**: stage Name - This represents the name or identifier of the stage.
-- **Progress**: Download Percentage - This indicates the downloading progress as a percentage.
-- **Downloaded**: Downloaded Data - This shows the amount of data that has been downloaded.
-- **Total**: Total Data Size - The overall size of data for this specific stage.
-- **Time Left**: Estimated Time Remaining - This represents the estimated time remaining for this stage to complete.
-- **Total Time**: Total Elapsed Time - The total time duration during which this stage has been downloading.
-- **Download Rate**: Current Download Speed - The current download speed for this stage.
-- **Upload Rate**: Current Upload Speed - The current upload speed for this stage.
-- **Peers**: Peer Count - The number of peers or network nodes involved in this stage of the task.
-- **Files**: Number of Files - The total number of files associated with this stage.
-- **Connections**: Network Connections - The total number of network connections established for this stage.
-- **Alloc**: Allocated Resources - The amount of resources allocated for this stage.
-- **Sys**: System Resource Usage - The system's resource usage for this stage.
+This table provides detailed information about the progress, download status, estimated time, and resource allocation for "Snapshots" download.
 
-Background change it's color as soon as part downloaded
+- **Name**: This represents the name or identifier of the stage.
+- **Progress**: This indicates the downloading progress as a percentage.
+- **Downloaded**: This shows the amount of data that has been downloaded.
+- **Total**: The overall size of data for this specific stage.
+- **Time Left**: This represents the estimated time remaining for this stage to complete.
+- **Total Time**: The total time duration during which this stage has been downloading.
+- **Download Rate**: The current download speed for this stage.
+- **Upload Rate**: The current upload speed for this stage.
+- **Peers**: The number of peers or network nodes involved in this stage of the task.
+- **Files**: The total number of files associated with this stage.
+- **Connections**: The total number of network connections established for this stage.
+- **Alloc**: The amount of resources allocated for this stage.
+- **Sys**: The system's resource usage for this stage.
+
+This page also displays all flag values related to the downloader, which helps to understand the current setup and see available tuning options.
+
+
 ![snapshot](/_images/snapshot_sync.png)
 
 ## Logs Tab
@@ -337,26 +322,33 @@ Operator has the capability to inspect the databases and their tables. This func
 
 ![flags](/_images/dbs.png)
 
-## (--DEPRECATED--) Header Download
-This is another crude example of monitoring an algorithm involving many items transitoning through series of states. On the erigon side, the code is spread across `dataflow/stages.go` and `diagnostics/header_downloader_stats.go`. The parameters considered for monitoring are decided based on header download states used in `turbo/stages/headerdownload/header_algos.go` and `eth/stagedsync/stage_headers.go`.
-The header downloader algorithm on the diagnostics system side is stored in `headers_download.go` file. The code in the file is reused from the `bodies_download.go` file which contains the code for fetching the bodies download state from erigon.
+## Available Flags
 
-## (--DEPRECATED--) Block Body Download
+The following flags can be used to configure various parameters of the diagnostics UI:
 
-This is the first crude example of monitoring an algorithms involving many items (in that case block bodies) transitioning through the series of states.
-On the Erigon side, the code is spread across files `dataflow/stages.go`, where the states of each block body in the downloading algorithm are listed,
-and the structure `States` is described. This structure allows the body downloader algorithm (in the files `eth/stagedsync/stage_bodies.go` and
-`turbo/stages/bodydownload/body_algos.go`) to invoke `AddChange` to report the change of state for any block number. The structure `States` intends to
-have a strict upper bound on memory usage and to be very allocation-light. On the other hand, the function `ChangesSince` is called by the code in
-`diagnostics/block_body_download.go` to send the recent history of state changes to the diagnostics system (via logical tunnel of `erigon support` of course).
-On the side of the diagnostics system, in the file `cmd/bodies_download.go`, there are two functions. One, `bodies_download` is generating output
-HTML representing the current view of some limited number of block bodies being downloaded (1000). This function keeps querying the Erigon node
-roughly every second and re-generates the HTML (using template in `assets/template/body_download.hml`). The re-generated HTML is written to, and is
-consumed by the javascript function `bodiesDownload` in the `assets/script/session.js`, which keeps replacing the `innerHTML` field in a div element
-whenever the new HTML piece is available.
-Each state is represented by a distinct colour, with the colour legend is also defined in the template file.
+### Configuration File:
 
-![body download](/_images/body_download.png)
+- `--config` : Specify a configuration file (default is $HOME/.cobra.yaml).
+
+### Network Settings:
+
+- `--addr` : Network interface to listen on (default is localhost).
+- `--port` : Port to listen on (default is 8080).
+
+### Session Management:
+
+- `--node.sessions` : Maximum number of node sessions to allow (default is 5000).
+- `--ui.sessions` : Maximum number of UI sessions to allow (default is 5000).
+
+### Logging Configuration:
+
+- `--log.dir.path` : Directory path to store log data (default is ./logs).
+- `--log.file.name` : Name of the log file (default is diagnostics.log).
+- `--log.file.size.max` : Maximum size of log file in megabytes (default is 100).
+- `--log.file.age.max` : Maximum age in days a log file can persist in the system (default is 28).
+- `--log.max.backup` : Maximum number of log files that can persist (default is 5).
+- `--log.compress` : Whether to compress historical log files (default is false).
+
 
 # Ideas for possible improvements
 
