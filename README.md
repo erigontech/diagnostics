@@ -114,7 +114,7 @@ cd diagnostics
 make build
 ```
 
-Run the application. This may take a while. Expect to see a TLS Handshake error in the terminal
+Run the application.
 ```
 make run-self-signed
 ```
@@ -131,6 +131,8 @@ make run-self-signed
 [Diagnostics setup](#diagnostics-set-up)
 
 #### Step 2:
+Open UI application in browser, you will find the link to it in console.
+
 Follow these steps to create a session:
 
 ![create new operation session 1](/_images/create_session_1.png)
