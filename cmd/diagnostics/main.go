@@ -1,14 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,7 +59,14 @@ func main() {
 		}
 	}()
 
-	open(fmt.Sprintf("http://%s:%d", listenAddr, listenPort))
+	packagePath := "github.com/ledgerwatch/erigonwatch"
+	version, err := GetPackageVersion(packagePath)
+	if err == nil {
+		fmt.Printf("Diagnostics version: %s\n", version)
+	}
+
+	fmt.Printf("Diagnostics UI is running on http://%s:%d\n", listenAddr, listenPort)
+	//open(fmt.Sprintf("http://%s:%d", listenAddr, listenPort))
 
 	// Graceful and eager terminations
 	switch s := <-signalCh; s {
@@ -75,7 +82,7 @@ func main() {
 }
 
 // open opens the specified URL in the default browser of the user.
-func open(url string) error {
+/*func open(url string) error {
 	var cmd string
 	var args []string
 
@@ -90,4 +97,26 @@ func open(url string) error {
 	}
 	args = append(args, url)
 	return exec.Command(cmd, args...).Start()
+}*/
+
+// GetPackageVersion returns the version of a package from the go.mod file.
+func GetPackageVersion(packagePath string) (string, error) {
+	file, err := os.Open("./../../go.mod")
+	if err != nil {
+		return "", fmt.Errorf("failed to open go.mod file: %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "\t"+packagePath+" ") {
+			// Extract the version from the line
+			split := strings.Split(line, " ")
+			version := strings.TrimSpace(split[1])
+			return version, nil
+		}
+	}
+
+	return "", fmt.Errorf("package not found in go.mod file: %s", packagePath)
 }
