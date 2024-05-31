@@ -1,0 +1,18 @@
+@startuml
+participant "Erigon Node" as Erigon
+participant "Diagnostics cmd" as Diag
+participant "Output" as Output
+
+note right of Erigon
+"./build/bin/erigon"
+end note
+Erigon -> Erigon: Run Erigon node
+
+note right of Diag
+   "./build/bin/diag downloader"
+end note
+Diag -> Erigon: Query downloader data
+Erigon -> Diag: Return queried data
+Diag -> Output: Display data
+
+@enduml
