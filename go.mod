@@ -14,7 +14,7 @@ require (
 require (
 	github.com/go-chi/cors v1.2.1
 	github.com/gorilla/websocket v1.5.1
-	github.com/ledgerwatch/erigonwatch v0.1.0
+	github.com/ledgerwatch/erigonwatch v0.1.2
 )
 
 require (
