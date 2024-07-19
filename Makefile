@@ -1,5 +1,5 @@
 BINARY_NAME := diagnostics
-BUILD_DIR := ./_bin
+BUILD_DIR := ./build
 DOCKER_IMAGE_NAME := diagnostics
 DOCKER_CONTAINER_NAME := diagnostics_container
 
