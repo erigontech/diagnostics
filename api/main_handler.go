@@ -3,13 +3,13 @@ package api
 import (
 	"net/http"
 
+	"github.com/erigontech/erigonwatch"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/ledgerwatch/diagnostics/api/internal"
 	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
 	"github.com/ledgerwatch/diagnostics/internal/sessions"
-	"github.com/ledgerwatch/erigonwatch"
 )
 
 type APIServices struct {

@@ -59,7 +59,7 @@ func main() {
 		}
 	}()
 
-	packagePath := "github.com/ledgerwatch/erigonwatch"
+	packagePath := "github.com/erigontech/erigonwatch"
 	version, err := GetPackageVersion(packagePath)
 	if err == nil {
 		fmt.Printf("Diagnostics version: %s\n", version)
