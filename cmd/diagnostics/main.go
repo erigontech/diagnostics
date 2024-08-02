@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ledgerwatch/diagnostics/api"
-	"github.com/ledgerwatch/diagnostics/internal/logging"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
+	"github.com/erigontech/diagnostics/api"
+	"github.com/erigontech/diagnostics/internal/logging"
+	"github.com/erigontech/diagnostics/internal/sessions"
 )
 
 func main() {

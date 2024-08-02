@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ledgerwatch/diagnostics"
+	"github.com/erigontech/diagnostics"
 )
 
 type Error struct {

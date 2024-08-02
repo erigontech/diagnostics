@@ -7,9 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/ledgerwatch/diagnostics/api/internal"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
+
+	"github.com/erigontech/diagnostics/api/internal"
+	"github.com/erigontech/diagnostics/internal/erigon_node"
+	"github.com/erigontech/diagnostics/internal/sessions"
 )
 
 type APIServices struct {

@@ -14,7 +14,7 @@ https://go.dev/doc/install
 ## Erigon Node Set Up
 Clone the Erigon repository
 ```
-git clone --recurse-submodules -j8 https://github.com/ledgerwatch/erigon.git
+git clone --recurse-submodules -j8 https://github.com/erigontech/erigon.git
 ```
 
 Change into the repo, and make sure you are on the ```devel``` branch
@@ -35,7 +35,7 @@ Run the Node
 
 ## Diagnostics Set Up
 ```
-git clone https://github.com/ledgerwatch/diagnostics.git
+git clone https://github.com/erigontech/diagnostics.git
 cd diagnostics
 make build
 ```

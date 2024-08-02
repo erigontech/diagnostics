@@ -89,7 +89,7 @@ necessarily want people to work for free.
 For building the bleeding edge development branch:
 
 ```sh
-git clone --recurse-submodules https://github.com/ledgerwatch/erigon.git
+git clone --recurse-submodules https://github.com/erigontech/erigon.git
 cd erigon
 git checkout main
 make erigon
@@ -102,14 +102,14 @@ Run the Node. The `<data_directory>` field will be the directory path to your da
 ./build/bin/erigon --datadir <data_directory> --chain sepolia
 ```
 
-For more details check [Erigon documentation](https://github.com/ledgerwatch/erigon?tab=readme-ov-file#getting-started)
+For more details check [Erigon documentation](https://github.com/erigontech/erigon?tab=readme-ov-file#getting-started)
 
 To set and use a custom address and port, here a
 [link to more information on this step](#how-to-run-an-erigon-node-that-can-be-connected-to-the-diagnostics-system)
 
 ## Diagnostics Set Up
 ```
-git clone https://github.com/ledgerwatch/diagnostics.git
+git clone https://github.com/erigontech/diagnostics.git
 cd diagnostics
 make build
 ```
@@ -158,7 +158,7 @@ Ensure that the Erigon node is already running and run the following command. Tw
 ```
 ./build/bin/erigon support <flags>
 ```
-[Support command documentation](https://github.com/ledgerwatch/erigon/tree/main/turbo/app#support)
+[Support command documentation](https://github.com/erigontech/erigon/tree/main/turbo/app#support)
 
 
 #### Step 5: 
