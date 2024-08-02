@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
+	"github.com/erigontech/diagnostics/internal/erigon_node"
 )
 
 type ports struct {

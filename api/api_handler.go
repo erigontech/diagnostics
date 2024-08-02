@@ -8,9 +8,10 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	api_internal "github.com/ledgerwatch/diagnostics/api/internal"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
+
+	api_internal "github.com/erigontech/diagnostics/api/internal"
+	"github.com/erigontech/diagnostics/internal/erigon_node"
+	"github.com/erigontech/diagnostics/internal/sessions"
 )
 
 var _ http.Handler = &APIHandler{}

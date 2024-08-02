@@ -1,4 +1,4 @@
-module github.com/ledgerwatch/diagnostics
+module github.com/erigontech/diagnostics
 
 go 1.21.5
 
