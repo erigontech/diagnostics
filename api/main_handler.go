@@ -35,7 +35,7 @@ func NewHandler(services APIServices) http.Handler {
 	}
 
 	r := chi.NewRouter()
-	//r.Use(middleware.Logger)
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RouteHeaders().
 		Route("Origin", "*", cors.Handler(cors.Options{

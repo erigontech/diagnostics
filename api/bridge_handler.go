@@ -172,8 +172,8 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err = json.Unmarshal(message, &response); err != nil {
-			fmt.Printf("can't read response message: %v\n", err)
-			fmt.Printf("Message is: %s\n", string(message))
+			fmt.Printf("can't read response: %v\n", err)
+			fmt.Printf("Message: %s\n", string(message))
 			select {
 			case <-time.After(100 * time.Millisecond):
 			case <-ctx.Done():
