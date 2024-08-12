@@ -2,7 +2,8 @@ package sessions
 
 import (
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
+
+	"github.com/erigontech/diagnostics/internal/erigon_node"
 )
 
 var _ CacheService = &Cache{}

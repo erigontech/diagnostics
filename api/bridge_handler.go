@@ -11,11 +11,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-	"github.com/ledgerwatch/diagnostics"
-	"github.com/ledgerwatch/diagnostics/api/internal"
-	"github.com/ledgerwatch/diagnostics/internal/erigon_node"
-	"github.com/ledgerwatch/diagnostics/internal/sessions"
 	"github.com/pkg/errors"
+
+	"github.com/erigontech/diagnostics"
+	"github.com/erigontech/diagnostics/api/internal"
+	"github.com/erigontech/diagnostics/internal/erigon_node"
+	"github.com/erigontech/diagnostics/internal/sessions"
 )
 
 var _ http.Handler = &APIHandler{}
