@@ -93,5 +93,7 @@ type Client interface {
 	BodiesDownload(ctx context.Context, w http.ResponseWriter)
 	HeadersDownload(ctx context.Context, w http.ResponseWriter)
 
+	FindHeapProfile(ctx context.Context) ([]byte, error)
+
 	fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error)
 }
