@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -271,6 +273,27 @@ func (h *APIHandler) UniversalRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
+func (h *APIHandler) HeapProfile(w http.ResponseWriter, r *http.Request) {
+	client, err := h.findNodeClient(r)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	heap, err := client.FindHeapProfile(r.Context())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to fetch sync stage progress: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(heap)
+
+	//w.Header().Set("Content-Type", "text/plain")
+	w.Write(bytes.NewBufferString(encoded).Bytes())
+}
+
 func NewAPIHandler(
 	sessions sessions.CacheService,
 	erigonNode erigon_node.Client,
@@ -291,6 +314,7 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
 	r.Get("/v2/sessions/{sessionId}/nodes/{nodeId}/*", r.UniversalRequest)
+	r.Get("/sessions/{sessionId}/nodes/{nodeId}/profile/heap", r.HeapProfile)
 
 	return r
 }
