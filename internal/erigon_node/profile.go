@@ -12,8 +12,8 @@ type ProfileContent struct {
 	Chunk []byte `json:"chunk"`
 }
 
-func (c *NodeClient) FindHeapProfile(ctx context.Context) ([]byte, error) {
-	request, err := c.fetch(ctx, "heap-profile", nil)
+func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, error) {
+	request, err := c.fetch(ctx, profile, nil)
 
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (c *NodeClient) FindHeapProfile(ctx context.Context) ([]byte, error) {
 	}
 
 	//result is a file content so I need to save it to file and return the file path
-	tempFile, err := os.CreateTemp("", "heap-profile-*.pprof")
+	tempFile, err := os.CreateTemp("", "profile-*.pprof")
 	if err != nil {
 		return nil, err
 	}

@@ -2,12 +2,14 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -247,8 +249,6 @@ func (h *APIHandler) findNodeClient(r *http.Request) (erigon_node.Client, error)
 }
 
 func (h *APIHandler) UniversalRequest(w http.ResponseWriter, r *http.Request) {
-	apiStr := chi.URLParam(r, "*")
-
 	client, err := h.findNodeClient(r)
 
 	if err != nil {
@@ -256,42 +256,44 @@ func (h *APIHandler) UniversalRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := client.GetResponse(r.Context(), apiStr)
+	pprof, data, err := GetResponseData(r.Context(), client, chi.URLParam(r, "*"))
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unable to fetch snapshot files list: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	jsonData, err := json.Marshal(response)
-
-	if err != nil {
-		api_internal.EncodeError(w, r, err)
+	if pprof {
+		encoded := base64.StdEncoding.EncodeToString(data)
+		data = bytes.NewBufferString(encoded).Bytes()
+	} else {
+		w.Header().Set("Content-Type", "application/json")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonData)
+	w.Write(data)
 }
 
-func (h *APIHandler) HeapProfile(w http.ResponseWriter, r *http.Request) {
-	client, err := h.findNodeClient(r)
+func GetResponseData(ctx context.Context, client erigon_node.Client, request string) (bool, []byte, error) {
+	if strings.Contains(request, "pprof") {
+		data, err := client.FindProfile(ctx, request)
+		if err != nil {
+			return true, nil, err
+		}
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return true, data, nil
+	} else {
+		response, err := client.GetResponse(ctx, request)
+		if err != nil {
+			return false, nil, err
+		}
+
+		jsonData, err := json.Marshal(response)
+		if err != nil {
+			return false, nil, err
+		}
+
+		return false, jsonData, nil
 	}
-
-	heap, err := client.FindHeapProfile(r.Context())
-
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Unable to fetch sync stage progress: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	encoded := base64.StdEncoding.EncodeToString(heap)
-
-	//w.Header().Set("Content-Type", "text/plain")
-	w.Write(bytes.NewBufferString(encoded).Bytes())
 }
 
 func NewAPIHandler(
@@ -314,7 +316,6 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/headers/download-summary", r.HeadersDownload)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/sync-stages", r.SyncStages)
 	r.Get("/v2/sessions/{sessionId}/nodes/{nodeId}/*", r.UniversalRequest)
-	r.Get("/sessions/{sessionId}/nodes/{nodeId}/profile/heap", r.HeapProfile)
 
 	return r
 }
