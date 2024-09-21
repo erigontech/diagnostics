@@ -31,6 +31,15 @@ func NewHandler(services APIServices) http.Handler {
 		"performance",
 		"documentation",
 		"issues",
+		"sysinfo",
+		"processes",
+		"cpu-info",
+		"goroutine",
+		"threadcreate",
+		"heap",
+		"allocs",
+		"block",
+		"mutex",
 		"admin",
 	}
 
