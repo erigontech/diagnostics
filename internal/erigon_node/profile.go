@@ -25,8 +25,6 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 		return nil, fmt.Errorf("Error fetching profile content: %v", err)
 	}
 
-	push erigonwatch release and update diagnostics deps
-
 	var content ProfileContent
 
 	if err := json.Unmarshal(result, &content); err != nil {
