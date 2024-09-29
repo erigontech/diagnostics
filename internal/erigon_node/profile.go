@@ -25,6 +25,8 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 		return nil, fmt.Errorf("Error fetching profile content: %v", err)
 	}
 
+	push erigonwatch release and update diagnostics deps
+
 	var content ProfileContent
 
 	if err := json.Unmarshal(result, &content); err != nil {
@@ -52,7 +54,7 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 		return nil, fmt.Errorf("Error writing to temporary file: %v", err)
 	}
 
-	cmd := exec.Command("go", "tool", "pprof", "-png", tempFile.Name())
+	cmd := exec.Command("go", "tool", "pprof", "-dot", tempFile.Name())
 	svgOutput, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating SVG output: %v", err)
