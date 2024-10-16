@@ -18,6 +18,5 @@ jobs:
       - uses: golangci/golangci-lint-action@v6
         with:
           version: 'v1.61'
-          skip-pkg-cache: true
       - run: go build -v ./...
       - run: go test -v ./...
