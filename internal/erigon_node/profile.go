@@ -16,25 +16,25 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 	request, err := c.fetch(ctx, profile, nil)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching profile: %v", err)
+		return nil, fmt.Errorf("fetching profile: %w", err)
 	}
 
 	_, result, err := request.nextResult(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching profile content: %v", err)
+		return nil, fmt.Errorf("fetching profile content: %w", err)
 	}
 
 	var content ProfileContent
 
 	if err := json.Unmarshal(result, &content); err != nil {
-		return nil, fmt.Errorf("Error unmarshalling profile content: %v", err)
+		return nil, fmt.Errorf("unmarshalling profile content: %w", err)
 	}
 
 	//result is a file content so I need to save it to file and return the file path
 	tempFile, err := os.CreateTemp("", "profile-*.pprof")
 	if err != nil {
-		return nil, fmt.Errorf("Error creating temporary file: %v", err)
+		return nil, fmt.Errorf("creating temporary file: %w", err)
 	}
 
 	defer func() {
@@ -49,13 +49,13 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 	}()
 
 	if _, err := tempFile.Write(content.Chunk); err != nil {
-		return nil, fmt.Errorf("Error writing to temporary file: %v", err)
+		return nil, fmt.Errorf("writing to temporary file: %w", err)
 	}
 
 	cmd := exec.Command("go", "tool", "pprof", "-dot", tempFile.Name()) //nolint:gosec
 	svgOutput, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("Error generating SVG output: %v", err)
+		return nil, fmt.Errorf("generating SVG output: %w", err)
 	}
 
 	return svgOutput, nil
