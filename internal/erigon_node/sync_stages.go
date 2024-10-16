@@ -28,7 +28,7 @@ func (c *NodeClient) FindSyncStages(ctx context.Context) (SyncStageProgress, err
 
 func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProgress, error) {
 	if cursorError := ss.rc.Init(ctx, syncStageDb, syncStageTable, nil); cursorError != nil {
-		return nil, fmt.Errorf("could not initialize remote cursor: %v", cursorError)
+		return nil, fmt.Errorf("could not initialize remote cursor: %w", cursorError)
 	}
 
 	syncStageProgress := make(SyncStageProgress)
@@ -46,13 +46,13 @@ func (ss *SyncStages) fetchSyncStageProgress(ctx context.Context) (SyncStageProg
 		syncProgress, unmarshalError := ss.unmarshal(v)
 
 		if unmarshalError != nil {
-			return nil, fmt.Errorf("could not unmarshal sync stage data: %v", unmarshalError)
+			return nil, fmt.Errorf("could not unmarshal sync stage data: %w", unmarshalError)
 		}
 
 		syncStageProgress[syncStage] = strconv.FormatUint(syncProgress, syncProgressBase)
 	}
 	if e != nil {
-		return nil, fmt.Errorf("could not process remote cursor line: %v", e)
+		return nil, fmt.Errorf("could not process remote cursor line: %w", e)
 	}
 
 	return syncStageProgress, nil

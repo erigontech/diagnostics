@@ -139,7 +139,7 @@ func (c *NodeClient) BodiesDownload(ctx context.Context, w http.ResponseWriter) 
 		return item.Id < bd.BlockNum+VisLimit // We limit visualisation to VisLimit first blocks
 	})
 	//if err := templ.ExecuteTemplate(w, "body_download.html", bd); err != nil {
-	//	fmt.Fprintf(w, "Executing body_download template: %v", err)
+	//	fmt.Fprintf(w, "Executing body_download template: %w", err)
 	//	return
 	//}
 }*/
