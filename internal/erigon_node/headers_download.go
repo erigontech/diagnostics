@@ -138,7 +138,7 @@ func (c *NodeClient) HeadersDownload(ctx context.Context, w http.ResponseWriter)
 		return item.Id < hd.HeaderNum+VisLimit // We limit visualisation to VisLimit first blocks
 	})
 	//if err := templ.ExecuteTemplate(w, "headers_download.html", hd); err != nil {
-	//	fmt.Fprintf(w, "Executing headers_download template: %v", err)
+	//	fmt.Fprintf(w, "Executing headers_download template: %w", err)
 	//	return
 	//}
 }*/
