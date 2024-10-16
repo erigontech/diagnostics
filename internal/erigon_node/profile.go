@@ -52,7 +52,7 @@ func (c *NodeClient) FindProfile(ctx context.Context, profile string) ([]byte, e
 		return nil, fmt.Errorf("writing to temporary file: %w", err)
 	}
 
-	cmd := exec.Command("go", "tool", "pprof", "-dot", tempFile.Name()) //nolint:gosec // i don't know how to fix gosec warning
+	cmd := exec.Command("go", "tool", "pprof", "-dot", tempFile.Name()) //nolint:gosec //TODO: i don't know how to fix gosec warning
 	svgOutput, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("generating SVG output: %w", err)
