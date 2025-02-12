@@ -37,7 +37,6 @@ const (
 var wsBufferPool = new(sync.Pool)
 
 func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
-
 	//Sends a success Message to the Node client, to receive more information
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
@@ -130,8 +129,6 @@ func (h BridgeHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 					}
 					continue
 				}
-
-				//fmt.Printf("Sending request %s\n", string(bytes))
 
 				requestMutex.Lock()
 				requestMap[rpcRequest.Id] = request

@@ -96,4 +96,7 @@ type Client interface {
 	FindProfile(ctx context.Context, profile string) ([]byte, error)
 
 	fetch(ctx context.Context, method string, params url.Values) (*NodeRequest, error)
+
+	Subscribe(ctx context.Context, channel chan []byte, service string) error
+	Unsubscribe(ctx context.Context, channel chan []byte, service string) error
 }

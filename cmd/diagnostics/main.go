@@ -59,11 +59,7 @@ func main() {
 		}
 	}()
 
-	packagePath := "github.com/erigontech/erigonwatch"
-	version, err := GetPackageVersion(packagePath)
-	if err == nil {
-		fmt.Printf("Diagnostics version: %s\n", version)
-	}
+	printUIVersion()
 
 	fmt.Printf("Diagnostics UI is running on http://%s:%d\n", listenAddr, listenPort)
 	//open(fmt.Sprintf("http://%s:%d", listenAddr, listenPort))
@@ -78,6 +74,14 @@ func main() {
 	case syscall.SIGINT:
 		log.Println("Terminating eagerly.")
 		os.Exit(-int(syscall.SIGINT))
+	}
+}
+
+func printUIVersion() {
+	packagePath := "github.com/erigontech/erigonwatch"
+	version, err := GetPackageVersion(packagePath)
+	if err == nil {
+		fmt.Printf("Diagnostics version: %s\n", version)
 	}
 }
 
