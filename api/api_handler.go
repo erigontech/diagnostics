@@ -309,6 +309,7 @@ func NewAPIHandler(
 	r.Get("/sessions/{sessionId}", r.GetSession)
 
 	// Erigon Node data
+	r.Get("/v2/sessions/{sessionId}/nodes/{nodeId}/ws", r.HandleWebSocket)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/logs/{file}", r.Log)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/dbs/*", r.Tables)
 	r.Get("/sessions/{sessionId}/nodes/{nodeId}/reorgs", r.ReOrg)
