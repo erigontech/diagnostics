@@ -151,8 +151,17 @@ func (h *APIHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
+
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				fmt.Println("Client closed connection")
+				break
+			} else if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
+				fmt.Println("Client closed connection unexpectedly")
+				break
+			}
+
 			fmt.Println("Error reading message:", err)
 			break
 		}
