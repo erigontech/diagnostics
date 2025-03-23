@@ -40,6 +40,7 @@ func NewHandler(services APIServices) http.Handler {
 		"allocs",
 		"block",
 		"mutex",
+		"txpool",
 		"admin",
 	}
 

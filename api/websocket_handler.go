@@ -27,6 +27,7 @@ type WebsocketHandler struct {
 	writeQueue chan []byte
 	conn       *websocket.Conn
 	closeChan  chan struct{}
+	closed     bool
 }
 
 // **NewWebsocketHandler initializes WebsocketHandler**
@@ -35,6 +36,7 @@ func NewWebsocketHandler(conn *websocket.Conn) *WebsocketHandler {
 		writeQueue: make(chan []byte, 100),
 		conn:       conn,
 		closeChan:  make(chan struct{}),
+		closed:     false,
 	}
 
 	go handler.startWriter() // Start dedicated writer goroutine
@@ -79,6 +81,14 @@ func (h *WebsocketHandler) startWriter() {
 
 // **Close WebSocket connection and stop writer**
 func (h *WebsocketHandler) closeConnection() {
+	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		return
+	}
+	h.closed = true
+	h.mu.Unlock()
+
 	close(h.closeChan)
 	h.conn.Close()
 }
@@ -111,10 +121,14 @@ func (h *APIHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case <-r.Context().Done():
+				handler.closeConnection()
 				return
 			case <-handler.closeChan: // Graceful shutdown
 				return
-			case message := <-channel:
+			case message, ok := <-channel:
+				if !ok {
+					return
+				}
 				handler.sendResponse(&ClientResponse{
 					Status:  "success",
 					Message: string(message),
@@ -128,16 +142,20 @@ func (h *APIHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
+	pingTicker := time.NewTicker(10 * time.Second)
+	defer pingTicker.Stop()
 
+	go func() {
 		for {
 			select {
 			case <-handler.closeChan:
 				return
-			case <-ticker.C:
+			case <-pingTicker.C:
 				handler.mu.Lock()
+				if handler.closed {
+					handler.mu.Unlock()
+					return
+				}
 				err := conn.WriteMessage(websocket.PingMessage, nil)
 				handler.mu.Unlock()
 
@@ -151,7 +169,6 @@ func (h *APIHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
