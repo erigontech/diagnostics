@@ -33,7 +33,7 @@ type WebsocketHandler struct {
 // **NewWebsocketHandler initializes WebsocketHandler**
 func NewWebsocketHandler(conn *websocket.Conn) *WebsocketHandler {
 	handler := &WebsocketHandler{
-		writeQueue: make(chan []byte, 100),
+		writeQueue: make(chan []byte, 200),
 		conn:       conn,
 		closeChan:  make(chan struct{}),
 		closed:     false,
