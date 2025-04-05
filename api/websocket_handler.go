@@ -169,6 +169,7 @@ func (h *APIHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
+
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
