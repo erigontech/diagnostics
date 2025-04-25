@@ -4,10 +4,6 @@ import (
 	"net/http"
 )
 
-const sessionIdCookieName = "sessionId"
-
-const sessionIdCookieDuration = 30 * 24 * 3600 // 30 days
-
 type Middleware struct {
 	CacheService
 }
