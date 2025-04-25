@@ -145,13 +145,13 @@ func (rc *RemoteCursor) findFullDbPath(ctx context.Context, db string) (string, 
 	request, err := rc.nodeClient.fetch(ctx, "dbs", nil)
 
 	if err != nil {
-		return "", fmt.Errorf("unable to fetch database list: %s", err)
+		return "", fmt.Errorf("unable to fetch database list: %w", err)
 	}
 
 	_, result, err := request.nextResult(ctx)
 
 	if err != nil {
-		return "", fmt.Errorf("unable to fetch database list: %s", err)
+		return "", fmt.Errorf("unable to fetch database list: %w", err)
 	}
 
 	var lines []string

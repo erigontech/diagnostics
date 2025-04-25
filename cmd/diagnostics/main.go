@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -68,7 +69,7 @@ func main() {
 	switch s := <-signalCh; s {
 	case syscall.SIGTERM:
 		log.Println("Terminating gracefully.")
-		if err := srv.Shutdown(context.Background()); err != http.ErrServerClosed {
+		if err := srv.Shutdown(context.Background()); !errors.Is(err, http.ErrServerClosed) {
 			log.Println("Failed to shutdown server:", err)
 		}
 	case syscall.SIGINT:
